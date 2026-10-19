@@ -1,6 +1,15 @@
 import type { ComposeInput, EmailAddress } from '@peregrine/core/types'
 import { parseAddress } from '@peregrine/smtp/headers'
+import { MAX_ATTACHMENT_BYTES, type FileAccess, type PickedFile } from './files'
 import type { ReadableMessage } from './messageText'
+
+/** A file attached to a draft: a copy in the application's storage, and what to show of it. */
+export interface DraftAttachment {
+  filename: string
+  path: string
+  contentType: string
+  size: number
+}
 
 /** A message as the compose screen holds it: what was typed, before it is checked. */
 export interface Draft {
@@ -8,11 +17,12 @@ export interface Draft {
   cc: string
   subject: string
   body: string
+  attachments: DraftAttachment[]
   inReplyTo?: string
   references?: string
 }
 
-export const emptyDraft: Draft = { to: '', cc: '', subject: '', body: '' }
+export const emptyDraft: Draft = { to: '', cc: '', subject: '', body: '', attachments: [] }
 
 /**
  * Splits a list of addresses as it is typed, at commas and semicolons that are not inside a name in
@@ -72,6 +82,7 @@ export function replyDraft(message: ReadableMessage): Draft {
     cc: '',
     subject: replySubject(message.subject),
     body: `\n\n${heading}\n${quoted}\n`,
+    attachments: [],
     inReplyTo: message.messageId || undefined,
     references: references || undefined
   }
@@ -87,7 +98,7 @@ export function toComposeInput(accountId: string, draft: Draft): ComposeInput {
     subject: draft.subject,
     textBody: draft.body,
     htmlBody: '',
-    attachments: [],
+    attachments: draft.attachments.map(({ filename, path, contentType }) => ({ filename, path, contentType })),
     inReplyTo: draft.inReplyTo,
     references: draft.references
   }
@@ -96,4 +107,50 @@ export function toComposeInput(accountId: string, draft: Draft): ComposeInput {
 /** Whether there is anything to send to: the screen enables its button on this. */
 export function hasRecipient(draft: Draft): boolean {
   return splitAddressList(`${draft.to},${draft.cc}`).length > 0
+}
+
+/** Why a picked file was not attached. */
+export interface RefusedFile {
+  name: string
+  reason: 'tooLarge'
+}
+
+/**
+ * Adds what was picked to what is attached. A file that is already attached is not attached twice,
+ * and one that would take the message over the limit is refused and its copy removed, because nothing
+ * will ever read it. What is refused is said, and not left out in silence: a message that goes out
+ * without the file somebody thought was in it is the worst way for this to go wrong.
+ */
+export async function attachPicked(
+  current: DraftAttachment[],
+  picked: PickedFile[],
+  files: FileAccess,
+  limit: number = MAX_ATTACHMENT_BYTES
+): Promise<{ attachments: DraftAttachment[]; refused: RefusedFile[] }> {
+  const attachments = [...current]
+  const refused: RefusedFile[] = []
+  const discard: string[] = []
+  let total = attachments.reduce((sum, attachment) => sum + attachment.size, 0)
+  for (const file of picked) {
+    if (attachments.some((attachment) => attachment.path === file.path)) continue
+    if (total + file.size > limit) {
+      refused.push({ name: file.name, reason: 'tooLarge' })
+      discard.push(file.path)
+      continue
+    }
+    total += file.size
+    attachments.push({ filename: file.name, path: file.path, contentType: file.contentType, size: file.size })
+  }
+  await files.remove(discard)
+  return { attachments, refused }
+}
+
+/** Takes one attachment off a draft and removes its copy. */
+export async function detachFile(
+  current: DraftAttachment[],
+  path: string,
+  files: FileAccess
+): Promise<DraftAttachment[]> {
+  await files.remove([path])
+  return current.filter((attachment) => attachment.path !== path)
 }

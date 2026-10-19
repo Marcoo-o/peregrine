@@ -23,5 +23,13 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
+      <!-- Hands a file to another application for as long as that one application needs it, by a content address and never a path. -->
+      <provider
+        android:name="androidx.core.content.FileProvider"
+        android:authorities="${applicationId}.files"
+        android:exported="false"
+        android:grantUriPermissions="true">
+        <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+      </provider>
     </application>
 </manifest>

@@ -11,6 +11,9 @@ import {
   View
 } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
+import { shouldWarnAboutAttachment } from '@peregrine/core/attachmentHints'
+import { refusalForOpening } from '@peregrine/core/attachmentSafety'
+import { SNIFF_BYTES } from '@peregrine/core/fileType'
 import type { ImapSession } from '@peregrine/core/imapSession'
 import type { QueueRunner } from '@peregrine/core/offlineQueue'
 import type { PendingSummary } from '@peregrine/core/pendingActions'
@@ -19,13 +22,16 @@ import type { SqlDb } from '@peregrine/core/sqlDb'
 import { ImapClientSession } from '@peregrine/imap/session'
 import { addAccount, getAccount, listAccounts, removeAccount, type Account } from './src/accounts'
 import { openDatabase } from './src/database'
-import { emptyDraft, hasRecipient, replyDraft, toComposeInput, type Draft } from './src/draft'
+import { attachmentContent, listAttachments, type AttachmentInfo } from './src/attachments'
+import { formatSize, refusalText, riskText } from './src/attachmentText'
+import { attachPicked, detachFile, emptyDraft, hasRecipient, replyDraft, toComposeInput, type Draft } from './src/draft'
+import { MAX_ATTACHMENT_BYTES, type Files } from './src/files'
 import { Connections } from './src/connections'
 import { getFolder, listFolders, syncFolders, type Folder } from './src/folders'
 import { MailActions } from './src/mailActions'
 import { listMessages, type StoredMessage } from './src/messages'
 import { readMessage, type ReadableMessage } from './src/messageText'
-import { createTransport } from './src/native'
+import { createFiles, createTransport } from './src/native'
 import { createQueue } from './src/queue'
 import { sendAndFile, smtpSettingsOf } from './src/send'
 import { syncFolder } from './src/sync'
@@ -63,6 +69,11 @@ type Screen =
       /** Where it was opened from, and so where leaving it goes back to. */
       origin: 'folder' | 'unified'
       message?: ReadableMessage
+      /** The source of the message and the attachments found in it, for saving and opening them. */
+      source?: Uint8Array
+      attachments?: AttachmentInfo[]
+      /** What was said about the last thing done with an attachment. */
+      notice?: string
       error?: string
     }
   | {
@@ -122,6 +133,16 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+/** The attachments of a message. A message that cannot be read for them is shown without, and not refused. */
+function attachmentsOf(source: Uint8Array): AttachmentInfo[] {
+  try {
+    return listAttachments(source)
+  } catch (error) {
+    console.error('reading the attachments failed:', describe(error))
+    return []
+  }
+}
+
 const SEEN = '\\Seen'
 const FLAGGED = '\\Flagged'
 
@@ -133,6 +154,7 @@ export default function App() {
   const database = useRef<SqlDb | null>(null)
   const queue = useRef<QueueRunner | null>(null)
   const mail = useRef<MailActions | null>(null)
+  const files = useRef<Files | null>(null)
   /** A connection per account, which belongs to the application and not to a screen. */
   const connections = useRef<Connections | null>(null)
   const latest = useRef<Screen>(screen)
@@ -243,7 +265,10 @@ export default function App() {
           () => setConnected((connections.current as Connections).connectedIds)
         )
         const runner = createQueue(db, { changed: () => refreshWaiting(), log })
-        runner.setSendHandler((input, imap) => sendAndFile(db, createTransport, input, imap, log))
+        files.current = createFiles()
+        runner.setSendHandler((input, imap) =>
+          sendAndFile(db, { makeTransport: createTransport, files: files.current ?? undefined }, input, imap, log)
+        )
         queue.current = runner
         mail.current = new MailActions({
           db,
@@ -297,7 +322,16 @@ export default function App() {
       const imap = await (connections.current as Connections).ensure(account)
       const full = await imap.fetchFullMessage(folder.imapPath, summary.uid)
       if (!full) throw new Error('Die Nachricht gibt es auf dem Server nicht mehr')
-      setScreen({ name: 'message', account, folder, summary, origin, message: readMessage(full.source) })
+      setScreen({
+        name: 'message',
+        account,
+        folder,
+        summary,
+        origin,
+        message: readMessage(full.source),
+        source: full.source,
+        attachments: attachmentsOf(full.source)
+      })
     } catch (error) {
       setScreen({ name: 'message', account, folder, summary, origin, error: describe(error) })
     }
@@ -336,6 +370,41 @@ export default function App() {
     const account = await getAccount(db, message.accountId)
     const folder = await getFolder(db, message.folderId)
     if (account && folder) await openMessage(account, folder, message, 'unified')
+  }
+
+  /** Saves an attachment where the user chooses. The decision to keep a file is theirs, so there is no check. */
+  const saveAttachment = async (current: Extract<Screen, { name: 'message' }>, info: AttachmentInfo) => {
+    const content = current.source ? attachmentContent(current.source, info.id) : undefined
+    if (!content || !files.current) return
+    try {
+      const saved = await files.current.save(info.filename, info.contentType, content)
+      setScreen({ ...current, notice: saved ? `Gespeichert: ${info.filename}` : undefined })
+    } catch (error) {
+      setScreen({ ...current, notice: `Speichern ging nicht: ${describe(error)}` })
+    }
+  }
+
+  /** Hands an attachment to another application, unless it would start a program or is not what its name says. */
+  const openAttachment = async (current: Extract<Screen, { name: 'message' }>, info: AttachmentInfo) => {
+    const content = current.source ? attachmentContent(current.source, info.id) : undefined
+    if (!content || !files.current) return
+    const refused = refusalForOpening(info.filename, content.subarray(0, SNIFF_BYTES))
+    if (refused) {
+      setScreen({ ...current, notice: refusalText(refused) })
+      return
+    }
+    try {
+      await files.current.open(info.filename, info.contentType, content)
+      setScreen({ ...current, notice: undefined })
+    } catch (error) {
+      setScreen({ ...current, notice: `Öffnen ging nicht: ${describe(error)}` })
+    }
+  }
+
+  /** Leaving the compose screen without sending: what was attached was copied for this message and goes. */
+  const cancelCompose = async (current: Extract<Screen, { name: 'compose' }>, draft: Draft) => {
+    await files.current?.remove(draft.attachments.map((attached) => attached.path)).catch(() => undefined)
+    setScreen(current.back)
   }
 
   const startMove = async (current: Extract<Screen, { name: 'message' }>) => {
@@ -482,6 +551,8 @@ export default function App() {
             onToggleSeen={() => act(screen, (a) => a.setFlags(screen.folder, [screen.summary.uid], [], [SEEN]))}
             onToggleFlag={() => toggleFlag(screen, FLAGGED, !screen.summary.flags.includes(FLAGGED))}
             onMove={() => startMove(screen)}
+            onSave={(info) => saveAttachment(screen, info)}
+            onOpenAttachment={(info) => openAttachment(screen, info)}
             onDelete={() => act(screen, (a) => a.remove(screen.folder, [screen.summary.uid]))}
           />
         )}
@@ -495,8 +566,9 @@ export default function App() {
         {screen.name === 'compose' && (
           <Compose
             screen={screen}
+            files={files.current as Files}
             onSend={(draft) => send(screen, draft)}
-            onCancel={() => setScreen(screen.back)}
+            onCancel={(draft) => cancelCompose(screen, draft)}
           />
         )}
       </SafeAreaView>
@@ -659,6 +731,7 @@ function Unified(props: {
           <Pressable style={styles.item} onPress={() => props.onOpen(item)}>
             <Text style={[styles.itemTitle, !item.flags.includes(SEEN) && styles.unread]} numberOfLines={1}>
               {item.flags.includes(FLAGGED) ? '★ ' : ''}
+              {item.hasAttachment ? '📎 ' : ''}
               {item.subject || '(ohne Betreff)'}
             </Text>
             <Text style={styles.itemMeta} numberOfLines={1}>
@@ -733,6 +806,7 @@ function Messages(props: {
           <Pressable style={styles.item} onPress={() => props.onOpen(item)}>
             <Text style={[styles.itemTitle, !item.flags.includes(SEEN) && styles.unread]} numberOfLines={1}>
               {item.flags.includes(FLAGGED) ? '★ ' : ''}
+              {item.hasAttachment ? '📎 ' : ''}
               {item.subject || '(ohne Betreff)'}
             </Text>
             <Text style={styles.itemMeta} numberOfLines={1}>
@@ -757,6 +831,8 @@ function MessageView(props: {
   onToggleFlag: () => void
   onMove: () => void
   onDelete: () => void
+  onSave: (info: AttachmentInfo) => void
+  onOpenAttachment: (info: AttachmentInfo) => void
 }) {
   const { screen } = props
   const flagged = screen.summary.flags.includes(FLAGGED)
@@ -780,6 +856,29 @@ function MessageView(props: {
         <Text selectable style={styles.body}>
           {screen.message?.text ?? ''}
         </Text>
+        {screen.attachments && screen.attachments.length > 0 ? (
+          <View style={styles.attachments}>
+            <Text style={styles.itemMeta}>Anhänge</Text>
+            {screen.attachments.map((info) => (
+              <View key={info.id} style={styles.attachment}>
+                <Text style={styles.itemTitle}>📎 {info.filename}</Text>
+                <Text style={styles.itemMeta}>
+                  {info.contentType} · {formatSize(info.size)}
+                </Text>
+                {info.findings.map((finding) => (
+                  <Text key={finding.risk} style={styles.error}>
+                    {riskText(finding)}
+                  </Text>
+                ))}
+                <View style={styles.row}>
+                  <Chip label="Speichern" active={false} onPress={() => props.onSave(info)} />
+                  <Chip label="Öffnen" active={false} onPress={() => props.onOpenAttachment(info)} />
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        {screen.notice ? <Text style={styles.hint}>{screen.notice}</Text> : null}
       </ScrollView>
     </View>
   )
@@ -807,15 +906,49 @@ function MoveTo(props: { targets: Folder[]; onChoose: (target: Folder) => void; 
 
 function Compose(props: {
   screen: Extract<Screen, { name: 'compose' }>
+  files: Files
   onSend: (draft: Draft) => void
-  onCancel: () => void
+  onCancel: (draft: Draft) => void
 }) {
   const { screen } = props
   const [draft, setDraft] = useState<Draft>(screen.draft)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [warned, setWarned] = useState(false)
   const set = (patch: Partial<Draft>) => setDraft((current) => ({ ...current, ...patch }))
+
+  const pick = async () => {
+    try {
+      const picked = await props.files.pick()
+      if (picked.length === 0) return
+      const { attachments, refused } = await attachPicked(draft.attachments, picked, props.files)
+      set({ attachments })
+      setNotice(
+        refused.length > 0
+          ? `Nicht angehängt, weil es zu groß ist (insgesamt höchstens ${formatSize(MAX_ATTACHMENT_BYTES)}): ${refused.map((file) => file.name).join(', ')}`
+          : null
+      )
+    } catch (error) {
+      setNotice(`Anhängen ging nicht: ${describe(error)}`)
+    }
+  }
+
+  const detach = async (path: string) => {
+    set({ attachments: await detachFile(draft.attachments, path, props.files) })
+  }
+
+  // A message that talks of an attachment and has none is held back once, and goes the second time.
+  const forgotten = shouldWarnAboutAttachment(draft.body, draft.attachments.length)
+  const press = () => {
+    if (forgotten && !warned) {
+      setWarned(true)
+      return
+    }
+    props.onSend(draft)
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
-      <Pressable onPress={props.onCancel}>
+      <Pressable onPress={() => props.onCancel(draft)}>
         <Text style={styles.link}>‹ Abbrechen</Text>
       </Pressable>
       <Text style={styles.title}>Neue Nachricht</Text>
@@ -825,8 +958,22 @@ function Compose(props: {
       <TextInput style={styles.input} placeholder="Kopie" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" value={draft.cc} onChangeText={(cc) => set({ cc })} />
       <TextInput style={styles.input} placeholder="Betreff" value={draft.subject} onChangeText={(subject) => set({ subject })} />
       <TextInput style={[styles.input, styles.multiline]} placeholder="Nachricht" multiline textAlignVertical="top" value={draft.body} onChangeText={(body) => set({ body })} />
+      {draft.attachments.map((attached) => (
+        <View key={attached.path} style={styles.attachment}>
+          <Text style={styles.itemTitle}>📎 {attached.filename}</Text>
+          <Text style={styles.itemMeta}>{formatSize(attached.size)}</Text>
+          <Pressable onPress={() => detach(attached.path)}>
+            <Text style={styles.link}>Entfernen</Text>
+          </Pressable>
+        </View>
+      ))}
+      {notice ? <Text style={styles.error}>{notice}</Text> : null}
+      <Chip label="Datei anhängen" active={false} onPress={pick} />
+      {forgotten && warned ? (
+        <Text style={styles.error}>Du schreibst von einem Anhang, aber es ist keiner angehängt. Tippe noch einmal, wenn die Nachricht so raus soll.</Text>
+      ) : null}
       {screen.busy ? <ActivityIndicator style={styles.spinner} /> : null}
-      <Button label="Senden" disabled={screen.busy || !hasRecipient(draft)} onPress={() => props.onSend(draft)} />
+      <Button label={forgotten && warned ? 'Trotzdem senden' : 'Senden'} disabled={screen.busy || !hasRecipient(draft)} onPress={press} />
     </ScrollView>
   )
 }
@@ -884,5 +1031,7 @@ const styles = StyleSheet.create({
   itemMeta: { fontSize: 13, color: '#666', marginTop: 2 },
   link: { color: '#3b2a8c', fontSize: 16, paddingVertical: 4 },
   spinner: { marginVertical: 8 },
-  body: { fontSize: 15, lineHeight: 22, color: '#111', paddingBottom: 24 }
+  body: { fontSize: 15, lineHeight: 22, color: '#111', paddingBottom: 24 },
+  attachments: { marginTop: 8, marginBottom: 24 },
+  attachment: { paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#ccc', gap: 4 }
 })

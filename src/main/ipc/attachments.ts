@@ -4,13 +4,8 @@ import { copyFile, open } from 'node:fs/promises'
 import { basename } from 'node:path'
 import { dialog, shell, type BrowserWindow, type IpcMain } from 'electron'
 import { IpcChannels } from '@shared/ipcContracts'
-import {
-  contentContradictsName,
-  isExecutableContent,
-  SNIFF_BYTES,
-  sniffType
-} from '@peregrine/core/fileType'
-import { isExecutableName } from '@peregrine/core/attachmentSafety'
+import { SNIFF_BYTES } from '@peregrine/core/fileType'
+import { refusalForOpening } from '@peregrine/core/attachmentSafety'
 import { attachmentCacheSize, clearAttachmentCache } from '../attachments/cache'
 import {
   clearAttachmentLocalPaths,
@@ -105,7 +100,6 @@ export function registerAttachmentsIpc(
       args: { messageId: string; attachmentId: string }
     ): Promise<{ opened: boolean; refused?: 'executable' | 'mismatch' }> => {
       const path = await localPathOf(db, args.messageId, args.attachmentId)
-      if (isExecutableName(basename(path))) return { opened: false, refused: 'executable' }
 
       const handle = await open(path, 'r')
       let head: Uint8Array
@@ -117,9 +111,9 @@ export function registerAttachmentsIpc(
         await handle.close()
       }
 
-      const type = sniffType(head)
-      if (isExecutableContent(type)) return { opened: false, refused: 'executable' }
-      if (contentContradictsName(basename(path), type)) return { opened: false, refused: 'mismatch' }
+      // The rule is shared with the phone, so that the same file is refused on both.
+      const refused = refusalForOpening(basename(path), head)
+      if (refused) return { opened: false, refused }
 
       // openPath returns a non-empty string on failure (e.g. no handler registered).
       const error = await shell.openPath(path)
