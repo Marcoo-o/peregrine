@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { hasRecipient, parseAddressList, replyDraft, replySubject, splitAddressList, toComposeInput } from './draft'
+import {
+  attachPicked,
+  detachFile,
+  emptyDraft,
+  hasRecipient,
+  parseAddressList,
+  replyDraft,
+  replySubject,
+  splitAddressList,
+  toComposeInput,
+  type DraftAttachment
+} from './draft'
+import type { FileAccess, PickedFile } from './files'
 import type { ReadableMessage } from './messageText'
 
 const original = (over: Partial<ReadableMessage> = {}): ReadableMessage => ({
@@ -33,8 +45,8 @@ describe('a list of addresses as it is typed', () => {
   })
 
   it('tells whether there is anyone to send to', () => {
-    expect(hasRecipient({ to: '', cc: '', subject: '', body: '' })).toBe(false)
-    expect(hasRecipient({ to: ' ', cc: 'a@example.net', subject: '', body: '' })).toBe(true)
+    expect(hasRecipient({ ...emptyDraft })).toBe(false)
+    expect(hasRecipient({ ...emptyDraft, to: ' ', cc: 'a@example.net' })).toBe(true)
   })
 })
 
@@ -71,7 +83,14 @@ describe('an answer', () => {
 
 describe('the input of sending', () => {
   it('has what was typed, with no attachments and no blind copy', () => {
-    const input = toComposeInput('acct', { to: 'Anna <a@example.net>', cc: 'b@example.net', subject: 'Hi', body: 'Text', inReplyTo: '<x@example.net>' })
+    const input = toComposeInput('acct', {
+      ...emptyDraft,
+      to: 'Anna <a@example.net>',
+      cc: 'b@example.net',
+      subject: 'Hi',
+      body: 'Text',
+      inReplyTo: '<x@example.net>'
+    })
     expect(input).toEqual({
       accountId: 'acct',
       to: [{ name: 'Anna', address: 'a@example.net' }],
@@ -84,5 +103,63 @@ describe('the input of sending', () => {
       inReplyTo: '<x@example.net>',
       references: undefined
     })
+  })
+})
+
+describe('attaching files', () => {
+  const picked = (name: string, size: number, path = `/store/${name}`): PickedFile => ({
+    path,
+    name,
+    size,
+    contentType: 'application/pdf'
+  })
+  const attached = (name: string, size: number): DraftAttachment => ({
+    filename: name,
+    path: `/store/${name}`,
+    contentType: 'application/pdf',
+    size
+  })
+  function files() {
+    const removed: string[] = []
+    const access: FileAccess = {
+      read: async () => new Uint8Array(0),
+      remove: async (paths) => void removed.push(...paths)
+    }
+    return { access, removed }
+  }
+
+  it('adds what was picked to what is attached, in the order picked', async () => {
+    const { access, removed } = files()
+    const result = await attachPicked([attached('a.pdf', 10)], [picked('b.pdf', 20), picked('c.pdf', 30)], access, 1000)
+    expect(result.attachments.map((a) => a.filename)).toEqual(['a.pdf', 'b.pdf', 'c.pdf'])
+    expect(result.refused).toEqual([])
+    expect(removed).toEqual([])
+  })
+
+  it('does not attach a copy twice, and keeps the copy that is already in use', async () => {
+    const { access, removed } = files()
+    const result = await attachPicked([attached('a.pdf', 10)], [picked('a.pdf', 10)], access, 1000)
+    expect(result.attachments).toHaveLength(1)
+    expect(removed).toEqual([])
+  })
+
+  it('refuses what would take the message over the limit, says which, and removes the copy it made', async () => {
+    const { access, removed } = files()
+    const result = await attachPicked([attached('a.pdf', 600)], [picked('big.pdf', 500), picked('small.pdf', 300)], access, 1000)
+    expect(result.attachments.map((a) => a.filename)).toEqual(['a.pdf', 'small.pdf'])
+    expect(result.refused).toEqual([{ name: 'big.pdf', reason: 'tooLarge' }])
+    expect(removed).toEqual(['/store/big.pdf'])
+  })
+
+  it('takes a file off a draft and removes its copy', async () => {
+    const { access, removed } = files()
+    const rest = await detachFile([attached('a.pdf', 1), attached('b.pdf', 2)], '/store/a.pdf', access)
+    expect(rest.map((a) => a.filename)).toEqual(['b.pdf'])
+    expect(removed).toEqual(['/store/a.pdf'])
+  })
+
+  it('goes into the input of sending with its name, path and type, and not its size', () => {
+    const input = toComposeInput('acct', { ...emptyDraft, to: 'a@example.net', attachments: [attached('a.pdf', 10)] })
+    expect(input.attachments).toEqual([{ filename: 'a.pdf', path: '/store/a.pdf', contentType: 'application/pdf' }])
   })
 })

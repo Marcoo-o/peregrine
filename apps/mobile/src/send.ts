@@ -1,11 +1,40 @@
 import type { ImapSession } from '@peregrine/core/imapSession'
+import { safeFilename } from '@peregrine/core/safeFilename'
 import type { SecureMode, ComposeInput } from '@peregrine/core/types'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { Transport } from '@peregrine/imap/transport'
 import { SmtpClient, type SendResult } from '@peregrine/smtp/client'
-import { composeMessage, type ComposeOptions } from '@peregrine/smtp/compose'
+import { composeMessage, type Attachment, type ComposeOptions } from '@peregrine/smtp/compose'
 import { getAccount, type Account } from './accounts'
+import { MAX_ATTACHMENT_BYTES, type FileAccess } from './files'
 import { getFolderBySpecialUse } from './folders'
+import { contentTypeFor } from './mimeTypes'
+
+/** What sending needs of the device: a way to connect, and the files that were attached. */
+export interface SendEnvironment {
+  makeTransport: () => Transport
+  /** Without it a message with attachments cannot be sent, and is refused with the reason. */
+  files?: FileAccess
+}
+
+/** Reads the copies of the attached files. They stay where they are: removing them is for after the sending. */
+async function readAttachments(input: ComposeInput, files: FileAccess | undefined): Promise<Attachment[]> {
+  if (input.attachments.length === 0) return []
+  if (!files) throw new Error('This build cannot read the files that were attached')
+  const attachments: Attachment[] = []
+  let total = 0
+  for (const attached of input.attachments) {
+    const content = await files.read(attached.path)
+    total += content.length
+    if (total > MAX_ATTACHMENT_BYTES) throw new Error('The attachments are larger than one message can carry')
+    attachments.push({
+      filename: safeFilename(attached.filename, `anhang-${attachments.length + 1}`),
+      contentType: attached.contentType ?? contentTypeFor(attached.filename),
+      content
+    })
+  }
+  return attachments
+}
 
 /** Where and how an account sends. What the form leaves out is the usual for the kind of connection. */
 export interface SmtpSettings {
@@ -41,18 +70,17 @@ export function smtpSettingsOf(account: Account): SmtpSettings | undefined {
  * it again.
  *
  * It refuses what the phone cannot do yet, and says so, where the alternative is sending something
- * other than what was written: attachments are not read from the phone's files, a message to be
- * encrypted or signed would go out in the clear, and one for a later time would go out now.
+ * other than what was written: a message to be encrypted or signed would go out in the clear, and one
+ * for a later time would go out now.
  */
 export async function sendMessage(
   db: SqlDb,
-  makeTransport: () => Transport,
+  environment: SendEnvironment,
   input: ComposeInput,
   options: ComposeOptions = {}
 ): Promise<SentMessage> {
   const account = await getAccount(db, input.accountId)
   if (!account) throw new Error('The account this message was written for is gone')
-  if (input.attachments.length > 0) throw new Error('Attachments cannot be sent from the phone yet')
   if (input.encrypt || input.sign) throw new Error('Encrypting and signing are not on the phone yet')
   if (input.sendAt !== undefined && input.sendAt > Date.now()) {
     throw new Error('Sending at a later time is not on the phone yet')
@@ -61,6 +89,7 @@ export async function sendMessage(
   const settings = smtpSettingsOf(account)
   if (!settings) throw new Error('This account has no server for sending')
 
+  const attachments = await readAttachments(input, environment.files)
   const composed = composeMessage(
     {
       // A name that is only the address again says nothing, and shows twice in a mail client.
@@ -71,13 +100,14 @@ export async function sendMessage(
       subject: input.subject,
       text: input.textBody,
       html: input.htmlBody === '' ? undefined : input.htmlBody,
+      attachments,
       inReplyTo: input.inReplyTo,
       references: input.references
     },
     options
   )
 
-  const client = new SmtpClient(makeTransport(), settings)
+  const client = new SmtpClient(environment.makeTransport(), settings)
   try {
     await client.connect()
     const result = await client.send({ from: composed.envelope.from, to: composed.envelope.to, data: composed.source })
@@ -102,16 +132,25 @@ export interface SentMessage {
  * a person would get it twice for the sake of a copy. A copy that could not be made is logged and
  * left: the account has no Sent folder, or the server refused, or the connection ended. The copy
  * is marked read, because the sender wrote it.
+ *
+ * The copies of the attached files are removed once the message has gone out, and only then: while it
+ * has not, the queue sends it again and needs them. Failing to remove one is logged and does not fail
+ * the send either, for the same reason.
  */
 export async function sendAndFile(
   db: SqlDb,
-  makeTransport: () => Transport,
+  environment: SendEnvironment,
   input: ComposeInput,
   imap: ImapSession,
   log: { error(message: string): void },
   options: ComposeOptions = {}
 ): Promise<SentMessage> {
-  const sent = await sendMessage(db, makeTransport, input, options)
+  const sent = await sendMessage(db, environment, input, options)
+  try {
+    await environment.files?.remove(input.attachments.map((attached) => attached.path))
+  } catch (error) {
+    log.error(`the message went out but its attached files could not be removed: ${error instanceof Error ? error.message : String(error)}`)
+  }
   try {
     const folder = await getFolderBySpecialUse(db, input.accountId, '\\Sent')
     if (folder) await imap.appendMessage(folder.imapPath, sent.source, ['\\Seen'])

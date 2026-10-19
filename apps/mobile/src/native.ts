@@ -1,4 +1,5 @@
 import { DeviceEventEmitter, NativeModules } from 'react-native'
+import { RnFiles } from './RnFiles'
 import { RnTransport } from './RnTransport'
 
 /**
@@ -8,6 +9,11 @@ import { RnTransport } from './RnTransport'
  */
 export function createTransport(): RnTransport {
   return new RnTransport(NativeModules.PeregrineTransport, DeviceEventEmitter)
+}
+
+/** The files of the device: picking, reading what was picked, saving, handing a file to another application. */
+export function createFiles(): RnFiles {
+  return new RnFiles(NativeModules.PeregrineFiles)
 }
 
 /** The passphrase of the database, 64 hexadecimal characters, made on the first call. */

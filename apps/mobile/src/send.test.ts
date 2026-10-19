@@ -4,6 +4,7 @@ import { FakeSmtpServer } from '../../../packages/smtp/test-support/fakeServer'
 import { addAccount, getAccount, type NewAccount } from './accounts'
 import type { ImapSession, MailboxEntry } from '@peregrine/core/imapSession'
 import { syncFolders } from './folders'
+import { MAX_ATTACHMENT_BYTES, type FileAccess } from './files'
 import { sendAndFile, sendMessage, smtpSettingsOf } from './send'
 import { migratedDatabase } from './testing/testDb'
 
@@ -66,7 +67,7 @@ describe('the settings for sending', () => {
 describe('sending from the application', () => {
   it('logs in, sends the message to everybody, bcc included, and says goodbye', async () => {
     const t = await setup()
-    const { result } = await sendMessage(t.db, t.make, input(t.account.id))
+    const { result } = await sendMessage(t.db, { makeTransport: t.make }, input(t.account.id))
 
     expect(result.accepted.sort()).toEqual(['anna@example.net', 'hidden@example.net'])
     expect(t.server.received.map((line) => line.split(' ')[0])).toEqual(['EHLO', 'STARTTLS', 'EHLO', 'AUTH', 'MAIL', 'RCPT', 'RCPT', 'DATA', 'QUIT'])
@@ -76,7 +77,7 @@ describe('sending from the application', () => {
 
   it('writes the sender from the account, and keeps the blind copy out of the headers', async () => {
     const t = await setup()
-    await sendMessage(t.db, t.make, input(t.account.id), { random: () => 0.5 })
+    await sendMessage(t.db, { makeTransport: t.make }, input(t.account.id), { random: () => 0.5 })
     const source = text(t.server.messages[0])
     expect(source).toMatch(/^From: Alex <alex@example\.org>\r$/m)
     expect(source).toMatch(/^To: Anna <anna@example\.net>\r$/m)
@@ -86,7 +87,7 @@ describe('sending from the application', () => {
 
   it('does not write a name that is only the address again', async () => {
     const t = await setup({ displayName: 'alex@example.org' })
-    await sendMessage(t.db, t.make, input(t.account.id))
+    await sendMessage(t.db, { makeTransport: t.make }, input(t.account.id))
     expect(text(t.server.messages[0])).toMatch(/^From: alex@example\.org\r$/m)
   })
 
@@ -94,7 +95,7 @@ describe('sending from the application', () => {
     const t = await setup()
     await sendMessage(
       t.db,
-      t.make,
+      { makeTransport: t.make },
       input(t.account.id, { htmlBody: '<p>Hello</p>', inReplyTo: '<one@example.net>', references: '<zero@example.net> <one@example.net>' })
     )
     const source = text(t.server.messages[0])
@@ -106,16 +107,15 @@ describe('sending from the application', () => {
   it('closes the connection when the server refuses, and says why', async () => {
     const t = await setup()
     t.server.on('RCPT', () => '550 no such user\r\n')
-    await expect(sendMessage(t.db, t.make, input(t.account.id))).rejects.toThrow(/no such user|550/)
+    await expect(sendMessage(t.db, { makeTransport: t.make }, input(t.account.id))).rejects.toThrow(/no such user|550/)
     expect(t.server.closed).toBe(true)
   })
 
   it('refuses what the phone cannot do yet, and sends nothing', async () => {
     const t = await setup()
     const refused = async (over: Partial<ComposeInput>, reason: RegExp) => {
-      await expect(sendMessage(t.db, t.make, input(t.account.id, over))).rejects.toThrow(reason)
+      await expect(sendMessage(t.db, { makeTransport: t.make }, input(t.account.id, over))).rejects.toThrow(reason)
     }
-    await refused({ attachments: [{ filename: 'a.txt', path: '/x' }] }, /Attachments/)
     await refused({ encrypt: true }, /Encrypting/)
     await refused({ sign: true }, /signing/)
     await refused({ sendAt: Date.now() + 3600_000 }, /later time/)
@@ -124,17 +124,17 @@ describe('sending from the application', () => {
 
   it('sends a message whose time has come, as the queue hands it over', async () => {
     const t = await setup()
-    await sendMessage(t.db, t.make, input(t.account.id, { sendAt: Date.now() - 1000, sendNow: true }))
+    await sendMessage(t.db, { makeTransport: t.make }, input(t.account.id, { sendAt: Date.now() - 1000, sendNow: true }))
     expect(t.server.messages).toHaveLength(1)
   })
 
   it('says what is wrong with the account instead of failing in some other way', async () => {
     const noAddress = await setup({ emailAddress: '' })
-    await expect(sendMessage(noAddress.db, noAddress.make, input(noAddress.account.id))).rejects.toThrow(/no address/)
+    await expect(sendMessage(noAddress.db, { makeTransport: noAddress.make }, input(noAddress.account.id))).rejects.toThrow(/no address/)
     const noServer = await setup({ smtpHost: null })
-    await expect(sendMessage(noServer.db, noServer.make, input(noServer.account.id))).rejects.toThrow(/no server for sending/)
+    await expect(sendMessage(noServer.db, { makeTransport: noServer.make }, input(noServer.account.id))).rejects.toThrow(/no server for sending/)
     const gone = await setup()
-    await expect(sendMessage(gone.db, gone.make, input('nobody'))).rejects.toThrow(/is gone/)
+    await expect(sendMessage(gone.db, { makeTransport: gone.make }, input('nobody'))).rejects.toThrow(/is gone/)
   })
 })
 
@@ -159,7 +159,7 @@ describe('filing a copy in Sent', () => {
 
   it('files what went out, marked read, in the folder the server calls Sent', async () => {
     const t = await filing(true)
-    await sendAndFile(t.db, t.make, input(t.account.id), t.imap, t.log)
+    await sendAndFile(t.db, { makeTransport: t.make }, input(t.account.id), t.imap, t.log)
     expect(t.appended).toHaveLength(1)
     expect(t.appended[0]).toMatchObject({ path: 'Gesendet', flags: ['\\Seen'] })
     // the same bytes the server was given, and like them without the blind copy
@@ -169,7 +169,7 @@ describe('filing a copy in Sent', () => {
 
   it('files nothing for an account with no Sent folder, and sends all the same', async () => {
     const t = await filing(false)
-    await sendAndFile(t.db, t.make, input(t.account.id), t.imap, t.log)
+    await sendAndFile(t.db, { makeTransport: t.make }, input(t.account.id), t.imap, t.log)
     expect(t.appended).toEqual([])
     expect(t.server.messages).toHaveLength(1)
   })
@@ -178,7 +178,7 @@ describe('filing a copy in Sent', () => {
   it('does not fail the send when the copy could not be made, and says so', async () => {
     const t = await filing(true)
     t.failure.error = new Error('NO [OVERQUOTA] mailbox is full')
-    const sent = await sendAndFile(t.db, t.make, input(t.account.id), t.imap, t.log)
+    const sent = await sendAndFile(t.db, { makeTransport: t.make }, input(t.account.id), t.imap, t.log)
     expect(sent.result.accepted).toHaveLength(2)
     expect(t.logs).toEqual([expect.stringContaining('OVERQUOTA')])
   })
@@ -186,7 +186,126 @@ describe('filing a copy in Sent', () => {
   it('files nothing when the sending failed', async () => {
     const t = await filing(true)
     t.server.on('RCPT', () => '550 no such user\r\n')
-    await expect(sendAndFile(t.db, t.make, input(t.account.id), t.imap, t.log)).rejects.toThrow()
+    await expect(sendAndFile(t.db, { makeTransport: t.make }, input(t.account.id), t.imap, t.log)).rejects.toThrow()
     expect(t.appended).toEqual([])
+  })
+})
+
+describe('sending attachments', () => {
+  /** Files by path, as the copies of what was picked. */
+  function store(content: Record<string, Uint8Array>) {
+    const removed: string[] = []
+    const files: FileAccess = {
+      read: async (path) => {
+        const found = content[path]
+        if (!found) throw new Error(`No such file: ${path}`)
+        return found
+      },
+      remove: async (paths) => void removed.push(...paths)
+    }
+    return { files, removed }
+  }
+  const ascii = (value: string): Uint8Array => Uint8Array.from(value, (c) => c.charCodeAt(0))
+
+  async function withFiles(content: Record<string, Uint8Array>, over: Partial<NewAccount> = {}) {
+    const t = await setup(over)
+    const made = store(content)
+    return { ...t, ...made, environment: { makeTransport: t.make, files: made.files } }
+  }
+
+  it('sends the files with their names and types, and the server takes the message whole', async () => {
+    const t = await withFiles({ '/store/report.pdf': ascii('%PDF-1.7 report'), '/store/notes.txt': ascii('some notes') })
+    await sendMessage(
+      t.db,
+      t.environment,
+      input(t.account.id, {
+        attachments: [
+          { filename: 'report.pdf', path: '/store/report.pdf', contentType: 'application/pdf' },
+          { filename: 'notes.txt', path: '/store/notes.txt' }
+        ]
+      })
+    )
+    const source = text(t.server.messages[0])
+    expect(source).toContain('multipart/mixed')
+    // the header is folded after the semicolon
+    expect(source).toMatch(/Content-Type: application\/pdf;\s+name="report\.pdf"/)
+    // the type of the second is worked out from its name
+    expect(source).toMatch(/Content-Type: text\/plain;\s+name="notes\.txt"/)
+    expect(source).toContain(Buffer.from('%PDF-1.7 report').toString('base64'))
+  })
+
+  it('writes a name that came from the picker as a safe one', async () => {
+    const t = await withFiles({ '/store/x': ascii('x') })
+    await sendMessage(t.db, t.environment, input(t.account.id, { attachments: [{ filename: '../../evil.sh', path: '/store/x' }] }))
+    expect(text(t.server.messages[0])).toContain('name="_.._evil.sh"')
+  })
+
+  it('refuses a message with attachments when it cannot read files, and sends nothing', async () => {
+    const t = await setup()
+    await expect(
+      sendMessage(t.db, { makeTransport: t.make }, input(t.account.id, { attachments: [{ filename: 'a.txt', path: '/store/a.txt' }] }))
+    ).rejects.toThrow(/cannot read the files/)
+    expect(t.server.connectedWith).toBeNull()
+  })
+
+  it('fails with the reason when a copy is gone, and sends nothing', async () => {
+    const t = await withFiles({})
+    await expect(
+      sendMessage(t.db, t.environment, input(t.account.id, { attachments: [{ filename: 'a.txt', path: '/store/gone' }] }))
+    ).rejects.toThrow('No such file: /store/gone')
+    expect(t.server.connectedWith).toBeNull()
+  })
+
+  it('refuses attachments that together are more than a message may carry', async () => {
+    const big = new Uint8Array(MAX_ATTACHMENT_BYTES / 2 + 1)
+    const t = await withFiles({ '/store/a': big, '/store/b': big })
+    await expect(
+      sendMessage(
+        t.db,
+        t.environment,
+        input(t.account.id, {
+          attachments: [
+            { filename: 'a.bin', path: '/store/a' },
+            { filename: 'b.bin', path: '/store/b' }
+          ]
+        })
+      )
+    ).rejects.toThrow(/larger than one message/)
+    expect(t.server.connectedWith).toBeNull()
+  })
+
+  describe('and the copies of the files', () => {
+    const attached = [{ filename: 'a.txt', path: '/store/a' }]
+
+    async function filing(content: Record<string, Uint8Array>) {
+      const t = await withFiles(content)
+      const imap = { appendMessage: async () => 1 } as unknown as ImapSession
+      const logs: string[] = []
+      return { ...t, imap, logs, log: { error: (m: string) => logs.push(m) } }
+    }
+
+    it('are removed once the message has gone out', async () => {
+      const t = await filing({ '/store/a': ascii('a') })
+      await sendAndFile(t.db, t.environment, input(t.account.id, { attachments: attached }), t.imap, t.log)
+      expect(t.removed).toEqual(['/store/a'])
+    })
+
+    // The queue sends the message again, and needs them.
+    it('stay when the sending failed', async () => {
+      const t = await filing({ '/store/a': ascii('a') })
+      t.server.on('RCPT', () => '550 no such user' + String.fromCharCode(13, 10))
+      await expect(sendAndFile(t.db, t.environment, input(t.account.id, { attachments: attached }), t.imap, t.log)).rejects.toThrow()
+      expect(t.removed).toEqual([])
+    })
+
+    it('do not fail the send when they cannot be removed, and it is said', async () => {
+      const t = await filing({ '/store/a': ascii('a') })
+      t.environment.files.remove = async () => {
+        throw new Error('disk error')
+      }
+      const sent = await sendAndFile(t.db, t.environment, input(t.account.id, { attachments: attached }), t.imap, t.log)
+      expect(sent.result.accepted).toHaveLength(2)
+      expect(t.logs).toEqual([expect.stringContaining('disk error')])
+    })
   })
 })

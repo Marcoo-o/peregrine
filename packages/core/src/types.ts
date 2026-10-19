@@ -615,6 +615,8 @@ export interface FilterRuleInput {
 export interface ComposeAttachmentInput {
   filename: string
   path: string
+  /** The media type, where the one who picked the file knows it. The desktop works it out from the name. */
+  contentType?: string
 }
 
 export interface ComposeInput {
