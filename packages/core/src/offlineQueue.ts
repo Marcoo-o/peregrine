@@ -98,7 +98,7 @@ export class QueueRunner {
    * Sending lives in a module that is registered after this one exists, so it is handed in rather
    * than known. Without it a queued message simply waits.
    */
-  private send: ((input: ComposeInput) => Promise<unknown>) | null = null
+  private send: ((input: ComposeInput, imap: ImapSession) => Promise<unknown>) | null = null
   /** Fires when the next scheduled message becomes due. */
   private dueTimer: unknown = null
   private readonly timers: QueueTimers
@@ -113,7 +113,11 @@ export class QueueRunner {
     this.now = env.now ?? Date.now
   }
 
-  setSendHandler(send: (input: ComposeInput) => Promise<unknown>): void {
+  /**
+   * The connection of the run is handed to the handler as well, for a sender that files the message
+   * it sent into the account's Sent folder, which the desktop's does not need.
+   */
+  setSendHandler(send: (input: ComposeInput, imap: ImapSession) => Promise<unknown>): void {
     this.send = send
   }
 
@@ -212,7 +216,7 @@ export class QueueRunner {
       // the application stopped in between, and a message the user considers sent must not
       // disappear. The price is the reverse window. A crash after the server accepted the mail
       // but before the row is gone would send it twice on the next start.
-      await this.send({ ...payload.input, sendNow: true })
+      await this.send({ ...payload.input, sendNow: true }, imap)
       return true
     }
 
