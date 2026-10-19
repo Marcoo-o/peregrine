@@ -11,47 +11,57 @@ import {
   View
 } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
-import type { ImapSession, MailboxEntry } from '@peregrine/core/imapSession'
+import type { ImapSession } from '@peregrine/core/imapSession'
+import type { QueueRunner } from '@peregrine/core/offlineQueue'
 import type { SecureMode } from '@peregrine/core/types'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import { ImapClientSession } from '@peregrine/imap/session'
+import { addAccount, listAccounts, removeAccount, type Account } from './src/accounts'
 import { openDatabase } from './src/database'
-import { createTransport } from './src/native'
+import { listFolders, syncFolders, type Folder } from './src/folders'
+import { listMessages, type StoredMessage } from './src/messages'
 import { readMessage, type ReadableMessage } from './src/messageText'
-import {
-  forgetAccount,
-  listMessages,
-  loadAccount,
-  saveAccount,
-  type Account,
-  type StoredMessage
-} from './src/store'
+import { createTransport } from './src/native'
+import { createQueue } from './src/queue'
 import { syncFolder } from './src/sync'
 
 /**
- * The prototype of stage 4: sign in to one account, list its folders, list the messages of one,
- * open one. It reads and writes nothing on the server. The screens are as plain as they can be and
- * are meant to be thrown away. What is being tried is everything underneath them.
+ * The prototype of stages 4 and 5: any number of accounts, the folders of one, the messages of a
+ * folder, one message opened. It writes nothing on the server except what the offline queue replays,
+ * and nothing in these screens puts anything into the queue yet. The screens are as plain as they can
+ * be and are meant to be thrown away. What is being tried is everything underneath them.
  */
 
 type Screen =
   | { name: 'loading' }
+  | { name: 'accounts'; accounts: Account[]; error?: string }
   | { name: 'login'; error?: string }
-  | { name: 'folders'; folders: MailboxEntry[] }
-  | { name: 'messages'; folder: string; messages: StoredMessage[]; busy: boolean; error?: string }
-  | { name: 'message'; folder: string; summary: StoredMessage; message?: ReadableMessage; error?: string }
+  | { name: 'folders'; account: Account; folders: Folder[] }
+  | { name: 'messages'; account: Account; folder: Folder; messages: StoredMessage[]; busy: boolean; error?: string }
+  | { name: 'message'; account: Account; folder: Folder; summary: StoredMessage; message?: ReadableMessage; error?: string }
 
-function connect(account: Account): ImapSession {
-  return new ImapClientSession(
-    {
-      host: account.host,
-      port: account.port,
-      secure: account.secure,
-      username: account.username,
-      password: account.password
-    },
-    { transport: createTransport() }
-  )
+/** What the form asks for: the way into one mailbox. */
+interface Credentials {
+  host: string
+  port: number
+  secure: SecureMode
+  username: string
+  password: string
+}
+
+const credentialsOf = (account: Account): Credentials => ({
+  host: account.imapHost,
+  port: account.imapPort,
+  secure: account.imapSecure,
+  username: account.imapUsername,
+  password: account.password
+})
+
+/** Connects, or throws with the reason. */
+async function connectWith(credentials: Credentials): Promise<ImapSession> {
+  const session = new ImapClientSession(credentials, { transport: createTransport() })
+  await session.connect()
+  return session
 }
 
 function describe(error: unknown): string {
@@ -61,26 +71,50 @@ function describe(error: unknown): string {
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'loading' })
   const database = useRef<SqlDb | null>(null)
+  const queue = useRef<QueueRunner | null>(null)
   const session = useRef<ImapSession | null>(null)
   // What was typed last, so a failed sign-in does not make anybody type it all again.
-  const attempt = useRef<Account | undefined>(undefined)
+  const attempt = useRef<Credentials | undefined>(undefined)
 
-  /** Connects and shows the folders. False when it did not work, with the reason on the login screen. */
-  const showFolders = useCallback(async (account: Account): Promise<boolean> => {
-    setScreen({ name: 'loading' })
-    try {
-      session.current?.disconnect().catch(() => undefined)
-      const next = connect(account)
-      await next.connect()
-      session.current = next
-      setScreen({ name: 'folders', folders: await next.listMailboxes() })
-      return true
-    } catch (error) {
-      session.current = null
-      setScreen({ name: 'login', error: describe(error) })
-      return false
-    }
+  const drop = () => {
+    session.current?.disconnect().catch(() => undefined)
+    session.current = null
+  }
+
+  /** The list of accounts, or the form when there is none. */
+  const showAccounts = useCallback(async (error?: string) => {
+    const db = database.current
+    if (!db) return
+    const accounts = await listAccounts(db)
+    setScreen(accounts.length === 0 ? { name: 'login', error } : { name: 'accounts', accounts, error })
   }, [])
+
+  /** With a connection that works: replays what waited for one, takes the folders from the server. */
+  const showFolders = useCallback(async (account: Account, connected: ImapSession) => {
+    const db = database.current
+    if (!db) return
+    session.current = connected
+    // A failed replay is kept in the queue with its reason and does not stop the mailbox from opening.
+    await queue.current
+      ?.flush(account.id, connected)
+      .catch((error) => console.error('replaying the queue failed:', describe(error)))
+    await syncFolders(db, account.id, await connected.listMailboxes())
+    setScreen({ name: 'folders', account, folders: await listFolders(db, account.id) })
+  }, [])
+
+  const openAccount = useCallback(
+    async (account: Account) => {
+      setScreen({ name: 'loading' })
+      try {
+        drop()
+        await showFolders(account, await connectWith(credentialsOf(account)))
+      } catch (error) {
+        drop()
+        await showAccounts(`${account.displayName}: ${describe(error)}`)
+      }
+    },
+    [showAccounts, showFolders]
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -88,65 +122,90 @@ export default function App() {
       try {
         const db = await openDatabase()
         database.current = db
-        const account = await loadAccount(db)
+        queue.current = createQueue(db, {
+          changed: async () => undefined,
+          log: { warn: (message) => console.warn(message), error: (message) => console.error(message) }
+        })
+        const accounts = await listAccounts(db)
         if (cancelled) return
-        if (account) {
-          // so that the form is filled in when connecting fails, offline for instance
-          attempt.current = account
-          await showFolders(account)
-        } else setScreen({ name: 'login' })
+        if (accounts.length === 1) await openAccount(accounts[0])
+        else await showAccounts()
       } catch (error) {
         if (!cancelled) setScreen({ name: 'login', error: describe(error) })
       }
     })()
     return () => {
       cancelled = true
-      session.current?.disconnect().catch(() => undefined)
+      queue.current?.stop()
+      drop()
     }
-  }, [showFolders])
+  }, [openAccount, showAccounts])
 
-  const openFolder = async (folder: string) => {
+  const openFolder = async (account: Account, folder: Folder) => {
     const db = database.current
     const imap = session.current
     if (!db || !imap) return
-    setScreen({ name: 'messages', folder, messages: await listMessages(db, folder), busy: true })
+    setScreen({ name: 'messages', account, folder, messages: await listMessages(db, folder.id), busy: true })
     try {
       await syncFolder(imap, db, folder)
-      setScreen({ name: 'messages', folder, messages: await listMessages(db, folder), busy: false })
+      setScreen({ name: 'messages', account, folder, messages: await listMessages(db, folder.id), busy: false })
     } catch (error) {
       setScreen({
         name: 'messages',
+        account,
         folder,
-        messages: await listMessages(db, folder),
+        messages: await listMessages(db, folder.id),
         busy: false,
         error: describe(error)
       })
     }
   }
 
-  const openMessage = async (folder: string, summary: StoredMessage) => {
-    setScreen({ name: 'message', folder, summary })
+  const openMessage = async (account: Account, folder: Folder, summary: StoredMessage) => {
+    setScreen({ name: 'message', account, folder, summary })
     try {
-      const full = await session.current?.fetchFullMessage(folder, summary.uid)
+      const full = await session.current?.fetchFullMessage(folder.imapPath, summary.uid)
       if (!full) throw new Error('Die Nachricht gibt es auf dem Server nicht mehr')
-      setScreen({ name: 'message', folder, summary, message: readMessage(full.source) })
+      setScreen({ name: 'message', account, folder, summary, message: readMessage(full.source) })
     } catch (error) {
-      setScreen({ name: 'message', folder, summary, error: describe(error) })
+      setScreen({ name: 'message', account, folder, summary, error: describe(error) })
     }
   }
 
-  const signOut = async () => {
-    session.current?.disconnect().catch(() => undefined)
-    session.current = null
-    if (database.current) await forgetAccount(database.current)
-    setScreen({ name: 'login' })
+  const removeCurrent = async (account: Account) => {
+    drop()
+    if (database.current) await removeAccount(database.current, account.id)
+    await showAccounts()
   }
 
-  const signIn = async (account: Account) => {
-    if (!database.current) return
-    attempt.current = account
-    // Kept only once it has worked. A mistyped server would otherwise be tried again at every start.
-    if (await showFolders(account)) await saveAccount(database.current, account)
+  /** A new account is kept only once it has connected. A mistyped server would otherwise be tried at every start. */
+  const signIn = async (credentials: Credentials) => {
+    const db = database.current
+    if (!db) return
+    attempt.current = credentials
+    setScreen({ name: 'loading' })
+    try {
+      drop()
+      const connected = await connectWith(credentials)
+      const account = await addAccount(db, {
+        displayName: credentials.username,
+        emailAddress: credentials.username.includes('@') ? credentials.username : '',
+        imapHost: credentials.host,
+        imapPort: credentials.port,
+        imapSecure: credentials.secure,
+        imapUsername: credentials.username,
+        smtpHost: null,
+        smtpPort: null,
+        smtpSecure: null,
+        smtpUsername: null,
+        password: credentials.password,
+        smtpPassword: null
+      })
+      await showFolders(account, connected)
+    } catch (error) {
+      drop()
+      setScreen({ name: 'login', error: describe(error) })
+    }
   }
 
   return (
@@ -154,34 +213,85 @@ export default function App() {
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.page}>
         {screen.name === 'loading' && <ActivityIndicator style={styles.centered} size="large" />}
+        {screen.name === 'accounts' && (
+          <Accounts
+            accounts={screen.accounts}
+            error={screen.error}
+            onOpen={openAccount}
+            onAdd={() => setScreen({ name: 'login' })}
+          />
+        )}
         {screen.name === 'login' && (
-          <Login error={screen.error} initial={attempt.current} onSubmit={signIn} />
+          <Login
+            error={screen.error}
+            initial={attempt.current}
+            onSubmit={signIn}
+            onCancel={async () => {
+              const accounts = database.current ? await listAccounts(database.current) : []
+              if (accounts.length > 0) await showAccounts()
+            }}
+          />
         )}
         {screen.name === 'folders' && (
-          <Folders folders={screen.folders} onOpen={openFolder} onSignOut={signOut} />
+          <Folders
+            account={screen.account}
+            folders={screen.folders}
+            onOpen={(folder) => openFolder(screen.account, folder)}
+            onBack={() => {
+              drop()
+              void showAccounts()
+            }}
+            onRemove={() => removeCurrent(screen.account)}
+          />
         )}
         {screen.name === 'messages' && (
           <Messages
             screen={screen}
             onBack={async () => {
-              const imap = session.current
-              if (imap) setScreen({ name: 'folders', folders: await imap.listMailboxes() })
+              const db = database.current
+              if (db) setScreen({ name: 'folders', account: screen.account, folders: await listFolders(db, screen.account.id) })
             }}
-            onOpen={(summary) => openMessage(screen.folder, summary)}
+            onOpen={(summary) => openMessage(screen.account, screen.folder, summary)}
           />
         )}
         {screen.name === 'message' && (
-          <MessageView screen={screen} onBack={() => openFolder(screen.folder)} />
+          <MessageView screen={screen} onBack={() => openFolder(screen.account, screen.folder)} />
         )}
       </SafeAreaView>
     </SafeAreaProvider>
   )
 }
 
+function Accounts(props: {
+  accounts: Account[]
+  error?: string
+  onOpen: (account: Account) => void
+  onAdd: () => void
+}) {
+  return (
+    <View style={styles.fill}>
+      <Text style={styles.title}>Konten</Text>
+      {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
+      <FlatList
+        data={props.accounts}
+        keyExtractor={(account) => account.id}
+        renderItem={({ item }) => (
+          <Pressable style={styles.item} onPress={() => props.onOpen(item)}>
+            <Text style={styles.itemTitle}>{item.displayName}</Text>
+            <Text style={styles.itemMeta}>{item.emailAddress || item.imapHost}</Text>
+          </Pressable>
+        )}
+      />
+      <Button label="Konto hinzufügen" onPress={props.onAdd} />
+    </View>
+  )
+}
+
 function Login(props: {
   error?: string
-  initial?: Account
-  onSubmit: (account: Account) => void
+  initial?: Credentials
+  onSubmit: (credentials: Credentials) => void
+  onCancel: () => void
 }) {
   const { initial } = props
   const [host, setHost] = useState(initial?.host ?? '')
@@ -214,25 +324,37 @@ function Login(props: {
         disabled={!ready}
         onPress={() => props.onSubmit({ host: host.trim(), port: Number(port), secure, username, password })}
       />
+      <Pressable onPress={props.onCancel}>
+        <Text style={styles.link}>‹ Zurück zu den Konten</Text>
+      </Pressable>
     </ScrollView>
   )
 }
 
-function Folders(props: { folders: MailboxEntry[]; onOpen: (path: string) => void; onSignOut: () => void }) {
+function Folders(props: {
+  account: Account
+  folders: Folder[]
+  onOpen: (folder: Folder) => void
+  onBack: () => void
+  onRemove: () => void
+}) {
   return (
     <View style={styles.fill}>
-      <Text style={styles.title}>Ordner</Text>
+      <Pressable onPress={props.onBack}>
+        <Text style={styles.link}>‹ Konten</Text>
+      </Pressable>
+      <Text style={styles.title}>{props.account.displayName}</Text>
       <FlatList
         data={props.folders}
-        keyExtractor={(folder) => folder.path}
+        keyExtractor={(folder) => folder.id}
         renderItem={({ item }) => (
-          <Pressable style={styles.item} onPress={() => props.onOpen(item.path)}>
-            <Text style={styles.itemTitle}>{item.path}</Text>
+          <Pressable style={styles.item} onPress={() => props.onOpen(item)}>
+            <Text style={styles.itemTitle}>{item.imapPath}</Text>
             {item.specialUse ? <Text style={styles.itemMeta}>{item.specialUse}</Text> : null}
           </Pressable>
         )}
       />
-      <Button label="Abmelden und Konto vergessen" onPress={props.onSignOut} />
+      <Button label="Konto entfernen" onPress={props.onRemove} />
     </View>
   )
 }
@@ -248,7 +370,7 @@ function Messages(props: {
       <Pressable onPress={props.onBack}>
         <Text style={styles.link}>‹ Ordner</Text>
       </Pressable>
-      <Text style={styles.title}>{screen.folder}</Text>
+      <Text style={styles.title}>{screen.folder.displayName}</Text>
       {screen.busy ? <ActivityIndicator style={styles.spinner} /> : null}
       {screen.error ? <Text style={styles.error}>{screen.error}</Text> : null}
       <FlatList
