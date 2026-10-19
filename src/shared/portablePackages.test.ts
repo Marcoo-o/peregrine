@@ -6,11 +6,14 @@ const packages = join(__dirname, '..', '..', 'packages')
 
 /**
  * What each package may ask for, besides its own files. `core` stands on nothing. `imap` may use
- * `core`, because the interface it implements lives there, and nothing else.
+ * `core`, because the interface it implements lives there, and nothing else. `smtp` may use `core`
+ * and `imap`: the interface it runs over, `Transport`, and the helpers for bytes and base64 are
+ * there, and moving them would change every import of both.
  */
 const ALLOWED: Record<string, string[]> = {
   core: [],
-  imap: ['@peregrine/core/']
+  imap: ['@peregrine/core/'],
+  smtp: ['@peregrine/core/', '@peregrine/imap/']
 }
 
 /** Every module name a file asks for, by `import`, `export … from`, `import()` or `require`. */
