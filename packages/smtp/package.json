@@ -1,0 +1,14 @@
+{
+  "name": "@peregrine/smtp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "An SMTP client and a message composer that run wherever JavaScript does, over a transport they are handed",
+  "license": "GPL-3.0-or-later",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@peregrine/core": "*",
+    "@peregrine/imap": "*"
+  }
+}

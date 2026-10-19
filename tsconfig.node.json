@@ -25,6 +25,8 @@
     "src/shared/**/*",
     "packages/core/src/**/*",
     "packages/imap/src/**/*",
-    "packages/imap/test-support/**/*"
+    "packages/imap/test-support/**/*",
+    "packages/smtp/src/**/*",
+    "packages/smtp/test-support/**/*"
   ]
 }

@@ -173,6 +173,7 @@ the worst outcome available here.
 peregrine/
   packages/core      the portable logic, 3,344 lines and 28 test files
   packages/imap      the client from decision 2
+  packages/smtp      sending: an SMTP client over the same transport, and a message composer
   apps/desktop       today's src/main and src/renderer
   apps/mobile        the React Native application
 ```
@@ -254,13 +255,52 @@ Out, for now:
 4. First phone build: one account, list and read, nothing else. **A prototype runs** on an
    Android 16 emulator against a test server: sign in, folders, the newest messages of a
    folder, one message opened. What it found is under "What stage 4 found".
-5. Send, attachments, offline queue, several accounts.
+5. Send, attachments, offline queue, several accounts. **Step 1 is written**: sending, in
+   `packages/smtp`. The rest is not, see "What stage 5 found so far".
 6. Notifications by periodic sync.
 7. Push as an opt-in, if the platform rules still allow what is wanted by then.
 
 Stages 1 to 3 improve the desktop whether or not a phone ever appears. That is the test of
 whether this plan is honest rather than hopeful: if the first half only pays off when the second
 half ships, it is a bet, not a plan.
+
+## What stage 5 found so far
+
+**Sending needs two things the desktop gets from one library.** nodemailer builds the message and
+speaks SMTP, and both want Node. `packages/smtp` has the two halves apart, as the IMAP client has
+its protocol apart from its socket: an SMTP client over the same `Transport`, which the phone's
+native module already is, and a composer that builds the RFC 5322 source. The desktop keeps
+nodemailer until a later step has proved the replacement, as it did with imapflow.
+
+**What the client does that a quick one would not.** Encryption is not negotiable: if the server
+does not offer STARTTLS, or refuses, or the handshake fails, nothing is sent, because a client that
+goes on without hands the password to anybody who removes one line from the exchange. What arrived
+over the clear connection after the `220` is thrown away, and the extensions are read again after
+the upgrade. An address is refused, not escaped, if it could end the command and start another. The
+message is written with every line end as CR LF and every line that starts with a dot doubled: a
+bare line feed is a line end to some servers and not to others, which is how a message gets split
+in two on the way. A test sends a message with one smuggled into it to a real server library and
+sees one message arrive.
+
+**What the composer does.** It builds the same messages nodemailer does, and the parsed result is
+compared field by field with nodemailer's for seven kinds of message: plain, non-ASCII subject and
+names, text with HTML, a reply in a thread, cc and bcc, attachments with names that are not ASCII,
+and a line of one dot. A real parser reads all of them back as written, and a 3 MB attachment
+goes through a real server whole. Everything that goes into a header is made one line first, and
+an id or a reference that carries a header is refused. The result is 7-bit all the way, so any
+server takes it.
+
+**Two mistakes the tests found in the code written for this.** The server's own status code did not
+decide whether to try again: every error of the kind "connection" counted as temporary, so a `554`
+at the greeting, which is a no, was one to retry. And the composer looked for a boundary that was
+not in the text it separates, which with a random source that keeps giving the same answer, as
+tests use, never ended. It counts its tries now.
+
+**Not in this step.** The screens, the offline queue, attachments from the phone's files, several
+accounts. In the composer: inline images (`multipart/related`), addresses with characters beyond
+ASCII in a header, which want the SMTPUTF8 form of the message, and addresses whose domain is an
+internationalised name. In the client: OAuth, and PGP/MIME, which the desktop sends through a
+different path and which the phone does not do yet.
 
 ## What stage 4 found
 
