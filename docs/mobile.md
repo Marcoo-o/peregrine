@@ -255,10 +255,11 @@ Out, for now:
 4. First phone build: one account, list and read, nothing else. **A prototype runs** on an
    Android 16 emulator against a test server: sign in, folders, the newest messages of a
    folder, one message opened. What it found is under "What stage 4 found".
-5. Send, attachments, offline queue, several accounts. **Steps 1 to 4 are written**: sending,
+5. Send, attachments, offline queue, several accounts. **Steps 1 to 5 are written**: sending,
    in `packages/smtp`, the replay of the offline queue as an engine in `@peregrine/core`, the
-   phone's data for several accounts with the queue's storage, and the application acting on mail
-   through the queue and sending. The rest is not, see "What stage 5 found so far".
+   phone's data for several accounts with the queue's storage, the application acting on mail
+   through the queue and sending, and the unified inbox. Attachments are not, see "What stage 5
+   found so far".
 6. Notifications by periodic sync.
 7. Push as an opt-in, if the platform rules still allow what is wanted by then.
 
@@ -383,16 +384,61 @@ what was fetched before, with the reason, and a button to try again, and what is
 A line at the top says that there is no connection, how many actions wait, why the first one that
 failed did, and offers to discard what was given up on.
 
-**What this step has not shown.** None of it was run on a device or a server. The queue, the actions
-and the sending are tested on the phone's data and through its adapter, sending against a scripted
-server, and the screens are type-checked and bundled and not used. Two things are known to be
+**What this step has not shown.** None of it was run on a real device or against a real provider.
+The queue, the actions and the sending are tested on the phone's data and through its adapter, sending
+against a scripted server. After step 5 they were also used on an emulator, see there. Two things are known to be
 missing or rough. The sending settings of a new account are not tried when it is added, only the
 reading ones are, so a wrong SMTP server shows when the first message is sent, as a message that
 waits with its reason. A message the server took for some recipients and refused for others counts
 as sent, and the refusals are not shown.
 
 **Not in step 4.** Attachments, which on the phone need a way to pick a file, and to open one;
-scheduled sending; drafts; OAuth; search; the unified inbox.
+scheduled sending; drafts; OAuth; search.
+
+**The unified inbox.** The point of the project is the inboxes of all accounts in one list, so the
+application starts there when there are two or more. The connections stopped belonging to the account
+screen that was open: there is one per account, held by the application, made when something asks for
+it and forgotten when it ends. That is what lets an action on a message reach the server of the
+account the message is in, wherever it is shown, and what lets the list bring every account up to date
+at once. A connection that was made to prove a login is kept and not made a second time.
+
+The list is the newest messages of every inbox, merged by date, a message without a date last, 200 of
+them, each marked with its account. It is shown at once from what is stored and brought up to date
+after: each account is connected, its queue replayed, its folders and its inbox fetched, all at the
+same time and each on its own. Replaying comes first so that what the user decided is on the server
+before the flags are read back from it. An account that is down, or does not answer within 30 seconds,
+is named with the reason under the title, and the rest of the list is the others'. A message opened
+from the list goes back to it, and marking, moving and deleting work from there as from a folder.
+
+**On an emulator.** Steps 3 to 5 were used on an Android 36 emulator against a throwaway Dovecot with
+two accounts and an SMTP server that writes down what it is given, both on the development machine,
+with a certificate of its own that the debug build is told to trust. Two accounts were added through the
+form and the unified list showed the six messages of both, merged by date and marked with their
+account. A message was opened and answered: the SMTP server received it over STARTTLS and a login, with
+the quoted original and the thread headers, and a copy marked read was in the account's Sent folder.
+Deleting moved a message to the Trash folder on the server. With the server stopped the status line said
+there was no connection, a message that was opened and deleted stayed in the list marked as waiting to
+be moved, two actions were counted as waiting, and after the server was back and the list was pulled
+down they were carried out in the order they were decided: the read mark first, then the move, and the
+message was in the Trash folder on the server, marked read, and gone from the list.
+
+Using it found one mistake that no test had: leaving a message after an action did not show the list
+again, because the update that follows a fetch was held back unless the list was already on the screen,
+and that held back the way back as well. The server was right and the screen was not. The two cases are
+told apart now.
+
+**What this step has not shown.** A real device, a real provider, and anything that takes long: how a
+list of several thousand messages behaves, or a connection that drops half way through an action. The
+merge, the selection of the inboxes, the connections and the refresh with one account down are tested on
+the phone's data with scripted servers. Rough places the emulator showed: the reason a message could not
+be read without a connection is the library's own English text, "connection closed", where the rest of the
+screens speak German, and the form does not move the field that is being typed in above the keyboard.
+Left out: unread counts, a choice of which accounts are in the
+list, search. A message that is already in the list is not removed from it when the server no longer
+has it until that inbox is fetched again and, as everywhere on the phone yet, a fetch only looks at the
+newest 50, so deletions made elsewhere to older ones are not noticed.
+
+**Not in step 5.** Attachments: a native way to pick a file and to open one.
 
 ## What stage 4 found
 
