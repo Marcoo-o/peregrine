@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { analyzeAttachmentName, isExecutableName, type AttachmentRisk } from './attachmentSafety'
+import { analyzeAttachmentName, isExecutableName, refusalForOpening, type AttachmentRisk } from './attachmentSafety'
 
 const risks = (filename: string): AttachmentRisk[] =>
   analyzeAttachmentName(filename).map((f) => f.risk)
@@ -90,5 +90,39 @@ describe('isExecutableName', () => {
     for (const name of ['rechnung.url', 'rechnung.desktop', 'rechnung.bat']) {
       expect(risks(name)).toContain('executable')
     }
+  })
+})
+
+describe('refusalForOpening', () => {
+  const bytesOf = (...values: number[]): Uint8Array => Uint8Array.from(values)
+  const text = (value: string): Uint8Array => Uint8Array.from(value, (c) => c.charCodeAt(0))
+  const windowsProgram = bytesOf(0x4d, 0x5a, 0x90, 0x00, 0x03)
+  const pdf = text('%PDF-1.7\n')
+
+  it('lets an honest document be opened', () => {
+    expect(refusalForOpening('Rechnung.pdf', pdf)).toBeNull()
+  })
+
+  it('lets a text file be opened, which has no signature to contradict', () => {
+    expect(refusalForOpening('notes.txt', text('Hello'))).toBeNull()
+    expect(refusalForOpening('data.csv', text('a,b\n1,2'))).toBeNull()
+  })
+
+  // A script is plain text, so only its name gives it away.
+  it('refuses a script by its name alone', () => {
+    expect(refusalForOpening('update.bat', text('echo hi'))).toBe('executable')
+    expect(refusalForOpening('link.url', new Uint8Array(0))).toBe('executable')
+  })
+
+  it('refuses a program that is named as something else', () => {
+    expect(refusalForOpening('invoice.pdf', windowsProgram)).toBe('executable')
+  })
+
+  it('refuses a file whose content contradicts its name, without calling it a program', () => {
+    expect(refusalForOpening('photo.png', pdf)).toBe('mismatch')
+  })
+
+  it('is quiet about an extension nothing is known of', () => {
+    expect(refusalForOpening('thing.xyz', pdf)).toBeNull()
   })
 })

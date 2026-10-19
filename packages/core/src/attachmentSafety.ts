@@ -1,3 +1,4 @@
+import { contentContradictsName, isExecutableContent, sniffType } from './fileType'
 import { invisibleCharactersIn } from './linkSafety'
 
 /**
@@ -98,4 +99,32 @@ export function analyzeAttachmentName(filename: string): AttachmentFinding[] {
   }
 
   return findings
+}
+
+/** Why a file is not handed to whatever opens it. */
+export type OpeningRefusal = 'executable' | 'mismatch'
+
+/**
+ * Whether a file may be handed to the system to open, or why not.
+ *
+ * Two questions, because neither one alone is enough. The name decides what the system starts: it
+ * looks the extension up and runs whatever is registered for it, so a script executes whatever is
+ * inside it, and a script is plain text with no signature to recognise it by. The content decides
+ * whether the name was honest: a program named `invoice.pdf` passes the first question and is exactly
+ * the shape a delivered program takes. So the extension is refused on its own, and the first bytes
+ * are read for the rest.
+ *
+ * Nothing legitimate needs a mail client to launch a program straight out of a message. Saving it
+ * first leaves that decision with the person, which is why saving has no such check.
+ *
+ * Shared by the desktop and the phone, so that the same file is refused on both.
+ *
+ * @param head the first bytes of the file, `SNIFF_BYTES` of them are enough
+ */
+export function refusalForOpening(filename: string, head: Uint8Array): OpeningRefusal | null {
+  if (isExecutableName(filename)) return 'executable'
+  const type = sniffType(head)
+  if (isExecutableContent(type)) return 'executable'
+  if (contentContradictsName(filename, type)) return 'mismatch'
+  return null
 }
