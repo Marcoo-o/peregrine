@@ -1,31 +1,6 @@
-import Database from 'better-sqlite3-multiple-ciphers'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { OpSqliteDb, type Connection } from './OpSqliteDb'
-
-/**
- * A connection with op-sqlite's shape over an ordinary SQLite, which answers on a later turn like
- * the real one does. The adapter's rules, and above all that a transaction is one unbroken stretch
- * of the connection, are tested here against real SQL.
- */
-function connection(): { connection: Connection; statements: string[] } {
-  const raw = new Database(':memory:')
-  const statements: string[] = []
-  return {
-    statements,
-    connection: {
-      async execute(sql, params = []) {
-        await Promise.resolve()
-        statements.push(sql.trim().split(/\s+/)[0].toUpperCase())
-        const statement = raw.prepare(sql)
-        if (statement.reader) {
-          return { rowsAffected: 0, rows: statement.all(...params) as never }
-        }
-        const result = statement.run(...params)
-        return { rowsAffected: result.changes, insertId: Number(result.lastInsertRowid), rows: [] }
-      }
-    }
-  }
-}
+import { OpSqliteDb } from './OpSqliteDb'
+import { fakeConnection as connection } from './testing/testDb'
 
 let db: OpSqliteDb
 let statements: string[]

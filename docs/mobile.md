@@ -255,9 +255,10 @@ Out, for now:
 4. First phone build: one account, list and read, nothing else. **A prototype runs** on an
    Android 16 emulator against a test server: sign in, folders, the newest messages of a
    folder, one message opened. What it found is under "What stage 4 found".
-5. Send, attachments, offline queue, several accounts. **Steps 1 and 2 are written**: sending,
-   in `packages/smtp`, and the replay of the offline queue as an engine in `@peregrine/core`. The
-   rest is not, see "What stage 5 found so far".
+5. Send, attachments, offline queue, several accounts. **Steps 1 to 3 are written**: sending,
+   in `packages/smtp`, the replay of the offline queue as an engine in `@peregrine/core`, and the
+   phone's data for several accounts with the queue's storage. The rest is not, see "What stage 5
+   found so far".
 6. Notifications by periodic sync.
 7. Push as an opt-in, if the platform rules still allow what is wanted by then.
 
@@ -317,8 +318,36 @@ queue for the next scheduled message. The desktop is checked against a real data
 migration, and the same test passes against the old implementation, which is what shows that it
 measures the behaviour that was there and not what was written afterwards.
 
-**Not in step 2.** The phone's side of it: its tables for several accounts, its store for the queue
-and its screens.
+**Not in step 2.** The phone's side of it, which is step 3.
+
+**The queue's storage was already portable, apart from one call.** Adding an action, listing what is
+due, counting failures, the summary and cancelling a queued move are SQL and rules, all of it with
+positional parameters, which is the one thing the phone's adapter takes. They needed `SqlDb` and a way
+to clear the mark of a queued move, which is a column of the desktop's messages. That is handed in
+now, and the functions live in `@peregrine/core`, so the limit of attempts, the order of replay and
+what counts as scheduled or given up are one thing for both sides. The desktop's file keeps its names.
+The table is defined once for the phone and a test holds it to the desktop's columns and indexes, as
+the desktop has them after its three migrations.
+
+**The phone's data.** Schema version 2 has any number of accounts, folders with an id of their own,
+messages keyed by folder and UID, and the queue's table. The queue names a folder by id and has to
+find its path on the server, and a folder that is renamed keeps its id when it is listed again. The
+prototype's account is kept with the login it was given, and its message headers, which are a cache,
+are fetched again. The migration is whole or nothing, and a test makes it fail part way. Saving
+messages updates a row instead of replacing it: replacing would clear the mark of a queued move, and
+the message would show in the folder it is leaving. The queue runs on this data through the same
+functions the desktop calls, and a test shows the limit of attempts, a folder the server no longer
+lists, a scheduled message and two accounts coming out as they do there.
+
+**What this step has not shown.** None of it was run on a device. The data layer is tested against a
+real SQLite through the phone's own adapter, which is why positional parameters are enforced, and
+the screens were type-checked and bundled and not exercised. The test database and op-sqlite's own
+SQLite are the same version, 3.53.4. With SQLCipher compiled in, op-sqlite uses SQLCipher's source,
+whose version was not checked: the upsert needs 3.24, and SQLCipher 4 is newer than that.
+
+**Not in step 3.** Sending from the app, the offline use of the queue in the screens, attachments,
+OAuth. Nothing in the screens puts anything into the queue yet: they replay it when an account
+connects, which is the path that is real now.
 
 ## What stage 4 found
 
