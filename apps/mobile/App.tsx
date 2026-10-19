@@ -17,10 +17,11 @@ import type { PendingSummary } from '@peregrine/core/pendingActions'
 import type { SecureMode } from '@peregrine/core/types'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import { ImapClientSession } from '@peregrine/imap/session'
-import { addAccount, listAccounts, removeAccount, type Account } from './src/accounts'
+import { addAccount, getAccount, listAccounts, removeAccount, type Account } from './src/accounts'
 import { openDatabase } from './src/database'
 import { emptyDraft, hasRecipient, replyDraft, toComposeInput, type Draft } from './src/draft'
-import { listFolders, syncFolders, type Folder } from './src/folders'
+import { Connections } from './src/connections'
+import { getFolder, listFolders, syncFolders, type Folder } from './src/folders'
 import { MailActions } from './src/mailActions'
 import { listMessages, type StoredMessage } from './src/messages'
 import { readMessage, type ReadableMessage } from './src/messageText'
@@ -28,6 +29,7 @@ import { createTransport } from './src/native'
 import { createQueue } from './src/queue'
 import { sendAndFile, smtpSettingsOf } from './src/send'
 import { syncFolder } from './src/sync'
+import { listUnified, refreshInboxes, type RefreshResult, type UnifiedMessage } from './src/unified'
 
 /**
  * The prototype of stages 4 and 5: any number of accounts, the folders of one, the messages of a
@@ -42,6 +44,7 @@ type Screen =
   | { name: 'loading' }
   | { name: 'accounts'; accounts: Account[]; error?: string }
   | { name: 'login'; error?: string }
+  | { name: 'unified'; messages: UnifiedMessage[]; busy: boolean; problems: RefreshResult[] }
   | { name: 'folders'; account: Account; folders: Folder[]; offline?: string }
   | {
       name: 'messages'
@@ -52,8 +55,25 @@ type Screen =
       busy: boolean
       error?: string
     }
-  | { name: 'message'; account: Account; folder: Folder; summary: StoredMessage; message?: ReadableMessage; error?: string }
-  | { name: 'move'; account: Account; folder: Folder; summary: StoredMessage; message?: ReadableMessage; targets: Folder[] }
+  | {
+      name: 'message'
+      account: Account
+      folder: Folder
+      summary: StoredMessage
+      /** Where it was opened from, and so where leaving it goes back to. */
+      origin: 'folder' | 'unified'
+      message?: ReadableMessage
+      error?: string
+    }
+  | {
+      name: 'move'
+      account: Account
+      folder: Folder
+      summary: StoredMessage
+      origin: 'folder' | 'unified'
+      message?: ReadableMessage
+      targets: Folder[]
+    }
   | { name: 'compose'; account: Account; back: Screen; draft: Draft; busy: boolean; error?: string }
 
 /** What the form asks for: the way into one mailbox, and out of it. */
@@ -107,13 +127,16 @@ const FLAGGED = '\\Flagged'
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'loading' })
-  const [online, setOnline] = useState(false)
+  /** The accounts that have a connection now. */
+  const [connected, setConnected] = useState<string[]>([])
   const [waiting, setWaiting] = useState<{ summary: PendingSummary; problem: string | null } | null>(null)
   const database = useRef<SqlDb | null>(null)
   const queue = useRef<QueueRunner | null>(null)
   const mail = useRef<MailActions | null>(null)
-  /** The open connection, and whose it is. There is one at a time. */
-  const connection = useRef<{ accountId: string; imap: ImapSession } | null>(null)
+  /** A connection per account, which belongs to the application and not to a screen. */
+  const connections = useRef<Connections | null>(null)
+  const latest = useRef<Screen>(screen)
+  latest.current = screen
   // What was typed last, so a failed sign-in does not make anybody type it all again.
   const attempt = useRef<AccountForm | undefined>(undefined)
   /** The account whose queue the status line speaks of. */
@@ -127,13 +150,6 @@ export default function App() {
     setWaiting({ summary, problem })
   }, [])
 
-  const drop = useCallback(() => {
-    const open = connection.current
-    connection.current = null
-    setOnline(false)
-    open?.imap.disconnect().catch(() => undefined)
-  }, [])
-
   /** The list of accounts, or the form when there is none. */
   const showAccounts = useCallback(async (error?: string) => {
     const db = database.current
@@ -145,21 +161,12 @@ export default function App() {
 
   /** With a connection that works: replays what waited for one, takes the folders from the server. */
   const showFolders = useCallback(
-    async (account: Account, connected: ImapSession) => {
+    async (account: Account, imap: ImapSession) => {
       const db = database.current
       if (!db) return
-      connection.current = { accountId: account.id, imap: connected }
       shown.current = account.id
-      setOnline(true)
-      connected.onClose(() => {
-        // A connection that ended is not the one in use any more, and what is decided from here on waits.
-        if (connection.current?.imap === connected) {
-          connection.current = null
-          setOnline(false)
-        }
-      })
       await mail.current?.flush(account.id)
-      await syncFolders(db, account.id, await connected.listMailboxes())
+      await syncFolders(db, account.id, await imap.listMailboxes())
       setScreen({ name: 'folders', account, folders: await listFolders(db, account.id) })
       void refreshWaiting()
     },
@@ -170,12 +177,10 @@ export default function App() {
     async (account: Account) => {
       const db = database.current
       setScreen({ name: 'loading' })
-      drop()
       shown.current = account.id
       try {
-        await showFolders(account, await connectWith(loginOf(account)))
+        await showFolders(account, await (connections.current as Connections).ensure(account))
       } catch (error) {
-        drop()
         // What was fetched before is still there to read, and what is decided now waits for a connection.
         const folders = db ? await listFolders(db, account.id) : []
         if (folders.length > 0) {
@@ -184,7 +189,45 @@ export default function App() {
         } else await showAccounts(`${account.displayName}: ${describe(error)}`)
       }
     },
-    [drop, refreshWaiting, showAccounts, showFolders]
+    [refreshWaiting, showAccounts, showFolders]
+  )
+
+  /**
+   * The newest messages of every account's inbox in one list. It is shown at once from what is stored
+   * and brought up to date after, account by account, so a server that is down costs a line saying
+   * so and not the list.
+   */
+  const showUnified = useCallback(
+    async (options: { refresh: boolean }) => {
+      const db = database.current
+      const all = connections.current
+      const actions = mail.current
+      if (!db || !all || !actions) return
+      shown.current = null
+      const show = async (busy: boolean, problems: RefreshResult[]) => {
+        const messages = await listUnified(db)
+        // Not over a screen the user has moved on to while this was fetching.
+        if (busy || latest.current.name === 'unified' || latest.current.name === 'loading') {
+          setScreen({ name: 'unified', messages, busy, problems })
+        }
+      }
+      await show(options.refresh, [])
+      if (!options.refresh) return
+      const results = await refreshInboxes({ db, connections: all, mail: actions }, await listAccounts(db))
+      await show(false, results.filter((result) => result.error !== undefined))
+      void refreshWaiting()
+    },
+    [refreshWaiting]
+  )
+
+  /** The first screen: the unified inbox when there are accounts to unify, the one account when there is one. */
+  const showStart = useCallback(
+    async (accounts: Account[]) => {
+      if (accounts.length >= 2) await showUnified({ refresh: true })
+      else if (accounts.length === 1) await openAccount(accounts[0])
+      else await showAccounts()
+    },
+    [openAccount, showAccounts, showUnified]
   )
 
   useEffect(() => {
@@ -194,19 +237,22 @@ export default function App() {
         const db = await openDatabase()
         database.current = db
         const log = { warn: (message: string) => console.warn(message), error: (message: string) => console.error(message) }
+        connections.current = new Connections(
+          (account) => connectWith(loginOf(account)),
+          () => setConnected((connections.current as Connections).connectedIds)
+        )
         const runner = createQueue(db, { changed: () => refreshWaiting(), log })
         runner.setSendHandler((input, imap) => sendAndFile(db, createTransport, input, imap, log))
         queue.current = runner
         mail.current = new MailActions({
           db,
           queue: runner,
-          session: (accountId) => (connection.current?.accountId === accountId ? connection.current.imap : null),
+          session: (accountId) => (connections.current as Connections).get(accountId),
           log
         })
         const accounts = await listAccounts(db)
         if (cancelled) return
-        if (accounts.length === 1) await openAccount(accounts[0])
-        else await showAccounts()
+        await showStart(accounts)
       } catch (error) {
         if (!cancelled) setScreen({ name: 'login', error: describe(error) })
       }
@@ -214,11 +260,9 @@ export default function App() {
     return () => {
       cancelled = true
       queue.current?.stop()
-      const open = connection.current
-      connection.current = null
-      open?.imap.disconnect().catch(() => undefined)
+      connections.current?.dropAll()
     }
-  }, [openAccount, refreshWaiting, showAccounts])
+  }, [refreshWaiting, showStart])
 
   /** The messages of a folder from the database, and a sync with the server when there is one. */
   const showMessages = async (account: Account, folder: Folder, options: { sync: boolean }) => {
@@ -227,7 +271,7 @@ export default function App() {
     const names = Object.fromEntries((await listFolders(db, account.id)).map((f) => [f.id, f.displayName]))
     const show = async (busy: boolean, error?: string) =>
       setScreen({ name: 'messages', account, folder, messages: await listMessages(db, folder.id), names, busy, error })
-    const imap = connection.current?.accountId === account.id ? connection.current.imap : null
+    const imap = connections.current?.get(account.id) ?? null
     if (!options.sync || !imap) {
       await show(false, options.sync ? 'Keine Verbindung. Gezeigt wird, was schon geladen ist.' : undefined)
       return
@@ -241,26 +285,26 @@ export default function App() {
     }
   }
 
-  const openMessage = async (account: Account, folder: Folder, summary: StoredMessage) => {
-    setScreen({ name: 'message', account, folder, summary })
+  const openMessage = async (account: Account, folder: Folder, summary: StoredMessage, origin: 'folder' | 'unified') => {
+    setScreen({ name: 'message', account, folder, summary, origin })
     // Opening it reads it. The change is made here at once and told to the server through the queue.
     if (!summary.flags.includes(SEEN)) {
       mail.current?.setFlags(folder, [summary.uid], [SEEN], []).catch((error) => console.error(describe(error)))
     }
     try {
-      const imap = connection.current?.accountId === account.id ? connection.current.imap : null
-      if (!imap) throw new Error('Keine Verbindung. Der Text wird geladen, sobald es eine gibt.')
+      // Reading needs the server: the account is connected if it is not, and says why if it cannot be.
+      const imap = await (connections.current as Connections).ensure(account)
       const full = await imap.fetchFullMessage(folder.imapPath, summary.uid)
       if (!full) throw new Error('Die Nachricht gibt es auf dem Server nicht mehr')
-      setScreen({ name: 'message', account, folder, summary, message: readMessage(full.source) })
+      setScreen({ name: 'message', account, folder, summary, origin, message: readMessage(full.source) })
     } catch (error) {
-      setScreen({ name: 'message', account, folder, summary, error: describe(error) })
+      setScreen({ name: 'message', account, folder, summary, origin, error: describe(error) })
     }
   }
 
   /** Runs an action on the open message, then shows the folder again, where its effect is to be seen. */
   const act = async (
-    current: Extract<Screen, { name: 'message' | 'move' }>,
+    from: Extract<Screen, { name: 'message' | 'move' }>,
     action: (actions: MailActions) => Promise<void>
   ) => {
     try {
@@ -268,7 +312,13 @@ export default function App() {
     } catch (error) {
       console.error(describe(error))
     }
-    await showMessages(current.account, current.folder, { sync: false })
+    await leave(from)
+  }
+
+  /** Back from a message to the list it was opened from, which shows what was done to it. */
+  const leave = async (from: Extract<Screen, { name: 'message' | 'move' }>) => {
+    if (from.origin === 'unified') await showUnified({ refresh: false })
+    else await showMessages(from.account, from.folder, { sync: false })
   }
 
   const toggleFlag = async (current: Extract<Screen, { name: 'message' }>, flag: string, on: boolean) => {
@@ -277,6 +327,14 @@ export default function App() {
     await mail.current.setFlags(current.folder, [current.summary.uid], on ? [flag] : [], on ? [] : [flag])
     const fresh = (await listMessages(db, current.folder.id)).find((m) => m.uid === current.summary.uid)
     if (fresh) setScreen({ ...current, summary: fresh })
+  }
+
+  const openFromUnified = async (message: UnifiedMessage) => {
+    const db = database.current
+    if (!db) return
+    const account = await getAccount(db, message.accountId)
+    const folder = await getFolder(db, message.folderId)
+    if (account && folder) await openMessage(account, folder, message, 'unified')
   }
 
   const startMove = async (current: Extract<Screen, { name: 'message' }>) => {
@@ -311,7 +369,7 @@ export default function App() {
   }
 
   const removeCurrent = async (account: Account) => {
-    drop()
+    connections.current?.drop(account.id)
     if (database.current) await removeAccount(database.current, account.id)
     await showAccounts()
   }
@@ -323,8 +381,7 @@ export default function App() {
     attempt.current = form
     setScreen({ name: 'loading' })
     try {
-      drop()
-      const connected = await connectWith(form)
+      const session = await connectWith(form)
       const email = form.email.trim() || (form.username.includes('@') ? form.username : '')
       const account = await addAccount(db, {
         displayName: email || form.username,
@@ -340,14 +397,14 @@ export default function App() {
         password: form.password,
         smtpPassword: null
       })
-      await showFolders(account, connected)
+      connections.current?.adopt(account.id, session)
+      await showFolders(account, session)
     } catch (error) {
-      drop()
       setScreen({ name: 'login', error: describe(error) })
     }
   }
 
-  const atAccount = screen.name === 'folders' || screen.name === 'messages' || screen.name === 'message' || screen.name === 'move'
+  const atAccount = screen.name === 'unified' || screen.name === 'folders' || screen.name === 'messages' || screen.name === 'message' || screen.name === 'move'
 
   return (
     <SafeAreaProvider>
@@ -355,7 +412,7 @@ export default function App() {
       <SafeAreaView style={styles.page}>
         {atAccount && (
           <StatusLine
-            online={online}
+            online={shown.current === null ? connected.length > 0 : connected.includes(shown.current)}
             waiting={waiting}
             onDiscard={async () => {
               await mail.current?.discardFailed()
@@ -370,6 +427,15 @@ export default function App() {
             error={screen.error}
             onOpen={openAccount}
             onAdd={() => setScreen({ name: 'login' })}
+            onUnified={() => showUnified({ refresh: true })}
+          />
+        )}
+        {screen.name === 'unified' && (
+          <Unified
+            screen={screen}
+            onAccounts={() => void showAccounts()}
+            onRefresh={() => showUnified({ refresh: true })}
+            onOpen={openFromUnified}
           />
         )}
         {screen.name === 'login' && (
@@ -389,10 +455,7 @@ export default function App() {
             folders={screen.folders}
             offline={screen.offline}
             onOpen={(folder) => showMessages(screen.account, folder, { sync: true })}
-            onBack={() => {
-              drop()
-              void showAccounts()
-            }}
+            onBack={() => void showAccounts()}
             onRemove={() => removeCurrent(screen.account)}
             onConnect={() => openAccount(screen.account)}
             onCompose={() => startCompose(screen.account, screen, emptyDraft)}
@@ -405,13 +468,13 @@ export default function App() {
               const db = database.current
               if (db) setScreen({ name: 'folders', account: screen.account, folders: await listFolders(db, screen.account.id) })
             }}
-            onOpen={(summary) => openMessage(screen.account, screen.folder, summary)}
+            onOpen={(summary) => openMessage(screen.account, screen.folder, summary, 'folder')}
           />
         )}
         {screen.name === 'message' && (
           <MessageView
             screen={screen}
-            onBack={() => showMessages(screen.account, screen.folder, { sync: false })}
+            onBack={() => leave(screen)}
             onReply={() =>
               screen.message && startCompose(screen.account, screen, replyDraft(screen.message))
             }
@@ -472,10 +535,12 @@ function Accounts(props: {
   error?: string
   onOpen: (account: Account) => void
   onAdd: () => void
+  onUnified: () => void
 }) {
   return (
     <View style={styles.fill}>
       <Text style={styles.title}>Konten</Text>
+      {props.accounts.length >= 2 ? <Button label="Alle Posteingänge" onPress={props.onUnified} /> : null}
       {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
       <FlatList
         data={props.accounts}
@@ -562,6 +627,48 @@ function Login(props: {
         <Text style={styles.link}>‹ Zurück zu den Konten</Text>
       </Pressable>
     </ScrollView>
+  )
+}
+
+function Unified(props: {
+  screen: Extract<Screen, { name: 'unified' }>
+  onAccounts: () => void
+  onRefresh: () => void
+  onOpen: (message: UnifiedMessage) => void
+}) {
+  const { screen } = props
+  return (
+    <View style={styles.fill}>
+      <Pressable onPress={props.onAccounts}>
+        <Text style={styles.link}>‹ Konten</Text>
+      </Pressable>
+      <Text style={styles.title}>Alle Posteingänge</Text>
+      {screen.problems.map((problem) => (
+        <Text key={problem.accountId} style={styles.error}>
+          {problem.accountName}: {problem.error}
+        </Text>
+      ))}
+      <FlatList
+        data={screen.messages}
+        keyExtractor={(message) => `${message.folderId}:${message.uid}`}
+        refreshing={screen.busy}
+        onRefresh={props.onRefresh}
+        ListEmptyComponent={screen.busy ? undefined : <Text style={styles.hint}>Keine Nachrichten.</Text>}
+        renderItem={({ item }) => (
+          <Pressable style={styles.item} onPress={() => props.onOpen(item)}>
+            <Text style={[styles.itemTitle, !item.flags.includes(SEEN) && styles.unread]} numberOfLines={1}>
+              {item.flags.includes(FLAGGED) ? '★ ' : ''}
+              {item.subject || '(ohne Betreff)'}
+            </Text>
+            <Text style={styles.itemMeta} numberOfLines={1}>
+              {item.accountName}  ·  {item.sender}
+              {item.dateMs ? `  ·  ${new Date(item.dateMs).toLocaleDateString('de-DE')}` : ''}
+            </Text>
+            {item.pendingMoveTo ? <Text style={styles.pending}>wird verschoben, sobald es geht</Text> : null}
+          </Pressable>
+        )}
+      />
+    </View>
   )
 }
 

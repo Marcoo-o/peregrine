@@ -255,10 +255,11 @@ Out, for now:
 4. First phone build: one account, list and read, nothing else. **A prototype runs** on an
    Android 16 emulator against a test server: sign in, folders, the newest messages of a
    folder, one message opened. What it found is under "What stage 4 found".
-5. Send, attachments, offline queue, several accounts. **Steps 1 to 4 are written**: sending,
+5. Send, attachments, offline queue, several accounts. **Steps 1 to 5 are written**: sending,
    in `packages/smtp`, the replay of the offline queue as an engine in `@peregrine/core`, the
-   phone's data for several accounts with the queue's storage, and the application acting on mail
-   through the queue and sending. The rest is not, see "What stage 5 found so far".
+   phone's data for several accounts with the queue's storage, the application acting on mail
+   through the queue and sending, and the unified inbox. Attachments are not, see "What stage 5
+   found so far".
 6. Notifications by periodic sync.
 7. Push as an opt-in, if the platform rules still allow what is wanted by then.
 
@@ -392,7 +393,31 @@ waits with its reason. A message the server took for some recipients and refused
 as sent, and the refusals are not shown.
 
 **Not in step 4.** Attachments, which on the phone need a way to pick a file, and to open one;
-scheduled sending; drafts; OAuth; search; the unified inbox.
+scheduled sending; drafts; OAuth; search.
+
+**The unified inbox.** The point of the project is the inboxes of all accounts in one list, so the
+application starts there when there are two or more. The connections stopped belonging to the account
+screen that was open: there is one per account, held by the application, made when something asks for
+it and forgotten when it ends. That is what lets an action on a message reach the server of the
+account the message is in, wherever it is shown, and what lets the list bring every account up to date
+at once. A connection that was made to prove a login is kept and not made a second time.
+
+The list is the newest messages of every inbox, merged by date, a message without a date last, 200 of
+them, each marked with its account. It is shown at once from what is stored and brought up to date
+after: each account is connected, its queue replayed, its folders and its inbox fetched, all at the
+same time and each on its own. Replaying comes first so that what the user decided is on the server
+before the flags are read back from it. An account that is down, or does not answer within 30 seconds,
+is named with the reason under the title, and the rest of the list is the others'. A message opened
+from the list goes back to it, and marking, moving and deleting work from there as from a folder.
+
+**What this step has not shown.** The same as before: none of it ran on a device. The merge, the
+selection of the inboxes, the connections and the refresh with one account down are tested on the
+phone's data with scripted servers. Left out: unread counts, a choice of which accounts are in the
+list, search. A message that is already in the list is not removed from it when the server no longer
+has it until that inbox is fetched again and, as everywhere on the phone yet, a fetch only looks at the
+newest 50, so deletions made elsewhere to older ones are not noticed.
+
+**Not in step 5.** Attachments: a native way to pick a file and to open one.
 
 ## What stage 4 found
 

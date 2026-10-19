@@ -55,23 +55,19 @@ export async function saveMessages(
   })
 }
 
-/** The newest messages of a folder first. */
-export async function listMessages(db: SqlDb, folderId: string): Promise<StoredMessage[]> {
-  const rows = await db.all<{
-    uid: number
-    subject: string
-    sender: string
-    date_ms: number | null
-    flags: string
-    size: number
-    has_attachment: number
-    pending_move_to: string | null
-  }>(
-    `SELECT uid, subject, sender, date_ms, flags, size, has_attachment, pending_move_to FROM messages
-     WHERE folder_id = ? ORDER BY uid DESC`,
-    folderId
-  )
-  return rows.map((row) => ({
+interface MessageRow {
+  uid: number
+  subject: string
+  sender: string
+  date_ms: number | null
+  flags: string
+  size: number
+  has_attachment: number
+  pending_move_to: string | null
+}
+
+export function toStoredMessage(row: MessageRow): StoredMessage {
+  return {
     uid: row.uid,
     subject: row.subject,
     sender: row.sender,
@@ -80,7 +76,17 @@ export async function listMessages(db: SqlDb, folderId: string): Promise<StoredM
     size: row.size,
     hasAttachment: row.has_attachment === 1,
     pendingMoveTo: row.pending_move_to
-  }))
+  }
+}
+
+/** The newest messages of a folder first. */
+export async function listMessages(db: SqlDb, folderId: string): Promise<StoredMessage[]> {
+  const rows = await db.all<MessageRow>(
+    `SELECT uid, subject, sender, date_ms, flags, size, has_attachment, pending_move_to FROM messages
+     WHERE folder_id = ? ORDER BY uid DESC`,
+    folderId
+  )
+  return rows.map(toStoredMessage)
 }
 
 /** Marks messages as waiting to be moved to a folder, or takes the mark off with null. */
