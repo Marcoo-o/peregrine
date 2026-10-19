@@ -204,17 +204,18 @@ export default function App() {
       const actions = mail.current
       if (!db || !all || !actions) return
       shown.current = null
-      const show = async (busy: boolean, problems: RefreshResult[]) => {
+      const show = async (busy: boolean, problems: RefreshResult[], navigating: boolean) => {
         const messages = await listUnified(db)
-        // Not over a screen the user has moved on to while this was fetching.
-        if (busy || latest.current.name === 'unified' || latest.current.name === 'loading') {
+        // Going to the list always shows it. The update after the fetch only goes onto the list: not
+        // over a screen the user has moved on to while the accounts were being fetched.
+        if (navigating || latest.current.name === 'unified') {
           setScreen({ name: 'unified', messages, busy, problems })
         }
       }
-      await show(options.refresh, [])
+      await show(options.refresh, [], true)
       if (!options.refresh) return
       const results = await refreshInboxes({ db, connections: all, mail: actions }, await listAccounts(db))
-      await show(false, results.filter((result) => result.error !== undefined))
+      await show(false, results.filter((result) => result.error !== undefined), false)
       void refreshWaiting()
     },
     [refreshWaiting]

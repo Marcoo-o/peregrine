@@ -384,9 +384,9 @@ what was fetched before, with the reason, and a button to try again, and what is
 A line at the top says that there is no connection, how many actions wait, why the first one that
 failed did, and offers to discard what was given up on.
 
-**What this step has not shown.** None of it was run on a device or a server. The queue, the actions
-and the sending are tested on the phone's data and through its adapter, sending against a scripted
-server, and the screens are type-checked and bundled and not used. Two things are known to be
+**What this step has not shown.** None of it was run on a real device or against a real provider.
+The queue, the actions and the sending are tested on the phone's data and through its adapter, sending
+against a scripted server. After step 5 they were also used on an emulator, see there. Two things are known to be
 missing or rough. The sending settings of a new account are not tried when it is added, only the
 reading ones are, so a wrong SMTP server shows when the first message is sent, as a message that
 waits with its reason. A message the server took for some recipients and refused for others counts
@@ -410,9 +410,30 @@ before the flags are read back from it. An account that is down, or does not ans
 is named with the reason under the title, and the rest of the list is the others'. A message opened
 from the list goes back to it, and marking, moving and deleting work from there as from a folder.
 
-**What this step has not shown.** The same as before: none of it ran on a device. The merge, the
-selection of the inboxes, the connections and the refresh with one account down are tested on the
-phone's data with scripted servers. Left out: unread counts, a choice of which accounts are in the
+**On an emulator.** Steps 3 to 5 were used on an Android 36 emulator against a throwaway Dovecot with
+two accounts and an SMTP server that writes down what it is given, both on the development machine,
+with a certificate of its own that the debug build is told to trust. Two accounts were added through the
+form and the unified list showed the six messages of both, merged by date and marked with their
+account. A message was opened and answered: the SMTP server received it over STARTTLS and a login, with
+the quoted original and the thread headers, and a copy marked read was in the account's Sent folder.
+Deleting moved a message to the Trash folder on the server. With the server stopped the status line said
+there was no connection, a message that was opened and deleted stayed in the list marked as waiting to
+be moved, two actions were counted as waiting, and after the server was back and the list was pulled
+down they were carried out in the order they were decided: the read mark first, then the move, and the
+message was in the Trash folder on the server, marked read, and gone from the list.
+
+Using it found one mistake that no test had: leaving a message after an action did not show the list
+again, because the update that follows a fetch was held back unless the list was already on the screen,
+and that held back the way back as well. The server was right and the screen was not. The two cases are
+told apart now.
+
+**What this step has not shown.** A real device, a real provider, and anything that takes long: how a
+list of several thousand messages behaves, or a connection that drops half way through an action. The
+merge, the selection of the inboxes, the connections and the refresh with one account down are tested on
+the phone's data with scripted servers. Rough places the emulator showed: the reason a message could not
+be read without a connection is the library's own English text, "connection closed", where the rest of the
+screens speak German, and the form does not move the field that is being typed in above the keyboard.
+Left out: unread counts, a choice of which accounts are in the
 list, search. A message that is already in the list is not removed from it when the server no longer
 has it until that inbox is fetched again and, as everywhere on the phone yet, a fetch only looks at the
 newest 50, so deletions made elsewhere to older ones are not noticed.
