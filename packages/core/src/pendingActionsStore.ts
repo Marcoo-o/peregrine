@@ -17,6 +17,31 @@ import {
  */
 export type ClearMoveMark = (db: SqlDb, sourceFolderId: string, uids: number[]) => Promise<void>
 
+/**
+ * The table the queue is kept in, as one creation. The desktop got to this shape in three migrations,
+ * the phone starts from it. A test holds the two to the same columns and indexes, because the
+ * functions below are written against them and a column that exists on one side only is a query
+ * that works on one side only.
+ *
+ * `id` is an autoincrementing integer on purpose. The replay order has to be the order in which the
+ * user acted, and a rowid gives that for free where a timestamp would need a tie-breaker for two
+ * actions in the same millisecond.
+ */
+export const PENDING_ACTIONS_SCHEMA: string[] = [
+  `CREATE TABLE IF NOT EXISTS pending_actions (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     account_id TEXT NOT NULL,
+     kind TEXT NOT NULL,
+     payload TEXT NOT NULL,
+     created_at INTEGER NOT NULL,
+     attempts INTEGER NOT NULL DEFAULT 0,
+     last_error TEXT,
+     due_at INTEGER
+   )`,
+  'CREATE INDEX IF NOT EXISTS idx_pending_actions_account ON pending_actions(account_id, id)',
+  'CREATE INDEX IF NOT EXISTS idx_pending_due ON pending_actions(due_at) WHERE due_at IS NOT NULL'
+]
+
 interface PendingRow {
   id: number
   account_id: string
