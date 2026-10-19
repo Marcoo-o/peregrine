@@ -15,3 +15,8 @@ declare class URL {
   readonly username: string
   readonly password: string
 }
+
+// The timers of the offline queue. Node, Electron and Hermes all have them, and a handle may be an
+// object, a number or nothing in particular, so it is only passed back to `clearTimeout`.
+declare function setTimeout(handler: () => void, milliseconds: number): unknown
+declare function clearTimeout(handle: unknown): void
