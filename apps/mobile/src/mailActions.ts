@@ -4,6 +4,7 @@ import {
   discardFailedActions,
   dropQueuedMoves,
   enqueueAction,
+  listPendingActions,
   pendingSummary
 } from '@peregrine/core/pendingActionsStore'
 import type { PendingSummary } from '@peregrine/core/pendingActions'
@@ -101,6 +102,12 @@ export class MailActions {
   /** What waits, for a line on a screen: how many, and how many were given up on. */
   waiting(): Promise<PendingSummary> {
     return pendingSummary(this.context.db)
+  }
+
+  /** Why the first action that failed, of an account, failed. Null when none has. */
+  async lastProblem(accountId: string): Promise<string | null> {
+    const actions = await listPendingActions(this.context.db, accountId)
+    return actions.find((action) => action.lastError !== null)?.lastError ?? null
   }
 
   /** Gives up on what failed too often, which is what the user does after reading why it did. */

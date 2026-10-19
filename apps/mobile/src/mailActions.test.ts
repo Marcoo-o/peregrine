@@ -116,6 +116,7 @@ describe('with a connection', () => {
     expect((await listMessages(t.db, inbox.id)).map((m) => m.flags)).toEqual([['\\Seen'], ['\\Seen']])
     expect(t.server.asked).toEqual(['add INBOX 1 \\Seen', 'add INBOX 2 \\Seen'])
     expect((await t.actions.waiting()).total).toBe(0)
+    expect(await t.actions.lastProblem(t.account.id)).toBeNull()
   })
 
   it('moves messages, which leave the source folder once the server has them', async () => {
@@ -287,6 +288,7 @@ describe('when the server refuses', () => {
     expect((await listMessages(t.db, inbox.id))[0].flags).toEqual(['\\Seen'])
     const [action] = await listPendingActions(t.db, t.account.id)
     expect(action).toMatchObject({ kind: 'flags', attempts: 1, lastError: 'NO [CANNOT] not allowed' })
+    expect(await t.actions.lastProblem(t.account.id)).toBe('NO [CANNOT] not allowed')
   })
 
   it('gives up on what was given up on when the user says so, and the moved messages are shown again', async () => {

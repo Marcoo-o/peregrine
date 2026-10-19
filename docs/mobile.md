@@ -255,10 +255,10 @@ Out, for now:
 4. First phone build: one account, list and read, nothing else. **A prototype runs** on an
    Android 16 emulator against a test server: sign in, folders, the newest messages of a
    folder, one message opened. What it found is under "What stage 4 found".
-5. Send, attachments, offline queue, several accounts. **Steps 1 to 3 are written**: sending,
-   in `packages/smtp`, the replay of the offline queue as an engine in `@peregrine/core`, and the
-   phone's data for several accounts with the queue's storage. The rest is not, see "What stage 5
-   found so far".
+5. Send, attachments, offline queue, several accounts. **Steps 1 to 4 are written**: sending,
+   in `packages/smtp`, the replay of the offline queue as an engine in `@peregrine/core`, the
+   phone's data for several accounts with the queue's storage, and the application acting on mail
+   through the queue and sending. The rest is not, see "What stage 5 found so far".
 6. Notifications by periodic sync.
 7. Push as an opt-in, if the platform rules still allow what is wanted by then.
 
@@ -348,6 +348,47 @@ whose version was not checked: the upsert needs 3.24, and SQLCipher 4 is newer t
 **Not in step 3.** Sending from the app, the offline use of the queue in the screens, attachments,
 OAuth. Nothing in the screens puts anything into the queue yet: they replay it when an account
 connects, which is the path that is real now.
+
+**One path to the server.** Marking, moving, deleting and sending each change the local copy at once
+and then go through the queue, and there is no second way that talks to the server directly. With
+one, a decision made while older ones still wait would arrive first, and what was decided in one order
+would happen in another. Through the queue alone the order is the order of the decisions, a decision
+survives the application being closed, and a refusal keeps its reason and its count. With a
+connection the queue is run straight away, so online it is the same as doing it directly, written
+down first. Runs for one account wait for each other: the queue does nothing when asked to run twice
+at once, and without that an action added while a run was reading its list would sit there until
+something else ran the queue. A test holds the first of two decisions in the server and makes the
+second while it is stuck.
+
+The rest is what the desktop does, so an account behaves the same on both. A move replaces a move
+that waits for the same messages. The messages stay in the list where they are, marked with where
+they are going, until the server has them. A deletion goes into the trash folder where there is one
+and is final in the trash itself, and it settles a move that waited for the same message.
+
+**Sending.** The composer and the client of `packages/smtp` over the phone's transport, with the
+sender and the login from the account. A user name or password that was not given for sending is the
+one for reading, and a port that was not given is the one for the kind of connection. It refuses,
+saying why, what the phone cannot do yet and would otherwise do wrongly: attachments, encrypting or
+signing, and a later time. An answer quotes the original and joins its thread, which needed the
+Message-ID, References and Reply-To of the message read out of the source.
+
+**Screens.** Reading a message marks it read. A message has Reply, Unread, Star, Move and Delete. A
+new message and an answer have a compose screen. An account whose server cannot be reached opens from
+what was fetched before, with the reason, and a button to try again, and what is decided there waits.
+A line at the top says that there is no connection, how many actions wait, why the first one that
+failed did, and offers to discard what was given up on.
+
+**What this step has not shown.** None of it was run on a device or a server. The queue, the actions
+and the sending are tested on the phone's data and through its adapter, sending against a scripted
+server, and the screens are type-checked and bundled and not used. Three things are known to be
+missing or rough. The sending settings of a new account are not tried when it is added, only the
+reading ones are, so a wrong SMTP server shows when the first message is sent, as a message that
+waits with its reason. A message the server took for some recipients and refused for others counts
+as sent, and the refusals are not shown. And a sent message is not copied into the Sent folder: some
+providers do that themselves, most do not, and it needs IMAP `APPEND`, which the session does not have.
+
+**Not in step 4.** Attachments, which on the phone need a way to pick a file, and to open one;
+scheduled sending; the copy into Sent; drafts; OAuth; search; the unified inbox.
 
 ## What stage 4 found
 
