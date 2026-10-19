@@ -14,7 +14,31 @@ describe('readMessage', () => {
       subject: 'Hallo',
       from: 'Alex <alex@example.org>',
       date: 'Mon, 19 Oct 2026 10:00:00 +0200',
-      text: 'Guten Tag\r\n'
+      text: 'Guten Tag\r\n',
+      messageId: '',
+      references: '',
+      replyTo: ''
+    })
+  })
+
+  it('reads the headers an answer needs to join the thread', () => {
+    const message = readMessage(
+      bytes(
+        crlf([
+          'From: Anna <anna@example.net>',
+          'Reply-To: Lists <list@example.net>',
+          'Message-ID: <two@example.net>',
+          'References: <zero@example.net>',
+          ' <one@example.net>',
+          '',
+          'x'
+        ])
+      )
+    )
+    expect(message).toMatchObject({
+      messageId: '<two@example.net>',
+      references: '<zero@example.net> <one@example.net>',
+      replyTo: 'Lists <list@example.net>'
     })
   })
 

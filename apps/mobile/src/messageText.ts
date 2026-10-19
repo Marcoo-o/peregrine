@@ -7,6 +7,10 @@ export interface ReadableMessage {
   from: string
   date: string
   text: string
+  /** The headers an answer needs to join the thread, as written, or empty. */
+  messageId: string
+  references: string
+  replyTo: string
 }
 
 interface Part {
@@ -27,7 +31,15 @@ export function readMessage(source: Uint8Array): ReadableMessage {
   // plain text wins over HTML, and the first of either over the later ones
   const text = textOf(top, 'text/plain') ?? textOf(top, 'text/html') ?? ''
   const header = (name: string): string => decodeMimeWords(top.headers.get(name) ?? '').trim()
-  return { subject: header('subject'), from: header('from'), date: header('date'), text }
+  return {
+    subject: header('subject'),
+    from: header('from'),
+    date: header('date'),
+    text,
+    messageId: header('message-id'),
+    references: header('references'),
+    replyTo: header('reply-to')
+  }
 }
 
 /** Everything before the first empty line is header, everything after it is body. */

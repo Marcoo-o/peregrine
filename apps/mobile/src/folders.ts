@@ -50,6 +50,21 @@ export async function getFolder(db: SqlDb, id: string): Promise<Folder | undefin
   return row ? toFolder(row) : undefined
 }
 
+/** The folder of an account that has a role, such as `\Trash`, or undefined when the server names none. */
+export async function getFolderBySpecialUse(
+  db: SqlDb,
+  accountId: string,
+  specialUse: string
+): Promise<Folder | undefined> {
+  const row = await db.get<FolderRow>(
+    `SELECT id, account_id, imap_path, display_name, special_use FROM folders
+     WHERE account_id = ? AND special_use = ? ORDER BY display_name LIMIT 1`,
+    accountId,
+    specialUse
+  )
+  return row ? toFolder(row) : undefined
+}
+
 /**
  * Makes the folders of an account the ones the server lists.
  *

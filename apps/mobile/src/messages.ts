@@ -112,3 +112,44 @@ export async function deleteMessages(db: SqlDb, folderId: string, uids: number[]
     )
   }
 }
+
+/**
+ * The flags after adding and removing some. IMAP compares flags without regard to case, so `\seen`
+ * and `\Seen` are one flag: a flag that is there in another spelling is not added a second time, and
+ * is removed whichever way it is spelled.
+ */
+export function changeFlags(current: string[], add: string[], remove: string[]): string[] {
+  const gone = new Set(remove.map((flag) => flag.toLowerCase()))
+  const next = current.filter((flag) => !gone.has(flag.toLowerCase()))
+  for (const flag of add) {
+    if (gone.has(flag.toLowerCase())) continue
+    if (!next.some((have) => have.toLowerCase() === flag.toLowerCase())) next.push(flag)
+  }
+  return next
+}
+
+/** Changes the flags of messages here. The server is told by the queue, not by this. */
+export async function applyFlags(
+  db: SqlDb,
+  folderId: string,
+  uids: number[],
+  add: string[],
+  remove: string[]
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    for (let at = 0; at < uids.length; at += CHUNK) {
+      const part = uids.slice(at, at + CHUNK)
+      const rows = await tx.all<{ uid: number; flags: string }>(
+        `SELECT uid, flags FROM messages WHERE folder_id = ? AND uid IN (${part.map(() => '?').join(',')})`,
+        folderId,
+        ...part
+      )
+      for (const row of rows) {
+        const before = JSON.parse(row.flags) as string[]
+        const after = changeFlags(before, add, remove)
+        if (after.length === before.length && after.every((flag, i) => flag === before[i])) continue
+        await tx.run('UPDATE messages SET flags = ? WHERE folder_id = ? AND uid = ?', JSON.stringify(after), folderId, row.uid)
+      }
+    }
+  })
+}
