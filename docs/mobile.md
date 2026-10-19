@@ -255,11 +255,11 @@ Out, for now:
 4. First phone build: one account, list and read, nothing else. **A prototype runs** on an
    Android 16 emulator against a test server: sign in, folders, the newest messages of a
    folder, one message opened. What it found is under "What stage 4 found".
-5. Send, attachments, offline queue, several accounts. **Steps 1 to 5 are written**: sending,
-   in `packages/smtp`, the replay of the offline queue as an engine in `@peregrine/core`, the
-   phone's data for several accounts with the queue's storage, the application acting on mail
-   through the queue and sending, and the unified inbox. Attachments are not, see "What stage 5
-   found so far".
+5. Send, attachments, offline queue, several accounts. **Written, in six steps**: sending, in
+   `packages/smtp`, the replay of the offline queue as an engine in `@peregrine/core`, the phone's
+   data for several accounts with the queue's storage, the application acting on mail through the
+   queue and sending, the unified inbox, and attachments. What is left of the stage is what it
+   did not set out to do, see the end of "What stage 5 found so far".
 6. Notifications by periodic sync.
 7. Push as an opt-in, if the platform rules still allow what is wanted by then.
 
@@ -439,6 +439,63 @@ has it until that inbox is fetched again and, as everywhere on the phone yet, a 
 newest 50, so deletions made elsewhere to older ones are not noticed.
 
 **Not in step 5.** Attachments: a native way to pick a file and to open one.
+
+**Attachments.** Three things had to exist that did not. The structure of a message, its parts and
+their headers, moved out of the reader into `mimeParts.ts` with a parameter parser that does what
+file names need: quoted values with semicolons and escaped quotes in them, and RFC 2231 for a name
+with an umlaut, in one piece or several, in any charset. `listAttachments` walks it and lists what is a
+file and not text: a part that says it is an attachment, one that has a name, and one that is not
+text by its type, such as an image shown inside the message, which has no name and gets one made
+for it. The name is made safe to write to a file system, no path and no leading dots, and the findings
+about it are the desktop's, judged by the name the file will be saved under.
+
+The rule for opening a file was written out in the desktop's attachment handler and is one function
+in the core now, so that the same file is refused on both: the name is refused on its own because a
+script has no signature, and the first bytes are read for a program that is named as something else and
+for a file that contradicts its name. Saving has no check, as on the desktop: keeping a file is the
+person's decision, and the refusal says that saving is possible.
+
+Picking copies. A file the user chose is copied into a directory of the application's own at once, and
+what a queued message refers to is the path of the copy. The queue may run when the application is
+started again much later, and by then the permission to read the file that was picked is gone, or the
+file. The copies are read when the message is sent and removed only after it has gone out, so a
+message the queue has to send again still has them, and removed when the compose screen is left
+without sending. What would take a message over 20 megabytes is refused and said, and not left out in
+silence. A message that talks of an attachment and has none is held back once, by the desktop's
+rule, which ignores quoted lines.
+
+The native module `PeregrineFiles` does five things: pick, read a copy, remove copies, save through the
+system's dialog, which needs no access to any storage, and hand a file to another application through
+a content address that is good for that one application and that one file, never a path. Every path
+JavaScript passes back is held to the one directory the copies are made in, with `..` and links
+followed, and the module has JVM tests for that and for the names it makes. Content crosses the bridge
+as base64.
+
+**On an emulator.** The two kinds of mail were put into the test account: one with a small file named
+`contract.pdf` and one with a program named `invoice.pdf.exe`. Both showed a paperclip in the list. The
+first listed its name, type and size and could be saved: the system's dialog offered the name, and the
+file on the device was the same bytes. Opening it handed it to the PDF viewer of the system image, which
+read it and said that it was not a valid PDF, which it is not, being made up. The program listed two
+warnings, that it is a program and that its ending is double, and opening it was refused with the reason
+and the way to saving it. Writing a message that said "attached" with nothing attached was held back and
+the button changed to "send anyway". A file picked from the system's dialog showed with its size, and
+sending it put a message with the file in it, base64 and with its name and type, to the server that
+records what it is given, whose bytes decoded to the file. The copy in the application's storage was
+there before and gone after, and the copy in the Sent folder was there.
+
+**What this has not shown.** Anything large: a file of many megabytes, which crosses the bridge as one
+string and is encoded in JavaScript. More than one file picked at once, though the code takes a list.
+A real PDF viewer, an image, a file from a cloud provider whose pick takes time to download. And a
+message whose queue run fails with the files already copied: then they stay, as they should, and are
+removed only by a later send, and one that is given up on and discarded leaves its copies behind. That
+is a leak of storage and not of anything else, and it is not handled yet. The picker reports a CSV as
+`text/comma-separated-values`, which is a type that exists and is rarer than `text/csv`; it is sent as
+the phone gave it.
+
+**What stage 5 did not set out to do, and is left.** Inline images shown inside a message, a preview of
+images, attachments in drafts, drafts at all, OAuth, scheduled sending, search, unread counts, a choice
+of which accounts are in the unified list, and the things that only a real device and a real provider
+can show.
 
 ## What stage 4 found
 
