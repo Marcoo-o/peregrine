@@ -1,0 +1,93 @@
+# How the build output turns into something installable.
+#
+# A file of its own rather than a "build" block in package.json, so the decisions here can be
+# explained: JSON carries no comments, and half of these entries are decisions rather than
+# formalities.
+
+appId: io.github.marcoo-o.peregrine
+productName: Peregrine
+copyright: © 2026 Marco
+
+directories:
+  # icon.ico and icon.png live here. The default would be "build/", a folder this project does
+  # not have and whose name would collide with the build output.
+  buildResources: resources
+  output: dist
+
+# The build output and the dependencies, nothing else. Without this list `src/`, the tests and
+# the tsconfigs travel along: source nobody needs, inside a file anyone can unpack.
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+
+extraResources:
+  - from: resources/icon.png
+    to: icon.png
+
+# better-sqlite3 ships a prebuilt Node-API binary per platform and picks it at runtime, so
+# there is nothing to rebuild against the Electron ABI. Letting electron-builder try anyway
+# would demand a compiler that no longer needs to be installed.
+npmRebuild: false
+
+# The compiled module has to come out of the archive: Node can only load a .node file that
+# exists on disk, not one inside an asar.
+asarUnpack:
+  - '**/*.node'
+  - node_modules/better-sqlite3-multiple-ciphers/**
+
+win:
+  icon: resources/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ${productName}-${version}-Setup.${ext}
+
+nsis:
+  # Not a one-click installer: somebody installing a mail client should see where it goes and
+  # be able to stop. An installer that starts on the double-click is the wrong manner for a
+  # program that will hold every mailbox.
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  # For the signed-in user rather than the whole machine: otherwise installation demands
+  # administrator rights this program needs nowhere.
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Peregrine
+  # Uninstalling clears the application away and leaves the profiles under %APPDATA%. The mail
+  # is in there, and an uninstaller that deletes the post on its way out is data loss with a
+  # progress bar.
+  deleteAppDataOnUninstall: false
+
+linux:
+  icon: resources/icon.png
+  category: Network;Email
+  # AppImage runs on any distribution without being installed, which is what somebody trying
+  # the program wants. The .deb is for keeping it: Debian and Ubuntu users expect their package
+  # manager to know about what is on the system.
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  # No "Setup" in the name here: on Linux the file is the program or a package, not an
+  # installer that runs one.
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  synopsis: Email client for several mailboxes
+  description: >-
+    A desktop email client for people who keep more than one mailbox. Unified folders across
+    accounts, encrypted profiles, OpenPGP, an offline queue and full text search.
+
+deb:
+  # libsecret is what Electron's safeStorage uses on Linux to encrypt stored passwords. Without
+  # it the credential store has nowhere safe to put anything.
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libsecret-1-0

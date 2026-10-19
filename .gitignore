@@ -1,0 +1,28 @@
+# Dependencies and build output
+node_modules
+out
+dist
+dist-electron
+
+# The TypeScript compiler's incremental state: rebuilt every time and read by nobody.
+*.tsbuildinfo
+
+# Databases and profiles never belong in version control: they hold messages, contacts and
+# credentials. Not even "just for testing".
+*.db
+*.db-shm
+*.db-wal
+profiles.json
+
+# The throwaway check scripts IDEAS.md describes
+verify-*.ts
+verify-*.cjs
+*-probe.ts
+*-probe.cjs
+
+# Private notes, not for publication
+IDEAS.de.md
+
+*.log
+.DS_Store
+Thumbs.db

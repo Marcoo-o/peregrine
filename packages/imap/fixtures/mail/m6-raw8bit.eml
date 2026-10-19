@@ -1,0 +1,10 @@
+From: Jörg Müller <joerg@example.de>
+To: test@example.com
+Subject: Grüße direkt im Header
+Date: Fri, 09 Jan 2026 12:00:00 +0000
+Message-ID: <m6@example.de>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+Rohe Umlaute: äöüß

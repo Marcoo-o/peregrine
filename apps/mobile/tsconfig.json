@@ -1,0 +1,10 @@
+{
+  "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    // The template's default pulls in Jest's globals, which this project does not use. Its tests
+    // run under Vitest from the root and are checked by tsconfig.test.json.
+    "types": []
+  },
+  "include": ["App.tsx", "src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["**/node_modules", "src/**/*.test.ts"]
+}

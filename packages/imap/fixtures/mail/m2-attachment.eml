@@ -1,0 +1,19 @@
+From: Bob Sender <bob@example.org>
+To: test@example.com
+Subject: Invoice attached
+Date: Tue, 06 Jan 2026 11:30:00 +0100
+Message-ID: <m2@example.org>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="BOUNDARY2"
+
+--BOUNDARY2
+Content-Type: text/plain; charset=utf-8
+
+Please find the invoice attached.
+--BOUNDARY2
+Content-Type: application/pdf; name="invoice.pdf"
+Content-Disposition: attachment; filename="invoice.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJSBtaW5pbWFsCg==
+--BOUNDARY2--

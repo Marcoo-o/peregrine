@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    // The tests run under Node, not React Native, so the packages they use resolve as they do there.
+    "customConditions": [],
+    "paths": {
+      // Same reason as in the desktop's tsconfig.node.json: the package's "exports" map has no
+      // "types" condition, so the declaration file it ships has to be pointed at.
+      "better-sqlite3-multiple-ciphers": ["../../node_modules/better-sqlite3-multiple-ciphers/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["**/node_modules"]
+}

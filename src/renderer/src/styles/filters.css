@@ -1,0 +1,55 @@
+/* Styles owned by the filter-rules settings section. */
+
+.rule-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.rule-editor-head {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.rule-editor-head input {
+  flex: 1;
+  min-width: 0;
+}
+
+.rule-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.rule-row select,
+.rule-row input {
+  flex: 1 1 120px;
+  min-width: 0;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.4rem;
+}
+
+.rule-add-row {
+  align-self: flex-start;
+  font-size: 0.76rem;
+  padding: 0.2rem 0.5rem;
+  background: none;
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.rule-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.3rem;
+}
+
+.filter-rule-row .icon-button {
+  padding: 0.25rem;
+}

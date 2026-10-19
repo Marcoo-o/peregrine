@@ -1,0 +1,8 @@
+From: "Quote \"Man\" Back\\slash" <quote@example.com>
+To: test@example.com
+Subject: A very long subject line that has to be folded over several lines
+	because the sender's client wrapped it at seventy-eight columns, and it also says "hi" \ there
+Date: Sat, 10 Jan 2026 13:00:00 +0000
+Message-ID: <m7@example.com>
+
+body

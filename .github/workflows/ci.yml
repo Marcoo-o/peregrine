@@ -1,0 +1,56 @@
+# Type check, tests and a build on every pull request.
+#
+# Pull requests only. A push to main is already built by the release workflow, which runs the
+# same typecheck and the same suite on both platforms before it publishes anything, so having
+# this run there as well meant paying for the same answer twice. Around 27 billed minutes per
+# push, of which twelve said nothing new. Where the two do differ is the Node version: the
+# matrix below is what covers 24, and a change reaches main through here.
+#
+# Windows rather than the cheaper Linux runner: the installer target is Windows, the title bar
+# handling only exists there, and a build that passes on Linux says little about the one that
+# ships.
+#
+# Node 22 is the floor because Electron, better-sqlite3 and jsdom all demand it. Node 20 was
+# tried and fails twice over: those packages refuse to install, and the npm that ships with 20
+# cannot read a lockfile written by the npm that ships with 22, so `npm ci` reports perfectly
+# present packages as missing.
+name: CI
+
+on:
+  pull_request:
+  # So a branch can be checked without opening a pull request for it first.
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: windows-latest
+    strategy:
+      # One failing version should not hide the state of the other.
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # Pinned rather than whatever the Node release happens to bundle. The lockfile is written
+      # by npm 11, which nests some entries in a way npm 10 reads differently: it then reports
+      # packages that are plainly there as missing and refuses to install. Fixing the npm
+      # version is what makes the two matrix entries comparable at all.
+      - run: npm install -g npm@11
+
+      # `npm ci` rather than `npm install`: the lockfile is the point of running this at all.
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      # Not packaged, only built. Packaging pulls down the code signing helper and belongs to
+      # the release workflow, where it is actually needed.
+      - run: npm run build

@@ -1,0 +1,998 @@
+/* Styles owned by the link and sender warnings. */
+
+.suspicious-banner {
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border-radius: var(--radius);
+  /* Aligned with the subject, the meta line and the PGP rows. The box has its own inner
+     padding, so only its text looked inset before while the box itself sat flush left. */
+  margin: 0 0.75rem 0.6rem;
+  overflow: hidden;
+}
+
+.suspicious-banner-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: none;
+  background: none;
+  color: var(--warning);
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.suspicious-banner-head span {
+  flex: 1;
+  min-width: 0;
+}
+
+.suspicious-banner-detail {
+  padding: 0 0.6rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.suspicious-banner-detail h4 {
+  margin: 0.4rem 0 0.25rem;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.suspicious-banner-detail ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.suspicious-banner-detail li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.suspicious-banner-detail code {
+  font-size: 0.78rem;
+  background: var(--bg-sunken);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  word-break: break-all;
+}
+
+/* ---------- Risky attachments ---------- */
+
+.attachment-chip.risky {
+  border-color: color-mix(in srgb, var(--warning) 55%, transparent);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+
+.attachment-risk {
+  display: inline-flex;
+  align-items: center;
+  color: var(--warning);
+  cursor: help;
+}
+
+/* ---------- Settings ---------- */
+
+.settings-subheading {
+  margin: 0.9rem 0 0.1rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+/* ---------- Confirmation dialog ---------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 15, 20, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 100;
+  animation: modal-backdrop-in var(--duration-fast) var(--ease-standard);
+}
+
+.modal-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1rem 1.1rem;
+  max-width: 30rem;
+  width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  animation: modal-panel-in var(--duration-normal) var(--ease-standard);
+}
+
+@keyframes modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* A slight rise rather than a plain fade: the panel is what the backdrop exists to
+   introduce, so it gets the motion that reads as arriving, not just appearing. */
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+}
+
+.modal-panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.98rem;
+  color: var(--danger);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.danger-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  color: var(--danger);
+}
+
+.link-warning-findings {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.link-warning-findings li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.82rem;
+}
+
+.link-warning-findings strong {
+  font-size: 0.84rem;
+}
+
+.link-warning-findings span {
+  color: var(--text-muted);
+}
+
+.link-warning-target {
+  margin-top: 0.8rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.link-warning-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+/* The host on its own, big enough that a swapped character has somewhere to show itself. */
+.link-warning-host {
+  font-size: 0.95rem;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.link-warning-url {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+/* A failed authentication is the server stating the sender is forged. Not an observation
+   that something reads oddly, so it gets the stronger colour. */
+.suspicious-banner.severe {
+  border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+  background: var(--danger-soft);
+}
+
+.suspicious-banner.severe .suspicious-banner-head {
+  color: var(--danger);
+}
+
+/* ---------- Thunderbird import ---------- */
+
+.import-panel {
+  max-width: 40rem;
+}
+
+.settings-header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.import-profile-path {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  word-break: break-all;
+  margin-bottom: 0.6rem;
+}
+
+.import-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+.import-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.6rem;
+}
+
+/* Accounts that cannot come along stay visible but recede. The point is that they are
+   accounted for, not that they compete for attention. */
+.import-row.blocked {
+  opacity: 0.6;
+}
+
+.import-row-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.import-address {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-server {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.import-status.ok {
+  color: var(--success);
+  display: inline-flex;
+}
+
+.import-blocker {
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  color: var(--warning);
+}
+
+.import-password {
+  margin-top: 0.4rem;
+  width: 100%;
+  font-size: 0.82rem;
+}
+
+/* ---------- Unlock screen ---------- */
+
+.unlock-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--bg);
+}
+
+.unlock-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.unlock-panel {
+  width: 100%;
+  max-width: 22rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.unlock-panel h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.unlock-profile-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.unlock-profile-list li {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.unlock-profile {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+}
+
+.unlock-profile.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.unlock-profile-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unlock-warning {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--warning);
+}
+
+.unlock-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.unlock-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.profile-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+
+/* ---------- Column settings ---------- */
+
+.column-settings-list {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-width: 22rem;
+}
+
+.column-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: var(--radius);
+}
+
+.column-setting label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* Hidden columns stay listed so they can be switched back on, but recede. */
+.column-setting.hidden {
+  color: var(--text-muted);
+}
+
+.column-setting-order {
+  display: flex;
+  gap: 0.1rem;
+}
+
+.message-row-meta {
+  font-size: var(--list-font);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Theme editor ---------- */
+
+.theme-token-list {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 22rem;
+}
+
+.theme-token {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.theme-token label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.theme-token input[type='color'] {
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+}
+
+.theme-contrast-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.76rem;
+  color: var(--warning);
+}
+
+.theme-import {
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.theme-import summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.theme-import textarea {
+  width: 100%;
+  max-width: 24rem;
+  margin: 0.4rem 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+}
+
+/* ---------- Shortcut settings ---------- */
+
+.shortcut-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 26rem;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.shortcut-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+.shortcut-key {
+  min-width: 8rem;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+
+.shortcut-key.recording {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.shortcut-key.conflicting {
+  border-color: color-mix(in srgb, var(--warning) 60%, transparent);
+  color: var(--warning);
+}
+
+.shortcut-unassigned {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ---------- Sender identities ---------- */
+
+.identity-list {
+  list-style: none;
+  margin: 0.4rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.identity-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.identity-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.identity-default {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.74rem;
+  color: var(--success);
+  white-space: nowrap;
+}
+
+.identity-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+/* ---------- Tags ---------- */
+
+.message-row-tag {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 0.3rem;
+  flex: none;
+  vertical-align: middle;
+}
+
+.tag-settings-list {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.tag-settings-row,
+.tag-create-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tag-settings-row input[type='color'],
+.tag-create-row input[type='color'] {
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+  flex: none;
+}
+
+.tag-name-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.tag-keyword {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg-sunken);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  cursor: help;
+  white-space: nowrap;
+}
+
+.tag-create-row {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.tag-create-row input:not([type='color']) {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- Source and headers ---------- */
+
+.source-dialog {
+  max-width: 56rem;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.source-dialog h3 {
+  color: var(--text);
+}
+
+.source-size {
+  margin-left: auto;
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.source-tabs {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.source-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+}
+
+.source-tabs button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.source-count {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.source-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.header-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.header-table th {
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+  padding: 0.25rem 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: 1%;
+}
+
+.header-table td {
+  padding: 0.25rem 0.6rem;
+  word-break: break-word;
+  font-family: ui-monospace, monospace;
+}
+
+.header-table tr:nth-child(even) {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.source-raw {
+  margin: 0;
+  padding: 0.6rem 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/*
+ * The raw message, with its four line shapes told apart.
+ *
+ * The whole thing used to be one block of grey monospace, which is exactly as readable as
+ * the transport made it. What a person opens this view for is a single header, and finding
+ * one meant reading every line until it appeared.
+ */
+.source-line {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0 0.6rem;
+}
+
+.source-line:hover {
+  background: var(--bg-elevated);
+}
+
+/* Not selectable: copying a header out of here should not bring the numbering with it. */
+.source-line-number {
+  flex: 0 0 3ch;
+  text-align: right;
+  color: var(--text-muted);
+  opacity: 0.5;
+  user-select: none;
+}
+
+.source-line-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.source-header-name {
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.source-line.continuation .source-line-text {
+  color: var(--text-muted);
+}
+
+.source-line.boundary {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Encoded payload is not meant to be read, only recognised as being there. */
+.source-line.encoded .source-line-text {
+  color: var(--text-muted);
+  opacity: 0.65;
+}
+
+.source-line.blank {
+  height: 0.5rem;
+}
+
+/* ---------- Command palette ---------- */
+
+.palette-backdrop {
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+
+.palette {
+  width: 100%;
+  max-width: 34rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 60vh;
+  animation: modal-panel-in var(--duration-normal) var(--ease-standard);
+}
+
+.palette-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.palette-input input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.palette-input input:focus {
+  outline: none;
+}
+
+.palette-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem;
+  overflow-y: auto;
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.86rem;
+  border-radius: var(--radius);
+}
+
+.palette-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.palette-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-item kbd {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.palette-empty {
+  padding: 0.8rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Editor toolbar ---------- */
+
+.rich-toolbar {
+  flex-wrap: wrap;
+}
+
+.rich-toolbar-separator {
+  width: 1px;
+  align-self: stretch;
+  margin: 0.15rem 0.15rem;
+  background: var(--border);
+}
+
+.rich-block-select {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.3rem;
+  max-width: 9rem;
+}
+
+/* The swatch is the input itself; the icon sits on top as its label. */
+.rich-color {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.rich-color:hover {
+  border-color: var(--accent);
+}
+
+.rich-color input[type='color'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Code and headings need to look like themselves while being written. */
+.rich-surface pre {
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.6rem;
+  overflow-x: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.82rem;
+}
+
+.rich-surface code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.86em;
+  background: var(--bg-sunken);
+  padding: 0.05rem 0.25rem;
+  border-radius: 3px;
+}
+
+.rich-surface pre code {
+  background: none;
+  padding: 0;
+}
+
+.rich-surface h1 {
+  font-size: 1.4rem;
+  margin: 0.5rem 0 0.3rem;
+}
+
+.rich-surface h2 {
+  font-size: 1.2rem;
+  margin: 0.5rem 0 0.3rem;
+}
+
+.rich-surface h3 {
+  font-size: 1.05rem;
+  margin: 0.4rem 0 0.25rem;
+}
+
+.rich-surface hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.7rem 0;
+}

@@ -1,0 +1,25 @@
+From: Dave <dave@example.com>
+To: test@example.com
+Subject: Inline pdf and extended parameter
+Date: Sun, 11 Jan 2026 14:00:00 +0000
+Message-ID: <m8@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="B8"
+
+--B8
+Content-Type: text/plain; charset=utf-8
+
+see below
+--B8
+Content-Type: application/pdf; name="inline.pdf"
+Content-Disposition: inline; filename="inline.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQK
+--B8
+Content-Type: application/pdf
+Content-Disposition: attachment; filename*=UTF-8''gr%C3%BC%C3%9Fe.pdf
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQK
+--B8--

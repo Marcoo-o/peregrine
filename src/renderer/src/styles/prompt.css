@@ -1,0 +1,29 @@
+/* The in-app replacement for window.prompt, which Electron does not implement. */
+
+.prompt-dialog h3 {
+  /* The shared modal heading is red, which belongs to the warning dialog, not to a question. */
+  color: var(--text);
+}
+
+.prompt-field {
+  width: 100%;
+  font: inherit;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.prompt-field:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.prompt-field-multiline {
+  /* Pasted keys are the reason multiline exists; monospace makes a truncated one visible. */
+  min-height: 11rem;
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.75rem;
+  resize: vertical;
+}

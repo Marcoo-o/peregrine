@@ -1,0 +1,75 @@
+/* Connection diagnostics: the protocol log and its toolbar. */
+
+.diagnostics-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.35rem;
+}
+
+.diagnostics-toolbar .settings-hint {
+  margin-right: auto;
+}
+
+/*
+ * A fixed height on purpose: the log is read while it fills, and a box that grows would move
+ * the controls above it out of reach with every new line.
+ */
+.protocol-log {
+  height: 22rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: var(--surface-sunken, var(--surface));
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.protocol-row {
+  display: grid;
+  /* minmax(0, …) so a long line wraps inside its cell instead of widening the whole log. */
+  grid-template-columns: minmax(0, 4.5rem) minmax(0, 11rem) minmax(0, 1fr);
+  gap: 0.6rem;
+  padding: 0.12rem 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+}
+
+.protocol-row:last-of-type {
+  border-bottom: none;
+}
+
+.protocol-delta {
+  text-align: right;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.protocol-connection {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.protocol-text {
+  overflow-wrap: anywhere;
+}
+
+/* Direction is carried by colour rather than by a prefix column, which would cost width
+   that the actual protocol line needs. */
+.protocol-row[data-source='client'] .protocol-text {
+  color: var(--accent);
+}
+
+.protocol-row[data-source='server'] .protocol-text {
+  color: var(--text);
+}
+
+.protocol-row[data-source='info'] .protocol-text {
+  color: var(--text-muted);
+}
+
+.protocol-row[data-source='error'] .protocol-text {
+  color: var(--danger, #e5484d);
+}

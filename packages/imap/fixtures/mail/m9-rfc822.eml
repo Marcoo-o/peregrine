@@ -1,0 +1,34 @@
+From: Erin <erin@example.com>
+To: test@example.com
+Subject: Forwarded as attachment
+Date: Mon, 12 Jan 2026 15:00:00 +0000
+Message-ID: <m9@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="B9"
+
+--B9
+Content-Type: text/plain; charset=utf-8
+
+forwarded
+--B9
+Content-Type: message/rfc822
+Content-Disposition: attachment; filename="original.eml"
+
+From: Frank <frank@example.com>
+To: erin@example.com
+Subject: The original
+Date: Sun, 04 Jan 2026 09:00:00 +0000
+Message-ID: <orig@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="IN9"
+
+--IN9
+Content-Type: text/plain; charset=us-ascii
+
+original text
+--IN9
+Content-Type: text/html; charset=us-ascii
+
+<p>original html</p>
+--IN9--
+--B9--

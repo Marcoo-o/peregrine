@@ -1,0 +1,247 @@
+/* Styles owned by the PGP settings section. */
+
+/* What is known about the sender's key, shown where the sender is. */
+
+.sender-key-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  /* The same 0.75rem inset the subject, the meta line and the PGP badge all use. The
+     reader itself has no padding, every row brings its own. */
+  margin: 0 0.75rem 0.4rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.sender-key-fingerprint {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  /* Grouped in fours so two people can compare it out loud; on a narrow pane it wraps
+     rather than pushing the rest of the header away. */
+  word-break: break-all;
+}
+
+.sender-key-source {
+  font-weight: 600;
+}
+
+.sender-key-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sender-key-search:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.sender-key-none {
+  font-style: italic;
+}
+
+.contact-key-origin {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
+/* ---------- Taking keys over ---------- */
+
+.key-import-panel {
+  max-width: 44rem;
+}
+
+/* Why the secret keys stay behind, said where it is read before ticking anything. */
+.key-import-note {
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-left: 2px solid var(--warning);
+  background: var(--surface-raised, transparent);
+  line-height: 1.45;
+}
+
+.key-import-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+.key-import-row {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.6rem;
+}
+
+/* Keys that cannot come along stay visible but recede. Someone looking for their key has
+   to find it here and read why, rather than wonder where it went. */
+.key-import-row.blocked {
+  opacity: 0.6;
+}
+
+.key-import-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.key-import-uid {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.key-import-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+  white-space: nowrap;
+}
+
+.key-import-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.6rem;
+  align-items: baseline;
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* A whole line to itself: a fingerprint is for comparing character by character, and one
+   sharing a row wraps after 39 of its 40 characters. */
+.key-import-meta code {
+  flex: 1 0 100%;
+  font-size: 0.68rem;
+  word-break: break-all;
+}
+
+.key-import-notes {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  color: var(--warning);
+}
+
+.key-import-help {
+  margin-top: 0.7rem;
+  font-size: 0.8rem;
+}
+
+.key-import-help summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.key-import-help ol {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ---------- The keyring of one account ---------- */
+
+.pgp-ring-heading {
+  margin: 0.9rem 0 0.2rem;
+  font-size: 0.85rem;
+}
+
+.pgp-ring {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.pgp-ring-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+}
+
+.pgp-ring-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.pgp-ring-main code {
+  display: block;
+  font-size: 0.68rem;
+  word-break: break-all;
+}
+
+.pgp-ring-date {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.pgp-ring-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.pgp-ring-active {
+  font-size: 0.7rem;
+  color: var(--success);
+  border: 1px solid var(--success);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+}
+
+/* ---------- What is wrong with a key ---------- */
+
+.pgp-health {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* A deadline and a withdrawal are not the same news, so they do not look the same. */
+.pgp-health.expiringSoon {
+  color: var(--warning);
+  border-left: 2px solid var(--warning);
+}
+
+.pgp-health.expired,
+.pgp-health.revoked {
+  color: var(--danger, var(--warning));
+  border-left: 2px solid var(--danger, var(--warning));
+}

@@ -1,0 +1,55 @@
+/* The chip that says something was done without a connection and has not gone out yet. */
+
+.pending-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: none;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+/* An unsent message is the one worth a colour: everything else can wait unnoticed. */
+.pending-chip.outbox {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Given up on, and the user has to be able to act on that. So this one is a button. */
+.pending-chip.failed {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  cursor: pointer;
+}
+
+/* Scheduled is a plan, not a problem. It gets the accent, not the warning colour. */
+.pending-chip.scheduled {
+  color: var(--accent);
+  border-color: var(--accent);
+  cursor: pointer;
+}
+
+/*
+ * A message whose move is still waiting for a connection.
+ *
+ * Outlined rather than filled, unlike the snooze badge next to it: a snooze is something the
+ * user set and wants to see, this is a state the message is passing through. It should be
+ * findable, not loud.
+ */
+.message-row-pending-move {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}

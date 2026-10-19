@@ -1,0 +1,339 @@
+# Peregrine on Android
+
+A scoping note, kept up to date as the stages land. No phone code has been written. Stages 1
+and 2 are done on the desktop. Stage 3 is built, compared with imapflow against two real servers,
+and available on the desktop behind a setting that is off by default. Nothing after it should
+start until the four decisions below have answers.
+
+## This is a second application
+
+Electron has no Android target. It is Chromium and Node packaged for a desktop operating
+system, and there is no build flag, no plugin and no fork that changes that. Nothing about the
+current repository can be made to produce an APK.
+
+So the question is not how to port Peregrine. It is how much of Peregrine a second application
+could share, and whether that share is large enough to be worth the second application.
+
+## What carries over, measured
+
+| | Lines | On a phone |
+|---|---|---|
+| `src/shared`, the pure logic | 3,344 | Runs unchanged. No Electron, no Node, no crypto dependency. 28 test files come with it |
+| `src/shared`, the IPC contracts | 1,134 | Describes Electron's IPC. Replaced, not moved |
+| `src/shared`, the Thunderbird importers | 794 | There is no Thunderbird profile on a phone |
+| `src/main` | 11,331 | Rewritten. imapflow, nodemailer, better-sqlite3 and `safeStorage` are all Node or Electron |
+| `src/renderer` | 12,599 | React stays, the layout does not. Three panes with draggable splitters is not a phone |
+| `src/preload` | 284 | Gone with the IPC boundary |
+
+Roughly one line in eight runs as it is. That sounds discouraging and is not the whole picture,
+because of what those 3,344 lines contain: the link forgery checks, the attachment refusal
+rules, the spam header reading, the search grammar, the saved searches, the vCard parser, the
+autoconfig lookup, the file type sniffing, the safe file names. That is the part of this
+project that is not "another mail client", and it is the part that travels.
+
+## The seam that already exists
+
+Every IMAP call in the application goes through one class. `ImapConnection` is 371 lines with
+21 public methods, and the entire rest of the codebase talks to those methods. Counted across
+the whole tree, imapflow itself is reached exactly 19 times, all of them inside that file.
+
+Nothing above it knows what an IMAP connection is. The sync engine, the offline queue and the
+account manager all speak to those 21 methods. A phone needs a second thing that answers to
+them, and everything above stays where it is.
+
+**Corrected.** That was true of the calls and not of what they returned. The methods
+handed out imapflow's own objects, and the sync engine read fields straight off them, so a second
+implementation would have had to build another project's objects to be understood. One of the 21,
+`fetchEnvelopes`, had no caller at all. The interface is now `ImapSession` in `packages/core`,
+with types of our own, and twenty methods.
+
+That is worth stating plainly because it decides how expensive this is. Most of what a mail
+client does with a mailbox is already behind an interface. It was not built for this, it came
+out of keeping imapflow's peculiarities in one place, and it happens to be the thing that makes
+a second front end thinkable.
+
+## Four decisions, in the order they have to be made
+
+### 1. The runtime
+
+**React Native** is the recommendation. TCP with TLS exists as a maintained library, SQLCipher
+exists, Hermes is a current JS engine, and the pure logic above runs on it untouched.
+
+**Capacitor** would keep more of the React code, since it is a WebView. That advantage is
+smaller than it looks. The desktop layout has to be rebuilt for a phone regardless, and what
+survives a rebuild is the state handling and the pure logic, which survives either choice.
+
+**nodejs-mobile** embeds a Node runtime in the app and would rescue imapflow, better-sqlite3
+and the whole main process almost unchanged. It is the tempting shortcut and it is the one to
+check hardest before taking. It has trailed current Node by a long way for years. A mail client
+sitting on an unmaintained runtime is a security problem with a timer on it, and this project
+promises the opposite of that in SECURITY.md.
+
+### 2. How IMAP gets onto the phone
+
+Three routes, and the third is the recommendation.
+
+**A native library** behind a Kotlin bridge, Jakarta Mail or the pieces K-9 uses. Proven code,
+but it is a second IMAP implementation with its own behaviour and its own bugs, and every fetch
+has to cross the bridge.
+
+**imapflow shimmed onto a React Native socket.** Tempting because it changes nothing above.
+Probably a swamp: imapflow reaches for `node:stream`, `node:zlib`, `node:crypto` and
+`node:buffer`, and a shim that is almost right is worse than no shim in a protocol client.
+
+**A small IMAP client in TypeScript**, written against a socket interface, shared by both. The
+measurement above is what makes this bounded rather than reckless. The application needs
+CAPABILITY, LOGIN, LIST, SELECT, STATUS, FETCH, STORE, UID MOVE, UID EXPUNGE, APPEND, CREATE,
+RENAME, DELETE, IDLE and LOGOUT, plus literals and the modified UTF-7 that mailbox names use.
+That is a list, not an RFC.
+
+Writing an IMAP client is where mail clients go to die, and the protection against that here is
+the list. Write it desktop first, behind the existing `ImapConnection` interface, and prove it
+against real accounts before a single line of phone code exists. If it cannot replace imapflow
+on the desktop, it is not ready for a phone, and finding that out costs nothing extra.
+
+**Built, behind a setting.** `packages/imap` is about 2,300 lines of source and
+implements `ImapSession` over a `Transport` it is handed. The desktop's transport is about 110 lines on
+Node's sockets. The parser was written against a Dovecot and not against the RFC's examples, using
+a corpus of awkward messages: encoded words in several charsets, address groups, raw UTF-8
+headers that the server sends as literals in the middle of an envelope, nested multiparts and
+an embedded message. Four recordings are kept as fixtures.
+
+What it was compared on: a suite runs the same nineteen scenarios through imapflow and through
+the new client against one server and compares what comes back. Envelopes, attachment hints,
+sizes, flags, the UIDs a move or an append reports, and the bytes of every message are the same.
+The differences found were fixed or written down: `\Recent` is not reported, an open mailbox is
+brought up to date before its count is read, a malformed Date header becomes no date instead of
+failing the folder's sync, and an address group no longer produces a recipient called `Team@`.
+The new client also starts listening for arrivals after two seconds of quiet where imapflow needs
+fifteen.
+
+The suite has been run against Dovecot 2.3 and, in the version before the last scenario below,
+against one real provider's server, and passes on both. Its last scenario syncs the same folder
+through the sync engine into a fresh database with each client and compares the rows, which are
+the same. That one has so far only run against Dovecot. The suite is skipped without a server in
+the environment, and it is safe to point at a real account, since it only touches folders it
+creates.
+
+The built-in client is chosen with a setting, `experimentalImapClient`, under Diagnostics in the
+settings. It is off by default, applies the next time an account connects, and writes into the same
+diagnostics log as imapflow. Turning it on for the accounts that matter, and living with it for a
+while, is what remains before the default can change.
+
+### 3. The database, and 126 synchronous functions
+
+better-sqlite3 is synchronous by design. Every SQLite driver on Android is asynchronous. The
+repository layer is 2,772 lines across 13 files, exporting 126 functions, and every one of them
+is synchronous, as is every caller of every one of them.
+
+Converting them is wide and produces a diff nobody enjoys reading. The alternative is a second
+data layer for the phone, which means the same queries written twice and drifting apart, and
+this project has already had one bug from exactly that shape (the attachment key that the
+window rebuilt for itself). So the conversion was done on the desktop, before the phone exists,
+while there is one set of callers.
+
+The 21 migrations are plain SQL and carry over as they are.
+
+**Done, and bigger than counted here.** Besides the 126 functions there were SQL
+statements written straight into the sync engine, the credential store and several IPC
+handlers (18 of them), and 20 transactions. All of it now goes through `SqlDb` in
+`src/main/db/sqlDb.ts`, which has four methods: `run`, `get`, `all` and `transaction`. The
+desktop implements it over better-sqlite3 as `BetterSqliteDb`. A phone implements it over
+whatever driver it ends up with, and the repositories, the sync engine and the handlers do not
+change. Apart from the reader for Thunderbird's address book, which opens somebody else's file,
+nothing outside that one file imports the driver.
+
+An earlier version of this section said better-sqlite3 does not object to being awaited. That
+is true and it was not the hard part. Two things were:
+
+* **Transactions.** On one connection, a transaction that spans an `await` lets any other task
+  run its statements inside it, and a rollback then undoes writes that were never part of it.
+  So everything else waits for an open transaction, and the function gets a handle of its own.
+  Using the outer handle from inside is an error instead of a hang. Whatever drives SQLite on
+  the phone has to give the same guarantee, and `sqlDb.test.ts` is the specification of it.
+* **Read, then write.** Seventeen functions looked something up and then wrote on the
+  strength of it: the next sort position, a free tag keyword, whether a message is new. They
+  were one step only because the driver was synchronous. Each now opens a transaction, and a
+  transaction asked for inside another one joins it. Eight tests fail with UNIQUE constraint
+  errors when that is taken away, which is how the claim was checked.
+
+The repositories are now tested against a real in-memory database with every migration applied.
+The old note in the test configuration, that the driver cannot load outside Electron, was out of
+date since the driver moved to Node-API.
+
+Still open for the phone: seven statements bind parameters by name (`@id`), which better-sqlite3
+accepts and a mobile driver may not.
+
+### 4. Where the shared code lives
+
+Not by copying. A copy of the link checker that fixes a hole in one place and not the other is
+the worst outcome available here.
+
+```
+peregrine/
+  packages/core      the portable logic, 3,344 lines and 28 test files
+  packages/imap      the client from decision 2
+  apps/desktop       today's src/main and src/renderer
+  apps/mobile        the React Native application
+```
+
+npm workspaces are enough. The cost is one pass over the desktop's import paths and build
+configuration. The benefit is that a fix to the spam reader or the link checker lands in both
+and is tested once.
+
+**Done, with one change.** `packages/core` exists as `@peregrine/core` and holds
+everything from `src/shared` except the two IPC files, which stay where the desktop needs them.
+The desktop did not move to `apps/desktop`. Moving the sources, the build configuration and the
+installer setup buys nothing a phone needs and puts the release pipeline at risk, so
+`apps/mobile` will sit next to the desktop at the root instead. That can be revisited once
+there is an `apps/mobile` to be tidy about.
+
+The boundary is enforced, which the plan above did not have. The package typechecks on its own
+without Node or DOM types, and a test fails on any import that is not one of its own files. The
+first run found a real assumption: `linkSafety` uses `URL`, and Hermes ships one without
+`hostname`, `username` and `password`, which the link forgery checks read. The phone
+application has to install a complete one. `packages/core/portable-globals.d.ts` is the whole
+list of what the package expects the platform to provide.
+
+## Push, and a correction
+
+An earlier note in this repository said a phone cannot hold a TCP connection open in the
+background, so push would require a server component. That is wrong. Android lets a foreground
+service keep a connection open indefinitely, and that is exactly how K-9 and FairEmail have
+done IMAP IDLE for years.
+
+What it costs is a permanent notification, battery, and a running fight with the battery
+optimisation that Samsung and Xiaomi apply to anything they do not recognise.
+
+Two things follow. The default should be periodic sync rather than push, on the platform's own
+scheduler, which floors out around fifteen minutes. Push should be something the user turns on
+knowing what it costs.
+
+And the rules for foreground services have tightened with almost every Android release,
+including which type an application may declare and how long it may run per day. Check the
+current rules for the version being targeted before designing anything that depends on holding
+a socket open. This is the item most likely to invalidate a plan written today.
+
+A push server would avoid the notification and the battery cost. It would also be a server that
+learns who writes to you and when, which is the thing SECURITY.md promises does not happen. If
+it is ever built, it holds the connection and knows "something arrived for account X" and never
+content, and that has to be designed in at the start rather than bolted on.
+
+## What v1 is
+
+Small on purpose. A phone client that tries to match the desktop feature for feature does not
+ship.
+
+In:
+
+- Several accounts with a unified inbox. This is the point of the project and there is no
+  version of it worth building that leaves this out.
+- Read, reply, forward, compose, attachments.
+- The offline queue. The phone is where the connection actually drops.
+- Search over what is on the device.
+- The safety work: link forgery checks, attachment refusal, remote content blocked until asked,
+  the spam verdict from the server's own headers. This already exists and is what makes it
+  Peregrine rather than one more client.
+
+Out, for now:
+
+- OpenPGP. openpgp.js needs a crypto polyfill on Hermes, and where a private key lives on a
+  phone deserves its own design rather than a port of the desktop's.
+- Filter rules, tasks, snooze, saved searches, several identities per account.
+- Thunderbird import, which has nothing to read from.
+
+## Stages
+
+1. Make the repositories asynchronous. Desktop only, no phone code, no user-visible change.
+   **Done.**
+2. Split the workspace. Desktop keeps working, tests run once. **Done**, without moving
+   the desktop.
+3. Write the IMAP client, desktop first, behind `ImapConnection`, proven against real accounts.
+   **Written, compared with imapflow against Dovecot and one real provider, and available behind
+   a setting**. Making it the default remains, and waits on use.
+4. First phone build: one account, list and read, nothing else. **A prototype runs** on an
+   Android 16 emulator against a test server: sign in, folders, the newest messages of a
+   folder, one message opened. What it found is under "What stage 4 found".
+5. Send, attachments, offline queue, several accounts.
+6. Notifications by periodic sync.
+7. Push as an opt-in, if the platform rules still allow what is wanted by then.
+
+Stages 1 to 3 improve the desktop whether or not a phone ever appears. That is the test of
+whether this plan is honest rather than hopeful: if the first half only pays off when the second
+half ships, it is a bet, not a plan.
+
+## What stage 4 found
+
+**The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was
+used. On Android its TLS does not check the host name: no endpoint identification algorithm and no
+host name verifier, and a Java `SSLSocket` checks the certificate chain and nothing about whose
+certificate it is unless it is told to. Any certificate a trusted authority signed would be accepted
+for any server. A STARTTLS upgrade is worse, because it hands over the IP address of the socket where
+the name belongs. So the phone has a transport of its own, a native module of about 200 lines
+(`PeregrineTransportModule`) with the check in a function a JVM test can reach (`TlsUpgrade`).
+It is tested against a server whose certificate the test trusts and which names one host, so that
+what is refused is refused for the name. One test shows the same socket accepting the wrong name
+when not told to check, which is the premise of the rest. On the emulator the same server was
+accepted under a name in its certificate and refused under an address that is not, with the
+handshake ended before any credential was sent, over TLS from the start and after a STARTTLS
+upgrade.
+
+**SQLCipher is a build flag, and without it the key does nothing.** op-sqlite takes an
+`encryptionKey` in any build and ignores it where SQLCipher was not compiled in, writing the
+database in the clear with no error. The flag lives in `apps/mobile/package.json`
+(`"op-sqlite": {"sqlcipher": true}`), and `openDatabase` refuses to open at all when `isSQLCipher()`
+is false. On the emulator the file begins with random bytes. The passphrase is 32 random bytes
+wrapped by an Android Keystore AES key and committed to storage before a database is created with it
+(`PeregrineKeystoreModule`). That is the arrangement from the author's other Android apps, and it is
+not tied to the screen being unlocked, because a sync has to open the database with nobody there.
+
+**The driver and `SqlDb`.** op-sqlite takes positional parameters only, per its type definitions, so
+the adapter refuses a named parameter object instead of binding nothing, and the seven statements
+that use names still have to be rewritten. Its transactions are not used. `OpSqliteDb` holds the
+connection from `BEGIN IMMEDIATE` to the end under a lock of its own, which gives `SqlDb` the
+guarantee that nothing else runs inside a transaction, and is tested against a real SQLite. What
+Hermes cannot give is the guard the desktop has against using the outer handle from inside a
+transaction, which rests on `AsyncLocalStorage`: there it waits for a lock that is never released.
+The repositories use the handle they are given, so it has not mattered yet.
+
+**The repository.** React Native's template expects its packages next to the project. In a
+workspace they are installed at the root, so the Gradle plugin, the codegen, the CLI and the Hermes
+compiler are looked up there. The last one only showed when a debug build was made to carry its
+JavaScript, which a build for the emulator never does, so it was found by trying what the pipeline
+would do before the pipeline did it. `npm audit` goes from 8 to 28 findings, all in React Native's build tooling and from two
+advisories without a patched version, and none of it is part of the APK.
+
+**Not yet looked at.** What Hermes offers as `TextDecoder`: the prototype reads a message in the
+charsets the package decodes itself, and a message in another one would show Latin-1 where it should
+show something else. Whether a sync of a real mailbox, with thousands of messages, is workable at
+the speed of the base64 bridge. Background work, and anything on a real phone: the emulator is
+x86_64, and the debug APK is 62 MB with one architecture.
+
+## To verify before committing to any of this
+
+- Charsets in message headers. UTF-8, ASCII, Latin-1, Latin-9 and Windows-1252 are decoded in the
+  package. Anything else goes to `TextDecoder` where the platform has one, and is read as Latin-1
+  where it does not. Check what Hermes offers before deciding whether that is enough.
+- Whether the key can be handed over in the form `profileCrypto` derives, if a profile is ever to
+  move between a phone and a desktop. The phone's own database does not need it.
+- Foreground service types and daily caps on the Android version being targeted.
+- Hermes and openpgp.js, if PGP is ever wanted.
+- nodejs-mobile's actual state, if the shortcut still tempts.
+
+## Effort, honestly
+
+Stages 1 to 3 were estimated at weeks each for somebody who knows this codebase. Stage 1 touched
+48 files and took a single working session, so that estimate was too high for it. It stays for
+stages 2 and 3 until they are done, because the asynchronous layer was the part with an obvious
+shape, and the IMAP client is not. Stages 4 onward are a second application and are measured in
+months. This is not a weekend and it is not a quarter.
+
+## The comparison worth making first
+
+Thunderbird for Android, formerly K-9 Mail, does most of the "in" list today. It is GPL, it
+handles several accounts, it does IMAP IDLE push, and setting it up takes an evening. Peregrine
+already imports Thunderbird's accounts, so the credentials are the same ones.
+
+The reason to build this is the safety work and the way several mailboxes are handled, not the
+want of a mail client on a phone. If that reason does not hold up when written out, the plan
+above is a great many months for something that already exists.

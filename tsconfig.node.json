@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "types": ["electron-vite/node", "node"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@shared/*": ["./src/shared/*"],
+      // The package's own "exports" map has no "types" condition for ".", so bundler
+      // resolution cannot see the declaration file it ships. Runtime resolution (esbuild,
+      // Vite) is unaffected, this only points the type checker at the right file.
+      "better-sqlite3-multiple-ciphers": ["./node_modules/better-sqlite3-multiple-ciphers/index.d.ts"]
+    }
+  },
+  "include": [
+    "electron.vite.config.*",
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/shared/**/*",
+    "packages/core/src/**/*",
+    "packages/imap/src/**/*",
+    "packages/imap/test-support/**/*"
+  ]
+}

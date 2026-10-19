@@ -1,0 +1,13 @@
+{
+  "name": "@peregrine/imap",
+  "version": "0.0.0",
+  "private": true,
+  "description": "An IMAP client that runs wherever JavaScript does, over a transport it is handed",
+  "license": "GPL-3.0-or-later",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@peregrine/core": "*"
+  }
+}

@@ -1,0 +1,31 @@
+From: Carol <carol@example.net>
+To: test@example.com
+Subject: Nested parts
+Date: Thu, 08 Jan 2026 09:00:00 +0000
+Message-ID: <m4@example.net>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="OUTER"
+
+--OUTER
+Content-Type: multipart/alternative; boundary="ALT"
+
+--ALT
+Content-Type: text/plain; charset=us-ascii
+
+plain version
+--ALT
+Content-Type: text/html; charset=us-ascii
+
+<p>html version</p>
+--ALT--
+--OUTER
+Content-Type: multipart/mixed; boundary="INNER"
+
+--INNER
+Content-Type: application/octet-stream; name="deep.bin"
+Content-Disposition: attachment; filename="deep.bin"
+Content-Transfer-Encoding: base64
+
+AAECAw==
+--INNER--
+--OUTER--

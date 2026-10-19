@@ -1,0 +1,9 @@
+# Der Bestand ist durchgehend LF. Ohne diese Zeile schreibt Git auf Windows beim
+# Auschecken alles auf CRLF um — ein Scheindiff quer durch 240 Dateien, und
+# `core.autocrlf` gilt nur auf diesem Rechner.
+* text=auto eol=lf
+
+# Binärdateien fasst niemand an.
+*.png binary
+*.ico binary
+*.icns binary

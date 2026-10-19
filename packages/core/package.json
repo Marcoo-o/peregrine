@@ -1,0 +1,10 @@
+{
+  "name": "@peregrine/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The parts of Peregrine that do not depend on any platform",
+  "license": "GPL-3.0-or-later",
+  "exports": {
+    "./*": "./src/*.ts"
+  }
+}

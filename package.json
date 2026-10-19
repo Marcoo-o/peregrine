@@ -1,0 +1,81 @@
+{
+  "name": "peregrine",
+  "version": "0.1.0",
+  "description": "Desktop email client for people with more than one mailbox",
+  "license": "GPL-3.0-or-later",
+  "author": {
+    "name": "Marco",
+    "email": "42667267+Marcoo-o@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/Marcoo-o/peregrine#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Marcoo-o/peregrine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Marcoo-o/peregrine/issues"
+  },
+  "keywords": [
+    "email",
+    "imap",
+    "smtp",
+    "openpgp",
+    "electron",
+    "desktop"
+  ],
+  "main": "./out/main/index.js",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p packages/core/tsconfig.json && tsc --noEmit -p packages/imap/tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "setup": "npm install --ignore-scripts && node scripts/postinstall.js",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "dist:linux": "electron-vite build && electron-builder --linux",
+    "icon": "electron scripts/build-icon.js"
+  },
+  "dependencies": {
+    "better-sqlite3-multiple-ciphers": "^13.0.3",
+    "dompurify": "^3.4.17",
+    "i18next": "^26.3.6",
+    "i18next-browser-languagedetector": "^8.2.1",
+    "imapflow": "^1.6.6",
+    "lucide-react": "^1.31.0",
+    "mailparser": "^3.9.46",
+    "nodemailer": "^10.1.7",
+    "openpgp": "^6.3.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.11",
+    "react-window": "^2.3.0",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@peregrine/core": "*",
+    "@peregrine/imap": "*",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/mailparser": "^3.4.6",
+    "@types/node": "^26.2.0",
+    "@types/nodemailer": "^8.0.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^43.8.0",
+    "electron-builder": "^26.17.0",
+    "electron-vite": "^5.0.0",
+    "jsdom": "^30.0.1",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.12"
+  }
+}

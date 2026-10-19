@@ -1,0 +1,65 @@
+/* The about section. Values that are rarely needed, but needed precisely when they are. */
+
+.about-identity {
+  margin-bottom: 1rem;
+}
+
+.about-name {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.about-version {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+}
+
+/* Only present during development, and meant as an explanation rather than a warning. */
+.about-badge {
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+}
+
+/*
+ * Label and value side by side rather than stacked. There are three lines, and a definition
+ * list running down half the page would look more important than it is.
+ */
+.about-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15rem 1rem;
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+}
+
+.about-facts dt {
+  color: var(--text-muted);
+}
+
+.about-facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.about-updates {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  max-width: 46rem;
+}
+
+.about-updates svg {
+  flex: none;
+  margin-top: 0.15rem;
+}
+
+/* A button spanning the full width would read as the primary action. It is not. */
+.settings-section .about-copy {
+  align-self: flex-start;
+  width: auto;
+}

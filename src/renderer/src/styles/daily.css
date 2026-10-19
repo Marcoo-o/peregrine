@@ -1,0 +1,290 @@
+/* The daily list: tasks with checklists, plus the mail that carries the configured tag. */
+
+.daily-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 2rem;
+  overflow-y: auto;
+  min-height: 0;
+  /* Held to a readable column rather than stretched across the window: a task title is one
+     line of text, and on a wide screen the tick and the delete button would end up a hand's
+     width apart from it. */
+  width: 100%;
+  max-width: 46rem;
+}
+
+.daily-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.daily-header h1 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.daily-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.daily-date {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.daily-new {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+
+.daily-new input {
+  flex: 1;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+
+/* The border sits on the container, because the field inside has none of its own. Without
+   this, tabbing into the field showed nothing at all. The ring had been removed and nothing
+   took its place. */
+.daily-new:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.daily-empty,
+.daily-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.daily-tasks,
+.daily-mails,
+.daily-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.daily-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.daily-task {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.6rem;
+  background: var(--bg-elevated);
+}
+
+/* Done stays visible rather than disappearing: what was finished today is part of the day. */
+.daily-task.done .daily-task-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.daily-task-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.daily-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.daily-check input {
+  width: auto;
+  flex: none;
+}
+
+.daily-task-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-recurrence {
+  flex: none;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  background: var(--bg);
+  color: var(--text-muted);
+}
+
+.daily-link,
+.daily-remove {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.daily-link:hover,
+.daily-remove:hover {
+  color: var(--text);
+}
+
+.daily-notes {
+  margin: 0.25rem 0 0 1.5rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.daily-items {
+  margin: 0.3rem 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.daily-items li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.daily-add-item input {
+  flex: 1;
+  border: none;
+  border-bottom: 1px dashed var(--border);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.1rem 0;
+  outline: none;
+}
+
+/* On focus the dashed hint becomes a solid line in the accent colour. The same field, visibly
+   active, and without the row jumping as it happens. */
+.daily-add-item input:focus {
+  border-bottom: 1px solid var(--accent);
+}
+
+.daily-subheading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.9rem 0 0;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.daily-mails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+/* A button now rather than a list item, so the row can be reached with the keyboard. The
+   button defaults for border, background and type have to go for that. */
+.daily-mail {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.3rem 0.5rem;
+  border: none;
+  border-radius: 0.35rem;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.daily-mail:hover {
+  background: var(--bg-elevated);
+}
+
+.daily-mail-subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-mail-from {
+  margin-left: auto;
+  flex: none;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+/* The note field looks like text until it is used. A box on every task would make the list
+   look like a form. */
+.daily-notes {
+  display: block;
+  width: calc(100% - 1.5rem);
+  margin: 0.25rem 0 0 1.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  resize: none;
+  outline: none;
+  overflow: hidden;
+}
+
+.daily-notes:focus {
+  color: var(--text);
+}
+
+/* ---------- Reordering ---------- */
+
+/* Only the handle drags. The row itself stays selectable text, which matters for the title
+   and the notes underneath it. */
+.daily-grip {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.daily-task:hover .daily-grip,
+.daily-grip:focus-visible {
+  opacity: 1;
+}
+
+.daily-grip:active {
+  cursor: grabbing;
+}
+
+.daily-task.drop-target {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}

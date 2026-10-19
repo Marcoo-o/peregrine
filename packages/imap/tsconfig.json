@@ -1,0 +1,19 @@
+{
+  // The package on its own, with the least a JavaScript engine promises, like packages/core. No
+  // Node and no DOM types: the client is written against a transport it is given, and the
+  // transport is the only part that knows what a socket is. The tests are left out because they
+  // run under Node, which is checked by the desktop project that includes them.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "types": [],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*.ts", "portable-globals.d.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

@@ -1,0 +1,82 @@
+# Builds the Android application: the unit tests of its native code, the type check of its
+# JavaScript, and a debug APK that carries its own JavaScript, so it starts without a development
+# server.
+#
+# It runs on changes to the application and to the two packages it shares with the desktop, because
+# a change in @peregrine/imap can break the phone without touching a file under apps/mobile.
+# The tests that need no phone (the database adapter, the transport, the message reader) run in
+# ci.yml with the rest. What cannot run here is the application itself: that needs an emulator and a
+# server, and was checked by hand for stage 4, as docs/mobile.md says.
+#
+# A debug APK only. It installs on a phone that allows apps from outside the store, which is all a
+# pull request or a development build needs. A release build has to be signed, which needs a
+# keystore kept in the repository's secrets, and that, with attaching the result to the release
+# next to the Windows and Linux files, belongs to stage 6. When it gets there, upload the checksums
+# as a `checksums-Android` artifact like the jobs in release.yml do, and the release picks them up
+# without further changes.
+name: Android
+
+on:
+  pull_request:
+    paths: ['apps/mobile/**', 'packages/**', 'package-lock.json', '.github/workflows/android.yml']
+  push:
+    branches: [main]
+    paths: ['apps/mobile/**', 'packages/**', 'package-lock.json', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+# One run per branch: a new push to a pull request cancels the one before it. A run on main is never
+# cancelled, so that what was merged is what was built.
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # React Native 0.88 asks for 22.13 or newer, and 22 resolves to the newest of that line.
+          node-version: 22
+          cache: npm
+
+      # See the note in ci.yml: the lockfile needs npm 11 to be read as written.
+      - run: npm install -g npm@11
+
+      - run: npm ci
+
+      - name: Type check the JavaScript
+        run: npm run typecheck -w @peregrine/mobile
+
+      # The Gradle wrapper of the project asks for Gradle 9, which needs JDK 17 or newer. 21 is the
+      # one the build was tried with.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # The certificate check of the native transport, against a test server on the JVM. It is the
+      # reason the phone has a transport of its own, so it runs on every change.
+      - name: Test the native code
+        working-directory: apps/mobile/android
+        run: ./gradlew testDebugUnitTest
+
+      # Two architectures and not the four the project defaults to: arm64 is the phones, x86_64 the
+      # emulator. The rest would triple the time for devices nobody has.
+      - name: Build the debug APK
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleDebug -PbundleJs -PreactNativeArchitectures=arm64-v8a,x86_64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: peregrine-android-debug
+          path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

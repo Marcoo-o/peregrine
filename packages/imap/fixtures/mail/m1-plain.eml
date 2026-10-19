@@ -1,0 +1,7 @@
+From: Alice Example <alice@example.com>
+To: test@example.com
+Subject: Hello plain
+Date: Mon, 05 Jan 2026 10:00:00 +0000
+Message-ID: <m1@example.com>
+
+Hello world.

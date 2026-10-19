@@ -1,0 +1,81 @@
+/* "Remind me later": the preset dialog and the badge on a message that is waiting. */
+
+.snooze-dialog h3 {
+  /* The shared modal heading is red; that belongs to the warning dialog. */
+  color: var(--text);
+}
+
+.snooze-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.snooze-preset {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.snooze-preset:hover,
+.snooze-preset:focus-visible {
+  background: var(--bg-hover, rgba(127, 127, 127, 0.12));
+  border-color: var(--border);
+}
+
+.snooze-when {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  flex: none;
+}
+
+.snooze-custom-open {
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+}
+
+.snooze-custom {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.snooze-custom input {
+  flex: 1;
+  font: inherit;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.snooze-hint {
+  margin: 0.7rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* The badge in the message list. */
+
+.message-row-snooze {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
