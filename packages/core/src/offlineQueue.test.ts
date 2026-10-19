@@ -227,6 +227,14 @@ describe('send', () => {
     expect(t.calls.indexOf('sending')).toBeLessThan(t.calls.findIndex((c) => c.startsWith('remove ')))
   })
 
+  it('hands the connection of the run to the handler', async () => {
+    const t = setup([send()])
+    const seen: unknown[] = []
+    t.runner.setSendHandler(async (_input, imap) => void seen.push(imap))
+    await t.runner.flush('a', t.imap)
+    expect(seen).toEqual([t.imap])
+  })
+
   // `false` means "nothing left to act on" and the row is dropped, so a message would have
   // disappeared unsent. A missing handler means it cannot run yet.
   it('does not drop a message when there is nothing to send it with yet', async () => {

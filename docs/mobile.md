@@ -370,7 +370,12 @@ sender and the login from the account. A user name or password that was not give
 one for reading, and a port that was not given is the one for the kind of connection. It refuses,
 saying why, what the phone cannot do yet and would otherwise do wrongly: attachments, encrypting or
 signing, and a later time. An answer quotes the original and joins its thread, which needed the
-Message-ID, References and Reply-To of the message read out of the source.
+Message-ID, References and Reply-To of the message read out of the source. A message that went out is
+filed in the account's Sent folder with IMAP `APPEND`, marked read, as most providers do not do it
+themselves. The queue hands its connection to the send handler for this. The copy is made after the
+server has accepted the message, and nothing that goes wrong with it fails the send: the queue would
+take that for a message that did not go out and send it again, and the recipient would get it twice
+for the sake of a copy. A copy that could not be made is logged.
 
 **Screens.** Reading a message marks it read. A message has Reply, Unread, Star, Move and Delete. A
 new message and an answer have a compose screen. An account whose server cannot be reached opens from
@@ -380,15 +385,14 @@ failed did, and offers to discard what was given up on.
 
 **What this step has not shown.** None of it was run on a device or a server. The queue, the actions
 and the sending are tested on the phone's data and through its adapter, sending against a scripted
-server, and the screens are type-checked and bundled and not used. Three things are known to be
+server, and the screens are type-checked and bundled and not used. Two things are known to be
 missing or rough. The sending settings of a new account are not tried when it is added, only the
 reading ones are, so a wrong SMTP server shows when the first message is sent, as a message that
 waits with its reason. A message the server took for some recipients and refused for others counts
-as sent, and the refusals are not shown. And a sent message is not copied into the Sent folder: some
-providers do that themselves, most do not, and it needs IMAP `APPEND`, which the session does not have.
+as sent, and the refusals are not shown.
 
 **Not in step 4.** Attachments, which on the phone need a way to pick a file, and to open one;
-scheduled sending; the copy into Sent; drafts; OAuth; search; the unified inbox.
+scheduled sending; drafts; OAuth; search; the unified inbox.
 
 ## What stage 4 found
 

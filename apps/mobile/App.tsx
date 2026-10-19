@@ -26,7 +26,7 @@ import { listMessages, type StoredMessage } from './src/messages'
 import { readMessage, type ReadableMessage } from './src/messageText'
 import { createTransport } from './src/native'
 import { createQueue } from './src/queue'
-import { sendMessage, smtpSettingsOf } from './src/send'
+import { sendAndFile, smtpSettingsOf } from './src/send'
 import { syncFolder } from './src/sync'
 
 /**
@@ -195,7 +195,7 @@ export default function App() {
         database.current = db
         const log = { warn: (message: string) => console.warn(message), error: (message: string) => console.error(message) }
         const runner = createQueue(db, { changed: () => refreshWaiting(), log })
-        runner.setSendHandler((input) => sendMessage(db, createTransport, input))
+        runner.setSendHandler((input, imap) => sendAndFile(db, createTransport, input, imap, log))
         queue.current = runner
         mail.current = new MailActions({
           db,

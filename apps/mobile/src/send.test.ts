@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { ComposeInput } from '@peregrine/core/types'
 import { FakeSmtpServer } from '../../../packages/smtp/test-support/fakeServer'
 import { addAccount, getAccount, type NewAccount } from './accounts'
-import { sendMessage, smtpSettingsOf } from './send'
+import type { ImapSession, MailboxEntry } from '@peregrine/core/imapSession'
+import { syncFolders } from './folders'
+import { sendAndFile, sendMessage, smtpSettingsOf } from './send'
 import { migratedDatabase } from './testing/testDb'
 
 const newAccount = (over: Partial<NewAccount> = {}): NewAccount => ({
@@ -64,7 +66,7 @@ describe('the settings for sending', () => {
 describe('sending from the application', () => {
   it('logs in, sends the message to everybody, bcc included, and says goodbye', async () => {
     const t = await setup()
-    const result = await sendMessage(t.db, t.make, input(t.account.id))
+    const { result } = await sendMessage(t.db, t.make, input(t.account.id))
 
     expect(result.accepted.sort()).toEqual(['anna@example.net', 'hidden@example.net'])
     expect(t.server.received.map((line) => line.split(' ')[0])).toEqual(['EHLO', 'STARTTLS', 'EHLO', 'AUTH', 'MAIL', 'RCPT', 'RCPT', 'DATA', 'QUIT'])
@@ -133,5 +135,58 @@ describe('sending from the application', () => {
     await expect(sendMessage(noServer.db, noServer.make, input(noServer.account.id))).rejects.toThrow(/no server for sending/)
     const gone = await setup()
     await expect(sendMessage(gone.db, gone.make, input('nobody'))).rejects.toThrow(/is gone/)
+  })
+})
+
+describe('filing a copy in Sent', () => {
+  const entry = (path: string, specialUse: string | null): MailboxEntry => ({ path, name: path, parentPath: null, flags: [], specialUse })
+
+  async function filing(withSent: boolean) {
+    const t = await setup()
+    await syncFolders(t.db, t.account.id, [entry('INBOX', null), ...(withSent ? [entry('Gesendet', '\\Sent')] : [])])
+    const appended: { path: string; source: string; flags: string[] }[] = []
+    const failure = { error: null as Error | null }
+    const imap = {
+      appendMessage: async (path: string, source: Uint8Array | string, flags: string[]) => {
+        if (failure.error) throw failure.error
+        appended.push({ path, source: typeof source === 'string' ? source : text(source), flags })
+        return 7
+      }
+    } as unknown as ImapSession
+    const logs: string[] = []
+    return { ...t, imap, appended, failure, logs, log: { error: (m: string) => logs.push(m) } }
+  }
+
+  it('files what went out, marked read, in the folder the server calls Sent', async () => {
+    const t = await filing(true)
+    await sendAndFile(t.db, t.make, input(t.account.id), t.imap, t.log)
+    expect(t.appended).toHaveLength(1)
+    expect(t.appended[0]).toMatchObject({ path: 'Gesendet', flags: ['\\Seen'] })
+    // the same bytes the server was given, and like them without the blind copy
+    expect(t.appended[0].source).toContain('Subject:')
+    expect(t.appended[0].source).not.toContain('hidden@example.net')
+  })
+
+  it('files nothing for an account with no Sent folder, and sends all the same', async () => {
+    const t = await filing(false)
+    await sendAndFile(t.db, t.make, input(t.account.id), t.imap, t.log)
+    expect(t.appended).toEqual([])
+    expect(t.server.messages).toHaveLength(1)
+  })
+
+  // Failing here would send the message again on the next run, for the sake of a copy.
+  it('does not fail the send when the copy could not be made, and says so', async () => {
+    const t = await filing(true)
+    t.failure.error = new Error('NO [OVERQUOTA] mailbox is full')
+    const sent = await sendAndFile(t.db, t.make, input(t.account.id), t.imap, t.log)
+    expect(sent.result.accepted).toHaveLength(2)
+    expect(t.logs).toEqual([expect.stringContaining('OVERQUOTA')])
+  })
+
+  it('files nothing when the sending failed', async () => {
+    const t = await filing(true)
+    t.server.on('RCPT', () => '550 no such user\r\n')
+    await expect(sendAndFile(t.db, t.make, input(t.account.id), t.imap, t.log)).rejects.toThrow()
+    expect(t.appended).toEqual([])
   })
 })
