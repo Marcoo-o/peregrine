@@ -255,8 +255,9 @@ Out, for now:
 4. First phone build: one account, list and read, nothing else. **A prototype runs** on an
    Android 16 emulator against a test server: sign in, folders, the newest messages of a
    folder, one message opened. What it found is under "What stage 4 found".
-5. Send, attachments, offline queue, several accounts. **Step 1 is written**: sending, in
-   `packages/smtp`. The rest is not, see "What stage 5 found so far".
+5. Send, attachments, offline queue, several accounts. **Steps 1 and 2 are written**: sending,
+   in `packages/smtp`, and the replay of the offline queue as an engine in `@peregrine/core`. The
+   rest is not, see "What stage 5 found so far".
 6. Notifications by periodic sync.
 7. Push as an opt-in, if the platform rules still allow what is wanted by then.
 
@@ -296,11 +297,28 @@ at the greeting, which is a no, was one to retry. And the composer looked for a 
 not in the text it separates, which with a random source that keeps giving the same answer, as
 tests use, never ended. It counts its tries now.
 
-**Not in this step.** The screens, the offline queue, attachments from the phone's files, several
+**Not in step 1.** The screens, the offline queue, attachments from the phone's files, several
 accounts. In the composer: inline images (`multipart/related`), addresses with characters beyond
 ASCII in a header, which want the SMTPUTF8 form of the message, and addresses whose domain is an
 internationalised name. In the client: OAuth, and PGP/MIME, which the desktop sends through a
 different path and which the phone does not do yet.
+
+**The offline queue's replay was written once and tested never.** The types and the rules about what
+an action is were already portable. The replay was 200 lines in the desktop that knew Electron, its
+repositories and its timers, and no test touched it. It is now `QueueRunner` in `@peregrine/core`,
+handed where the actions are kept, what a folder id means on the server, what to do to the local mail
+after a move, how to say that something changed, and the timers. The desktop's `OfflineQueue` is a
+74-line layer over it with the methods the rest of the process always called. The rules are the ones
+that were in the comments, now each with a test: order kept per account and the first failure stops
+the run, a target that is gone is dropped and not retried, a message is sent before it is removed and
+a missing send handler fails it instead of dropping it, an action that never settles is a failed
+attempt, a second run for a running account does nothing, and one timer, capped at a day, wakes the
+queue for the next scheduled message. The desktop is checked against a real database with every
+migration, and the same test passes against the old implementation, which is what shows that it
+measures the behaviour that was there and not what was written afterwards.
+
+**Not in step 2.** The phone's side of it: its tables for several accounts, its store for the queue
+and its screens.
 
 ## What stage 4 found
 
