@@ -27,9 +27,16 @@ export class Application {
     this.accounts = new AccountSetup(services, store, this.navigator)
   }
 
-  /** Gives up on the actions that failed too often. */
-  discardFailedActions(): Promise<void> {
-    return discardFailedActions(this.services, this.store)
+  /** Starts the application: removes what was left behind, then shows the first screen. */
+  async start(): Promise<void> {
+    await this.services.sweepCopies()
+    await this.navigator.start()
+  }
+
+  /** Gives up on the actions that failed too often, and with them the files they carried. */
+  async discardFailedActions(): Promise<void> {
+    await discardFailedActions(this.services, this.store)
+    await this.services.sweepCopies()
   }
 
   /** Lets go of what is open: the queue's timer and every connection. */

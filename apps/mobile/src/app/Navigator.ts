@@ -1,6 +1,6 @@
 import type { ImapSession } from '@peregrine/core/imapSession'
 import { listAccounts, type Account } from '../accounts'
-import { describeError } from '../errors'
+import { explainError } from '../errors'
 import { listFolders, syncFolders, type Folder } from '../folders'
 import { listMessages } from '../messages'
 import { syncFolder } from '../sync'
@@ -57,7 +57,7 @@ export class Navigator {
     try {
       await this.showFolders(account, await this.services.connections.ensure(account))
     } catch (error) {
-      await this.showFoldersOffline(account, describeError(error))
+      await this.showFoldersOffline(account, explainError(error))
     }
   }
 
@@ -123,7 +123,7 @@ export class Navigator {
       await syncFolder(imap, this.services.db, folder)
       await this.showStoredMessages(account, folder, { busy: false })
     } catch (error) {
-      await this.showStoredMessages(account, folder, { busy: false, error: describeError(error) })
+      await this.showStoredMessages(account, folder, { busy: false, error: explainError(error) })
     }
   }
 

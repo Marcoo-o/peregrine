@@ -2,7 +2,9 @@ import type { ImapSession } from '@peregrine/core/imapSession'
 import type { QueueRunner } from '@peregrine/core/offlineQueue'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { Transport } from '@peregrine/imap/transport'
+import { sweepCopies } from '../attachmentCopies'
 import { Connections } from '../connections'
+import { describeError } from '../errors'
 import type { Files } from '../files'
 import { MailActions } from '../mailActions'
 import { createQueue } from '../queue'
@@ -33,6 +35,11 @@ export interface Services {
   log: Log
   /** A connection that belongs to no account yet, to find out whether a login works. */
   connectImap(login: ImapLogin): Promise<ImapSession>
+  /**
+   * Removes the copies of attached files that no queued message refers to. What cannot be removed is
+   * logged and not raised: a copy that is left is a leak of storage and no reason to stop anything.
+   */
+  sweepCopies(): Promise<void>
 }
 
 export interface ServiceListeners {
@@ -57,5 +64,20 @@ export function createServices(db: SqlDb, platform: Platform, listeners: Service
     sendAndFile(db, { makeTransport: () => platform.makeTransport(), files }, input, imap, log)
   )
   const mail = new MailActions({ db, queue, session: (accountId) => connections.get(accountId), log })
-  return { db, connections, queue, mail, files, log, connectImap: (login) => platform.connectImap(login) }
+  return {
+    db,
+    connections,
+    queue,
+    mail,
+    files,
+    log,
+    connectImap: (login) => platform.connectImap(login),
+    sweepCopies: async () => {
+      try {
+        await sweepCopies(db, files)
+      } catch (error) {
+        log.error(`removing the leftover copies of attached files failed: ${describeError(error)}`)
+      }
+    }
+  }
 }

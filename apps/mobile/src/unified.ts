@@ -1,6 +1,7 @@
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { Account } from './accounts'
 import type { Connections } from './connections'
+import { explainError } from './errors'
 import { listFolders, syncFolders, type Folder } from './folders'
 import type { MailActions } from './mailActions'
 import { toStoredMessage, type StoredMessage } from './messages'
@@ -114,7 +115,7 @@ export async function refreshInboxes(
         return {
           accountId: account.id,
           accountName: account.displayName,
-          error: error instanceof Error ? error.message : String(error)
+          error: explainError(error)
         }
       }
     })

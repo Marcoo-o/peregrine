@@ -162,6 +162,25 @@ class PeregrineFilesModule(context: ReactApplicationContext) : ReactContextBaseJ
     promise.resolve(null)
   }
 
+  /**
+   * Removes every copy that is not in the list, which is what the queue still refers to. For what is
+   * left behind when a message is discarded, an account is removed or the application stops between
+   * picking a file and sending.
+   */
+  @ReactMethod
+  fun keepOnly(paths: ReadableArray, promise: Promise) {
+    val keep = (0 until paths.size()).mapNotNull { paths.getString(it) }
+    Thread {
+        try {
+          ConfinedFiles.orphans(outgoing, keep).forEach { it.deleteRecursively() }
+          promise.resolve(null)
+        } catch (e: SecurityException) {
+          promise.reject("E_REMOVE", e.message ?: "The copies could not be removed", e)
+        }
+      }
+      .start()
+  }
+
   /** Lets the user choose where to save a file and writes it there. False when they chose nowhere. */
   @ReactMethod
   fun save(name: String, mimeType: String, base64: String, promise: Promise) {

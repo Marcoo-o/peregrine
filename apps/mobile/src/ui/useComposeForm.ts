@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { shouldWarnAboutAttachment } from '@peregrine/core/attachmentHints'
 import { refusedFilesText } from '../attachmentText'
 import { attachPicked, detachFile, type Draft } from '../draft'
-import { describeError } from '../errors'
+import { explainError } from '../errors'
 import type { Files } from '../files'
 
 /**
@@ -25,7 +25,7 @@ export function useComposeForm(initial: Draft, files: Files) {
       update({ attachments })
       setNotice(refused.length > 0 ? refusedFilesText(refused) : null)
     } catch (error) {
-      setNotice(`Anhängen ging nicht: ${describeError(error)}`)
+      setNotice(`Anhängen ging nicht: ${explainError(error)}`)
     }
   }
 

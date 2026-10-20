@@ -1,5 +1,5 @@
 import { addAccount, removeAccount, type Account } from '../accounts'
-import { describeError } from '../errors'
+import { explainError } from '../errors'
 import { newAccountFrom, type AccountForm } from './accountForm'
 import type { Navigator } from './Navigator'
 import type { Services } from './services'
@@ -29,14 +29,15 @@ export class AccountSetup {
       this.services.connections.adopt(account.id, session)
       await this.navigator.showFolders(account, session)
     } catch (error) {
-      this.store.showScreen({ name: 'login', error: describeError(error) })
+      this.store.showScreen({ name: 'login', error: explainError(error) })
     }
   }
 
-  /** Removes an account with its mail and its queue, and lets go of its connection. */
+  /** Removes an account with its mail and its queue and the files its queue carried, and lets go of its connection. */
   async remove(account: Account): Promise<void> {
     this.services.connections.drop(account.id)
     await removeAccount(this.services.db, account.id)
+    await this.services.sweepCopies()
     await this.navigator.showAccounts()
   }
 }

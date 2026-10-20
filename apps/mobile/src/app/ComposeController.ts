@@ -1,6 +1,6 @@
 import type { Account } from '../accounts'
 import { emptyDraft, replyDraft, toComposeInput, type Draft } from '../draft'
-import { describeError } from '../errors'
+import { explainError } from '../errors'
 import { smtpSettingsOf } from '../send'
 import type { Navigator } from './Navigator'
 import type { ComposeState, MessageState, Screen } from './screens'
@@ -50,7 +50,7 @@ export class ComposeController {
       this.store.showScreen(state.returnTo)
       this.navigator.refreshStatus()
     } catch (error) {
-      this.store.showScreen({ ...state, draft, busy: false, error: describeError(error) })
+      this.store.showScreen({ ...state, draft, busy: false, error: explainError(error) })
     }
   }
 

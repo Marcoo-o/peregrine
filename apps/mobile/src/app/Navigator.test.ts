@@ -69,7 +69,7 @@ describe('opening an account', () => {
     const work = await t.givenAccount('work', { INBOX: [], Trash: [] })
     t.server.unreachable.add('work')
     await t.app.navigator.openAccount(work)
-    expect(t.store.screen).toMatchObject({ name: 'folders', offline: 'work: connection refused' })
+    expect(t.store.screen).toMatchObject({ name: 'folders', offline: 'Der Server ist nicht erreichbar. (work: connection refused)' })
   })
 
   it('goes back to the list of accounts, naming the account, when there is nothing from before either', async () => {
@@ -78,7 +78,7 @@ describe('opening an account', () => {
     const other = await t.givenAccount('other', { INBOX: [] })
     t.server.unreachable.add('work')
     await t.app.navigator.openAccount(work)
-    expect(t.store.screen).toMatchObject({ name: 'accounts', error: 'work: work: connection refused' })
+    expect(t.store.screen).toMatchObject({ name: 'accounts', error: 'work: Der Server ist nicht erreichbar. (work: connection refused)' })
     expect((t.store.screen as { accounts: unknown[] }).accounts).toHaveLength(2)
     expect(other.id).toBeTruthy()
   })
@@ -136,7 +136,7 @@ describe('the unified inbox', () => {
     const last = t.store.screen
     expect(last).toMatchObject({ name: 'unified', busy: false })
     if (last.name !== 'unified') return
-    expect(last.problems).toEqual([expect.objectContaining({ accountName: 'home', error: 'home: connection refused' })])
+    expect(last.problems).toEqual([expect.objectContaining({ accountName: 'home', error: 'Der Server ist nicht erreichbar. (home: connection refused)' })])
   })
 
   // Found on an emulator: after an action the way back to the list did not show it, because the
