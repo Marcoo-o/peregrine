@@ -267,6 +267,8 @@ Out, for now:
 
 Between 6 and 7 the screens were given the look of the desktop application, made for the phone. What
 that is, and what it left out, is under "What the design found".
+After that, reading a message was brought closer to the desktop: HTML mail, what is known of the sender and
+the links, and the actions of a message. That is under "What reading like the desktop found".
 
 Stages 1 to 3 improve the desktop whether or not a phone ever appears. That is the test of
 whether this plan is honest rather than hopeful: if the first half only pays off when the second
@@ -617,6 +619,60 @@ ran: the unified list, the accounts, the folders with their counts, a folder, an
 settings. The list and an open message were also looked at with the system font at 160 percent, where a
 layout made of fixed heights would break first: the rows grow with the text and the actions wrap onto
 more lines, and nothing is cut off. The forms were not looked at that way.
+
+## What reading like the desktop found
+
+The desktop sanitizes a message's HTML with DOMPurify in its window, which needs a DOM, so it does not carry
+over. The phone shows HTML mail in a WebView instead, and what keeps a message from doing anything is not a
+sanitizer. It is the policy the page is served under, the one `@peregrine/core/mailCsp` gives the desktop's
+reader: no script of the message runs, no form goes anywhere, and no image is fetched from outside until the user
+asks. The policy is the first thing in the page, before a byte of the message, and a message cannot unsay it. What
+the page builder takes out of the message besides, such as scripts and frames, is tidiness, and is written as that
+in the code: it is a pattern over text and nothing relies on it.
+
+- *The application decides every link.* The view refuses every navigation and hands the address to the
+  application, which opens it at once when nothing is wrong with it and asks first, with where it leads spelled
+  out, when it does not lead where it reads, by the rules of `linkSafety` in the core. Only web addresses and
+  telephone numbers are opened at all, and only when they are the address of a link the page has. The page tells
+  the application its links and images through one small script of ours, which the policy does not apply to,
+  and what it says is read field by field, with lengths cut.
+- *What the message has to say for itself* is said above it, in the desktop's order and words: the verdict of the
+  server's spam filter, the checks of the sender that failed, a name that claims another address, a reply that
+  would go elsewhere, links that do not lead where they read, images that only count the opening, and the images
+  that were held back, which one tap shows. The domains a sender or a link is measured against for looking like
+  one are those of the user's own addresses.
+- *The screen scrolls as one.* The page reports how tall it is and the view is that tall, so the message is not a
+  small window in the screen. What can be done to a message is a bar at the bottom, where the thumb is: answer,
+  answer everybody, pass on, star, and more, which has marking as unread, moving, archiving, marking as spam and
+  deleting. Answering everybody and passing on follow the desktop's rules. Archiving and marking as spam move the
+  message through the queue to the folder of that role, and say so when the account has none.
+- *Images that belong to the message* are taken out of it by content id and shown as data, up to a size, and are
+  not listed under the attachments any more.
+
+Two mistakes were found by trying to get past the checks on the emulator, with messages built for it, and both
+are fixed and covered by a test. A link was opened at once, past the check: an address that the view's whitelist
+does not match is opened by the view itself with the system's handler, before the application is asked, and the
+first version listed only the page's own address there. And sending a form in a message opened its address in the
+browser, because the view reports a form that is sent like a link that is followed. The desktop stops a form with
+`form-action 'none'`, and the phone's view had not stopped it before it asked the application. A navigation is now
+a tap only when it leads to the address of a link of the page.
+
+Shown on the Android 16 emulator, with messages from the test server: a newsletter with a style of its own, an
+inline image, a table, a link built to deceive, a counting pixel and an image from outside, held back and then
+shown on request, with the dialog for the deceiving link and not opening it; a forged message that has every hint
+there is, opened one by one, and put into the spam folder, which the server then had it in; passing a message on,
+with its subject and the message under a line that says what it is; and a message with a script, a handler on an
+image, a link with a script address, a form and an inline frame, of which nothing ran or opened and where a link
+that is only a host did open.
+
+Not done, and not looked at: the attachments of a message are not passed on when it is. Reading mode, printing
+and the source of a message are not there, nor the hint for a first message from an address, nor a setting to
+confirm every link or to show images always. Addresses in a message that has no HTML are not tappable. The page is
+white in the dark theme too, because mail is written for a white page, and that was not looked at in the dark. A
+table wider than the screen is cut and does not scroll, as the view does not scroll by itself. Answering everybody
+and archiving are covered by tests and were not run on the emulator. The policy comes in a meta element of the
+page, which the system's WebView has to honour; it does on the emulator's, and on an old phone that has not updated
+its WebView it is the first thing to check.
 
 ## What stage 4 found
 
