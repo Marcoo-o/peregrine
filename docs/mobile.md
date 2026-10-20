@@ -614,8 +614,9 @@ runs, with the status bar.
 
 Shown on an Android 16 emulator in light and in dark, switching the system's setting while the application
 ran: the unified list, the accounts, the folders with their counts, a folder, an open message and the
-settings. Not shown: a screen with a very large system font, which is where a layout made of fixed
-heights would break first.
+settings. The list and an open message were also looked at with the system font at 160 percent, where a
+layout made of fixed heights would break first: the rows grow with the text and the actions wrap onto
+more lines, and nothing is cut off. The forms were not looked at that way.
 
 ## What stage 4 found
 
