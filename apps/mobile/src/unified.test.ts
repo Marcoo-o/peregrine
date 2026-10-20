@@ -149,7 +149,10 @@ describe('bringing the inboxes up to date', () => {
     const results = await refreshInboxes(t, await listAccounts(t.db))
 
     expect(results[0].error).toBeUndefined()
-    expect(results[1]).toMatchObject({ accountName: 'Home', error: 'Home refused the connection' })
+    expect(results[1]).toMatchObject({
+      accountName: 'Home',
+      error: 'Der Server ist nicht erreichbar. (Home refused the connection)'
+    })
     expect((await listUnified(t.db)).map((m) => m.subject)).toEqual(['from work'])
   })
 

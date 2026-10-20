@@ -136,7 +136,7 @@ describe('the unified inbox', () => {
     const last = t.store.screen
     expect(last).toMatchObject({ name: 'unified', busy: false })
     if (last.name !== 'unified') return
-    expect(last.problems).toEqual([expect.objectContaining({ accountName: 'home', error: 'home: connection refused' })])
+    expect(last.problems).toEqual([expect.objectContaining({ accountName: 'home', error: 'Der Server ist nicht erreichbar. (home: connection refused)' })])
   })
 
   // Found on an emulator: after an action the way back to the list did not show it, because the
