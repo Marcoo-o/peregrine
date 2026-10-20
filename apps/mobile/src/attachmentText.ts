@@ -1,4 +1,6 @@
 import type { AttachmentFinding, OpeningRefusal } from '@peregrine/core/attachmentSafety'
+import type { RefusedFile } from './draft'
+import { MAX_ATTACHMENT_BYTES } from './files'
 
 /** A size as a person reads it: bytes, then kilobytes and megabytes with a decimal comma. */
 export function formatSize(bytes: number): string {
@@ -27,4 +29,10 @@ export function refusalText(refusal: OpeningRefusal): string {
   return refusal === 'executable'
     ? 'Nicht geöffnet: Die Datei würde ein Programm starten. Speichern ist möglich, wenn du sie wirklich brauchst.'
     : 'Nicht geöffnet: Der Inhalt passt nicht zum Namen, wie bei einem getarnten Programm. Speichern ist möglich.'
+}
+
+/** Says which files were not attached, and why: nothing is left out in silence. */
+export function refusedFilesText(refused: RefusedFile[]): string {
+  const names = refused.map((file) => file.name).join(', ')
+  return `Nicht angehängt, weil es zu groß ist (insgesamt höchstens ${formatSize(MAX_ATTACHMENT_BYTES)}): ${names}`
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { analyzeAttachmentName } from '@peregrine/core/attachmentSafety'
-import { formatSize, refusalText, riskText } from './attachmentText'
+import { formatSize, refusalText, refusedFilesText, riskText } from './attachmentText'
 
 describe('a size', () => {
   it('is in bytes, kilobytes and megabytes, with a decimal comma and no needless zero', () => {
@@ -33,5 +33,16 @@ describe('what is said about a file', () => {
     expect(refusalText('executable')).toContain('Speichern')
     expect(refusalText('mismatch')).toContain('Speichern')
     expect(refusalText('executable')).not.toBe(refusalText('mismatch'))
+  })
+})
+
+describe('what is said about files that were not attached', () => {
+  it('names each of them and the limit', () => {
+    const text = refusedFilesText([
+      { name: 'big.zip', reason: 'tooLarge' },
+      { name: 'movie.mp4', reason: 'tooLarge' }
+    ])
+    expect(text).toContain('big.zip, movie.mp4')
+    expect(text).toContain('20 MB')
   })
 })
