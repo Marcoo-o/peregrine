@@ -123,6 +123,49 @@ function createStyles({ colors }: Theme) {
     link: { color: colors.accent, fontSize: 16, paddingVertical: 4 },
     spinner: { marginVertical: SIZE.gap },
 
+    // What a message has to say for itself, above its text.
+    notice: { borderRadius: SIZE.radius, borderWidth: 1, padding: 12, marginBottom: SIZE.gap },
+    noticeInfo: { backgroundColor: colors.accentSoft, borderColor: 'transparent' },
+    noticeWarning: { backgroundColor: colors.surface, borderColor: colors.warning },
+    noticeDanger: { backgroundColor: colors.dangerSoft, borderColor: 'transparent' },
+    noticeTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
+    noticeDetail: { fontSize: 13, lineHeight: 18, marginTop: 4, color: colors.text },
+    noticeAction: { color: colors.accent, fontSize: 14, fontWeight: '600', marginTop: 8 },
+
+    // Who a message is from.
+    senderRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: SIZE.gap },
+    avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+    avatarText: { color: '#ffffff', fontSize: 18, fontWeight: '700' },
+    senderName: { fontSize: 16, fontWeight: '600', color: colors.text },
+    senderAddress: { fontSize: 13, color: colors.muted },
+
+    // A question that has to be answered, and a choice of what to do.
+    backdrop: { flex: 1, backgroundColor: '#00000099', justifyContent: 'center', padding: 24 },
+    sheetBackdrop: { flex: 1, backgroundColor: '#00000099', justifyContent: 'flex-end' },
+    dialog: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, gap: 8 },
+    dialogTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+    mono: { fontFamily: 'monospace', fontSize: 13, color: colors.text },
+    sheet: {
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      paddingHorizontal: 8,
+      paddingTop: 8,
+      paddingBottom: 24
+    },
+    sheetItem: { minHeight: SIZE.target, justifyContent: 'center', paddingHorizontal: 16, borderRadius: SIZE.radius },
+    sheetText: { fontSize: 16, color: colors.text },
+    sheetTextDanger: { fontSize: 16, color: colors.danger },
+    mailView: { borderRadius: SIZE.radius, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+    // What can be done to a message, within reach of the thumb, and in place while the message scrolls.
+    actionBar: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
+      paddingVertical: SIZE.gap,
+      marginHorizontal: -SIZE.padding
+    },
+    actionBarContent: { flexDirection: 'row', gap: SIZE.gap, paddingHorizontal: SIZE.padding },
+
     body: { fontSize: 16, lineHeight: 24, color: colors.text, paddingBottom: 24 },
     section: {
       marginTop: 24,

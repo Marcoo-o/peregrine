@@ -70,12 +70,18 @@ export function ScreenView(props: { application: Application; screen: Screen }):
     case 'message':
       return (
         <MessageScreen
+          // Another message is another screen: what was shown or decided on the one before is not carried over.
+          key={`${screen.folder.id}:${screen.summary.uid}`}
           state={screen}
           onBack={() => messages.leave(screen)}
           onReply={() => compose.startReply(screen)}
+          onReplyAll={() => compose.startReplyAll(screen)}
+          onForward={() => compose.startForward(screen)}
           onToggleSeen={() => messages.markUnread(screen)}
           onToggleFlag={() => messages.toggleFlagged(screen)}
           onMove={() => messages.startMove(screen)}
+          onArchive={() => messages.archive(screen)}
+          onJunk={() => messages.markAsJunk(screen)}
           onDelete={() => messages.delete(screen)}
           onSave={(attachment) => messages.saveAttachment(screen, attachment)}
           onOpenAttachment={(attachment) => messages.openAttachment(screen, attachment)}
