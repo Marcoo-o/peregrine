@@ -1,0 +1,231 @@
+import { describe, expect, it } from 'vitest'
+import { listAccounts } from '../accounts'
+import { listFolders } from '../folders'
+import { appHarness } from '../testing/appHarness'
+import type { Screen } from './screens'
+
+const day = (n: number) => new Date(Date.UTC(2026, 9, n))
+
+/** Two accounts with two messages each, one of them with a message the other has not. */
+async function twoAccounts() {
+  const t = await appHarness()
+  const work = await t.givenAccount('work', {
+    INBOX: [{ uid: 1, subject: 'Budget', date: day(1), source: 'Subject: Budget\r\n\r\nText' }],
+    Trash: []
+  })
+  const home = await t.givenAccount('home', { INBOX: [{ uid: 1, subject: 'Dinner', date: day(2) }], Trash: [] })
+  return { ...t, work, home }
+}
+
+const screenName = (screen: Screen) => screen.name
+
+describe('the first screen', () => {
+  it('is the form when there is no account', async () => {
+    const t = await appHarness()
+    await t.app.navigator.start()
+    expect(t.store.screen).toEqual({ name: 'login', error: undefined })
+  })
+
+  it('is the folders of the account when there is one', async () => {
+    const t = await appHarness()
+    const work = await t.givenAccount('work', { INBOX: [], Trash: [] })
+    await t.app.navigator.start()
+    expect(t.store.screen).toMatchObject({ name: 'folders', account: { id: work.id } })
+    expect(t.store.state.connected).toEqual([work.id])
+  })
+
+  it('is the unified inbox when there are two, brought up to date from both', async () => {
+    const t = await twoAccounts()
+    t.server.mailboxes.get('work')?.INBOX.push({ uid: 2, subject: 'New at work', date: day(5) })
+    await t.app.navigator.start()
+    const screen = t.store.screen
+    expect(screen.name).toBe('unified')
+    if (screen.name !== 'unified') return
+    expect(screen.busy).toBe(false)
+    expect(screen.messages.map((m) => m.subject)).toEqual(['New at work', 'Dinner', 'Budget'])
+    expect(t.store.state.statusAccountId).toBeNull()
+  })
+})
+
+describe('opening an account', () => {
+  it('shows its folders from the server, after what waited in the queue was replayed', async () => {
+    const t = await appHarness()
+    const work = await t.givenAccount('work', { INBOX: [{ uid: 1 }], Trash: [] })
+    const folders = await listFolders(t.db, work.id)
+    await t.app.services.mail.setFlags(folders[0], [1], ['\\Seen'], [])
+    t.server.calls.length = 0
+    t.app.services.connections.drop(work.id)
+
+    await t.app.services.mail.setFlags(folders[0], [1], ['\\Flagged'], [])
+    await t.app.navigator.openAccount(work)
+
+    expect(t.server.calls).toContain('add INBOX 1 \\Flagged')
+    expect(t.store.screen.name).toBe('folders')
+    expect(t.store.state.statusAccountId).toBe(work.id)
+  })
+
+  it('shows the folders it has from before, with the reason, when the server cannot be reached', async () => {
+    const t = await appHarness()
+    const work = await t.givenAccount('work', { INBOX: [], Trash: [] })
+    t.server.unreachable.add('work')
+    await t.app.navigator.openAccount(work)
+    expect(t.store.screen).toMatchObject({ name: 'folders', offline: 'work: connection refused' })
+  })
+
+  it('goes back to the list of accounts, naming the account, when there is nothing from before either', async () => {
+    const t = await appHarness()
+    const work = await t.givenAccount('work', {})
+    const other = await t.givenAccount('other', { INBOX: [] })
+    t.server.unreachable.add('work')
+    await t.app.navigator.openAccount(work)
+    expect(t.store.screen).toMatchObject({ name: 'accounts', error: 'work: work: connection refused' })
+    expect((t.store.screen as { accounts: unknown[] }).accounts).toHaveLength(2)
+    expect(other.id).toBeTruthy()
+  })
+
+  it('shows the stored folders again without asking the server', async () => {
+    const t = await appHarness()
+    const work = await t.givenAccount('work', { INBOX: [], Trash: [] })
+    await t.app.navigator.showStoredFolders(work)
+    expect(t.store.screen).toMatchObject({ name: 'folders' })
+    expect(t.server.sessions).toHaveLength(0)
+  })
+})
+
+describe('the list of accounts and the form', () => {
+  it('shows the form when the last account is gone', async () => {
+    const t = await appHarness()
+    await t.app.navigator.showAccounts('gone')
+    expect(t.store.screen).toEqual({ name: 'login', error: 'gone' })
+  })
+
+  it('leaves the form for the accounts only when there are some', async () => {
+    const t = await appHarness()
+    t.app.navigator.showLogin()
+    await t.app.navigator.leaveLogin()
+    expect(t.store.screen.name).toBe('login')
+
+    await t.givenAccount('work', { INBOX: [] })
+    await t.app.navigator.leaveLogin()
+    expect(t.store.screen.name).toBe('accounts')
+  })
+})
+
+describe('the unified inbox', () => {
+  it('is shown from what is stored when it is not asked to refresh, and asks no server', async () => {
+    const t = await twoAccounts()
+    await t.app.navigator.showUnified({ refresh: false })
+    expect(t.store.screen).toMatchObject({ name: 'unified', busy: false })
+    expect(t.server.sessions).toHaveLength(0)
+  })
+
+  it('is shown at once from what is stored and then brought up to date, with the accounts that failed named', async () => {
+    const t = await twoAccounts()
+    t.server.unreachable.add('home')
+    const seen: Screen[] = []
+    let previous = t.store.screen
+    t.store.subscribe(() => {
+      if (t.store.screen === previous) return
+      previous = t.store.screen
+      seen.push(previous)
+    })
+
+    await t.app.navigator.showUnified({ refresh: true })
+
+    expect(seen[0]).toMatchObject({ name: 'unified', busy: true, problems: [] })
+    const last = t.store.screen
+    expect(last).toMatchObject({ name: 'unified', busy: false })
+    if (last.name !== 'unified') return
+    expect(last.problems).toEqual([expect.objectContaining({ accountName: 'home', error: 'home: connection refused' })])
+  })
+
+  // Found on an emulator: after an action the way back to the list did not show it, because the
+  // update that follows a fetch was held back when the list was not on the screen.
+  it('is shown when it is gone to from another screen, though it is not on the screen yet', async () => {
+    const t = await twoAccounts()
+    t.store.showScreen({ name: 'login' })
+    await t.app.navigator.showUnified({ refresh: false })
+    expect(screenName(t.store.screen)).toBe('unified')
+  })
+
+  it('is not put over a screen the user went to while the accounts were being fetched', async () => {
+    const t = await twoAccounts()
+    let release!: () => void
+    const held = new Promise<void>((resolve) => (release = resolve))
+    const connect = t.app.services.connectImap
+    t.app.services.connections.ensure = async (account) => {
+      await held
+      return (await connect({ username: account.imapUsername } as never)) as never
+    }
+
+    const refreshing = t.app.navigator.showUnified({ refresh: true })
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    t.app.navigator.showLogin()
+    release()
+    await refreshing
+
+    expect(t.store.screen.name).toBe('login')
+  })
+})
+
+describe('the messages of a folder', () => {
+  async function inbox() {
+    const t = await appHarness()
+    const work = await t.givenAccount('work', { INBOX: [{ uid: 1, subject: 'One' }, { uid: 2, subject: 'Two' }], Trash: [] })
+    const folder = t.folderOf(await listFolders(t.db, work.id), 'INBOX')
+    return { ...t, work, folder }
+  }
+
+  it('are the stored ones, without a word to the server, when not asked to sync', async () => {
+    const t = await inbox()
+    await t.app.navigator.showMessages(t.work, t.folder, { sync: false })
+    expect(t.store.screen).toMatchObject({ name: 'messages', busy: false })
+    expect(t.server.sessions).toHaveLength(0)
+  })
+
+  it('are brought up to date from the server when it is connected, first showing what is stored', async () => {
+    const t = await inbox()
+    await t.app.services.connections.ensure(t.work)
+    t.server.mailboxes.get('work')?.INBOX.push({ uid: 3, subject: 'Three' })
+    const seen: Screen[] = []
+    t.store.subscribe(() => seen.push(t.store.screen))
+
+    await t.app.navigator.showMessages(t.work, t.folder, { sync: true })
+
+    expect(seen[0]).toMatchObject({ name: 'messages', busy: true })
+    const last = t.store.screen
+    if (last.name !== 'messages') throw new Error('not the messages')
+    expect(last.busy).toBe(false)
+    expect(last.messages.map((m) => m.uid)).toEqual([3, 2, 1])
+  })
+
+  it('say that there is no connection, and show what is stored, when asked to sync without one', async () => {
+    const t = await inbox()
+    await t.app.navigator.showMessages(t.work, t.folder, { sync: true })
+    expect(t.store.screen).toMatchObject({ name: 'messages', busy: false, error: expect.stringContaining('Keine Verbindung') })
+  })
+
+  it('carry the names of the folders, for saying where a message is going', async () => {
+    const t = await inbox()
+    await t.app.navigator.showMessages(t.work, t.folder, { sync: false })
+    const names = Object.values((t.store.screen as { folderNames: Record<string, string> }).folderNames)
+    expect(names.sort()).toEqual(['INBOX', 'Trash'])
+  })
+})
+
+describe('the status of the queue', () => {
+  it('is read for the account that is open, after its queue was replayed', async () => {
+    const t = await appHarness()
+    const work = await t.givenAccount('work', { INBOX: [{ uid: 1 }], Trash: [] })
+    t.server.unreachable.add('work')
+    const folder = t.folderOf(await listFolders(t.db, work.id), 'INBOX')
+    await t.app.services.mail.setFlags(folder, [1], ['\\Seen'], [])
+    t.server.unreachable.delete('work')
+
+    await t.app.navigator.openAccount(work)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(t.store.state.waiting?.summary.total).toBe(0)
+    expect((await listAccounts(t.db)).length).toBe(1)
+  })
+})
