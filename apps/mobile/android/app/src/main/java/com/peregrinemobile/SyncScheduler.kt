@@ -3,6 +3,7 @@ package com.peregrinemobile
 import android.content.Context
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
@@ -22,6 +23,9 @@ object SyncScheduler {
   private const val PERIODIC = "peregrine-mail-sync"
   private const val ONCE = "peregrine-mail-sync-now"
 
+  /** The key of the input that says that the look was asked for by the user and is not to be skipped. */
+  const val FORCE = "force"
+
   private val needsNetwork = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
   /** Looks for mail every so often. Called again with another interval, it changes the one that is scheduled. */
@@ -37,9 +41,16 @@ object SyncScheduler {
     WorkManager.getInstance(context).cancelUniqueWork(PERIODIC)
   }
 
-  /** Looks for mail once, now, which is what a button for it does. A run that is waiting is not doubled. */
+  /**
+   * Looks for mail once, now, which is what a button for it does. A run that is waiting is not doubled.
+   * It is forced: the user asked, so it is not skipped because the application is on the screen.
+   */
   fun runNow(context: Context) {
-    val request = OneTimeWorkRequest.Builder(SyncWorker::class.java).setConstraints(needsNetwork).build()
+    val request =
+      OneTimeWorkRequest.Builder(SyncWorker::class.java)
+        .setConstraints(needsNetwork)
+        .setInputData(Data.Builder().putBoolean(FORCE, true).build())
+        .build()
     WorkManager.getInstance(context).enqueueUniqueWork(ONCE, ExistingWorkPolicy.KEEP, request)
   }
 }

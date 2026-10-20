@@ -17,7 +17,7 @@ const TASK_KEY = 'PeregrineSync'
  * the next time all the same, and a crash here would take the screen with it when the application is open.
  */
 export function registerBackgroundSync(): void {
-  AppRegistry.registerHeadlessTask(TASK_KEY, () => async () => {
+  AppRegistry.registerHeadlessTask(TASK_KEY, () => async (data?: { force?: boolean }) => {
     const platform = createPlatform()
     try {
       const services = createServices(await openDatabase(), platform, {
@@ -27,8 +27,8 @@ export function registerBackgroundSync(): void {
       await runBackgroundSync({
         services,
         notifier: platform.notifications,
-        // Whether the application is on the screen, which looks after its own mail.
-        isForeground: () => AppState.currentState === 'active',
+        // Whether the application is on the screen, which looks after its own mail. Not when the user asked.
+        isForeground: () => data?.force !== true && AppState.currentState === 'active',
         log: platform.log
       })
     } catch (error) {

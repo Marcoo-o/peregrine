@@ -31,38 +31,42 @@ object BackgroundSyncRunner {
   /** How long the job waits. A little longer than the task, which ends by itself first. */
   private const val WAIT_MINUTES = 4L
 
-  /** Returns whether the task finished before it was given up on. Called on the scheduler's thread. */
-  fun run(context: Context): Boolean {
+  /**
+   * Returns whether the task finished before it was given up on. Called on the scheduler's thread.
+   * [force] is passed to the task, which then looks though the application is on the screen.
+   */
+  fun run(context: Context, force: Boolean): Boolean {
     val finished = CountDownLatch(1)
-    UiThreadUtil.runOnUiThread { prepare(context, finished) }
+    UiThreadUtil.runOnUiThread { prepare(context, force, finished) }
     return finished.await(WAIT_MINUTES, TimeUnit.MINUTES)
   }
 
-  private fun prepare(context: Context, finished: CountDownLatch) {
+  private fun prepare(context: Context, force: Boolean, finished: CountDownLatch) {
     val host =
       checkNotNull((context.applicationContext as ReactApplication).reactHost) {
         "The application has no React host to run the look for mail in"
       }
     val current = host.currentReactContext
     if (current != null) {
-      start(current, finished)
+      start(current, force, finished)
       return
     }
     host.addReactInstanceEventListener(
       object : ReactInstanceEventListener {
         override fun onReactContextInitialized(context: ReactContext) {
           host.removeReactInstanceEventListener(this)
-          start(context, finished)
+          start(context, force, finished)
         }
       }
     )
     host.start()
   }
 
-  private fun start(reactContext: ReactContext, finished: CountDownLatch) {
+  private fun start(reactContext: ReactContext, force: Boolean, finished: CountDownLatch) {
     val tasks = HeadlessJsTaskContext.getInstance(reactContext)
     // Allowed on the screen too: the application may be open, and the task then does nothing and ends.
-    val config = HeadlessJsTaskConfig(TASK_KEY, Arguments.createMap(), TASK_TIMEOUT_MS, true)
+    val data = Arguments.createMap().apply { putBoolean("force", force) }
+    val config = HeadlessJsTaskConfig(TASK_KEY, data, TASK_TIMEOUT_MS, true)
     tasks.addTaskEventListener(
       object : HeadlessJsTaskEventListener {
         private var mine = -1
