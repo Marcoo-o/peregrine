@@ -107,7 +107,8 @@ describe('opening a message', () => {
       ...t.summary,
       accountId: t.work.id,
       folderId: t.folder.id,
-      accountName: 'work'
+      accountName: 'work',
+      accountColor: '#2f5d9f'
     })
     expect(t.store.screen).toMatchObject({ name: 'message', origin: 'unified', account: { id: t.work.id } })
   })

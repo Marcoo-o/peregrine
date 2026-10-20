@@ -1,3 +1,4 @@
+import { nextAccountColor } from '@peregrine/core/accountColors'
 import type { SecureMode } from '@peregrine/core/types'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import { newId } from './ids'
@@ -18,10 +19,13 @@ export interface Account {
   password: string
   /** When it is not the same as `password`. */
   smtpPassword: string | null
+  /** What tells it from the other accounts in a list, given when it is added. */
+  color: string
   createdAt: number
 }
 
-export type NewAccount = Omit<Account, 'id' | 'createdAt'>
+/** What an account is made from. Its colour is not the caller's to choose, it is given. */
+export type NewAccount = Omit<Account, 'id' | 'createdAt' | 'color'>
 
 interface AccountRow {
   id: string
@@ -37,12 +41,13 @@ interface AccountRow {
   smtp_username: string | null
   password: string
   smtp_password: string | null
+  color: string
   created_at: number
 }
 
 const COLUMNS =
   `id, display_name, email_address, imap_host, imap_port, imap_secure, imap_username,
-   smtp_host, smtp_port, smtp_secure, smtp_username, password, smtp_password, created_at`
+   smtp_host, smtp_port, smtp_secure, smtp_username, password, smtp_password, color, created_at`
 
 function toAccount(row: AccountRow): Account {
   return {
@@ -59,6 +64,7 @@ function toAccount(row: AccountRow): Account {
     smtpUsername: row.smtp_username,
     password: row.password,
     smtpPassword: row.smtp_password,
+    color: row.color,
     createdAt: row.created_at
   }
 }
@@ -82,8 +88,10 @@ export async function addAccount(
 ): Promise<Account> {
   const id = options.id ?? newId()
   const createdAt = options.now ?? Date.now()
+  const existing = await db.get<{ count: number }>('SELECT COUNT(*) AS count FROM accounts')
+  const color = nextAccountColor(existing?.count ?? 0)
   await db.run(
-    `INSERT INTO accounts (${COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO accounts (${COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     id,
     input.displayName,
     input.emailAddress,
@@ -97,9 +105,10 @@ export async function addAccount(
     input.smtpUsername,
     input.password,
     input.smtpPassword,
+    color,
     createdAt
   )
-  return { ...input, id, createdAt }
+  return { ...input, id, createdAt, color }
 }
 
 /**

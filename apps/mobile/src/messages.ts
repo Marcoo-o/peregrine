@@ -1,5 +1,6 @@
 import type { FetchedMessage } from '@peregrine/core/imapSession'
 import type { SqlDb } from '@peregrine/core/sqlDb'
+import { SEEN } from './flags'
 
 export interface StoredMessage {
   uid: number
@@ -158,4 +159,20 @@ export async function applyFlags(
       }
     }
   })
+}
+
+/**
+ * How many messages of each folder of an account have not been read, by the id of the folder. A folder with
+ * none is not in the result. The flags are compared without regard to case, as IMAP does.
+ */
+export async function unreadCounts(db: SqlDb, accountId: string): Promise<Record<string, number>> {
+  const rows = await db.all<{ folder_id: string; unread: number }>(
+    `SELECT folder_id, COUNT(*) AS unread FROM messages
+     WHERE account_id = ?
+       AND NOT EXISTS (SELECT 1 FROM json_each(messages.flags) WHERE lower(json_each.value) = lower(?))
+     GROUP BY folder_id`,
+    accountId,
+    SEEN
+  )
+  return Object.fromEntries(rows.map((row) => [row.folder_id, row.unread]))
 }

@@ -2,7 +2,7 @@ import type { ImapSession } from '@peregrine/core/imapSession'
 import { listAccounts, type Account } from '../accounts'
 import { explainError } from '../errors'
 import { listFolders, syncFolders, type Folder } from '../folders'
-import { listMessages } from '../messages'
+import { listMessages, unreadCounts } from '../messages'
 import { syncFolder } from '../sync'
 import { listUnified, refreshInboxes, type RefreshResult } from '../unified'
 import { refreshQueueStatus } from './queueStatus'
@@ -67,14 +67,20 @@ export class Navigator {
     this.store.setStatusAccount(account.id)
     await mail.flush(account.id)
     await syncFolders(db, account.id, await imap.listMailboxes())
-    this.store.showScreen({ name: 'folders', account, folders: await listFolders(db, account.id) })
+    await this.showFoldersScreen(account)
     this.refreshStatus()
   }
 
   /** The folders as they were last fetched, for going back to them without asking the server. */
   async showStoredFolders(account: Account): Promise<void> {
-    const folders = await listFolders(this.services.db, account.id)
-    this.store.showScreen({ name: 'folders', account, folders })
+    await this.showFoldersScreen(account)
+  }
+
+  /** The folders that are stored, with how much of each is not read, and what is to be said when the server could not be reached. */
+  private async showFoldersScreen(account: Account, offline?: string): Promise<void> {
+    const { db } = this.services
+    const folders = await listFolders(db, account.id)
+    this.store.showScreen({ name: 'folders', account, folders, unread: await unreadCounts(db, account.id), offline })
   }
 
   private async showFoldersOffline(account: Account, reason: string): Promise<void> {
@@ -83,7 +89,7 @@ export class Navigator {
       await this.showAccounts(`${account.displayName}: ${reason}`)
       return
     }
-    this.store.showScreen({ name: 'folders', account, folders, offline: reason })
+    await this.showFoldersScreen(account, reason)
     this.refreshStatus()
   }
 

@@ -70,6 +70,10 @@ describe('the unified list', () => {
       ['Work', 1, day(1).getTime()]
     ])
     expect(list[0]).toMatchObject({ accountId: t.b.id, folderId: t.bInbox.id })
+    // each message has the colour of its account, which differ
+    expect(list[0].accountColor).toBe(t.b.color)
+    expect(list[1].accountColor).toBe(t.a.color)
+    expect(t.a.color).not.toBe(t.b.color)
   })
 
   it('leaves out every other folder', async () => {

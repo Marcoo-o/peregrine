@@ -47,6 +47,23 @@ describe('the first screen', () => {
   })
 })
 
+describe('the folders of an account', () => {
+  it('say how many messages of each are not read', async () => {
+    const t = await appHarness()
+    const seen = ['\\Seen']
+    const work = await t.givenAccount('work', {
+      INBOX: [{ uid: 1 }, { uid: 2 }, { uid: 3, flags: seen }],
+      Trash: [{ uid: 1, flags: seen }]
+    })
+    await t.app.navigator.openAccount(work)
+
+    const screen = t.store.screen
+    if (screen.name !== 'folders') throw new Error(`not the folders but ${screen.name}`)
+    const inbox = screen.folders.find((folder) => folder.imapPath === 'INBOX')
+    expect(screen.unread).toEqual({ [inbox?.id ?? '']: 2 })
+  })
+})
+
 describe('opening an account', () => {
   it('shows its folders from the server, after what waited in the queue was replayed', async () => {
     const t = await appHarness()

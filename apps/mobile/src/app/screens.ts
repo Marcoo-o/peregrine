@@ -42,6 +42,8 @@ export interface FoldersState {
   name: 'folders'
   account: Account
   folders: Folder[]
+  /** How many messages of each folder are not read, by the id of the folder. A folder with none is left out. */
+  unread: Record<string, number>
   /** Why the account could not be reached, when what is shown is only what was fetched before. */
   offline?: string
 }

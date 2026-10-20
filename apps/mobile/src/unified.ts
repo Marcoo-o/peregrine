@@ -12,6 +12,8 @@ export interface UnifiedMessage extends StoredMessage {
   accountId: string
   folderId: string
   accountName: string
+  /** The colour of the account, which marks the message in the list. */
+  accountColor: string
 }
 
 /** How many the list shows. A list of everything would read the whole mailbox for one screen. */
@@ -39,9 +41,10 @@ export async function listUnified(db: SqlDb, limit: number = UNIFIED_LIMIT): Pro
     account_id: string
     folder_id: string
     account_name: string
+    account_color: string
   }>(
     `SELECT m.uid, m.subject, m.sender, m.date_ms, m.flags, m.size, m.has_attachment, m.pending_move_to,
-            m.account_id, m.folder_id, a.display_name AS account_name
+            m.account_id, m.folder_id, a.display_name AS account_name, a.color AS account_color
      FROM messages m
      JOIN folders f ON f.id = m.folder_id
      JOIN accounts a ON a.id = m.account_id
@@ -54,7 +57,8 @@ export async function listUnified(db: SqlDb, limit: number = UNIFIED_LIMIT): Pro
     ...toStoredMessage(row),
     accountId: row.account_id,
     folderId: row.folder_id,
-    accountName: row.account_name
+    accountName: row.account_name,
+    accountColor: row.account_color
   }))
 }
 

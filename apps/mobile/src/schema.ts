@@ -94,7 +94,21 @@ const MIGRATIONS: string[][] = [
   // 3. What the user has set. One row for each group of settings, its value written as JSON, so that
   // a group can gain a setting without a migration: what is missing from a stored value is what it
   // was before the setting existed, and the code says what that is.
-  ['CREATE TABLE settings (name TEXT PRIMARY KEY, value TEXT NOT NULL)']
+  ['CREATE TABLE settings (name TEXT PRIMARY KEY, value TEXT NOT NULL)'],
+  // 4. The colour that tells an account from the others, as the desktop has it. The accounts that are
+  // there are given one each in the order they were added, round robin through the six that
+  // `@peregrine/core/accountColors` had when this was written. They are written out here and not
+  // imported, because an entry of this list says what it did then and is not to change with the list.
+  [
+    "ALTER TABLE accounts ADD COLUMN color TEXT NOT NULL DEFAULT '#2f5d9f'",
+    `UPDATE accounts SET color = CASE (
+       SELECT COUNT(*) FROM accounts earlier
+       WHERE earlier.created_at < accounts.created_at
+          OR (earlier.created_at = accounts.created_at AND earlier.id < accounts.id)
+     ) % 6
+       WHEN 0 THEN '#2f5d9f' WHEN 1 THEN '#16736b' WHEN 2 THEN '#6341b8'
+       WHEN 3 THEN '#a2650c' WHEN 4 THEN '#b03a5b' ELSE '#4a5568' END`
+  ]
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */
