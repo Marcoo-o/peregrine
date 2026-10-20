@@ -397,6 +397,40 @@ describe('what the server sent for each operation', () => {
     expect(await session.fetchFullMessage('INBOX', 999)).toBeUndefined()
   })
 
+  // A mailbox that is open does not know the messages that came after it was opened, and answers a
+  // fetch of such a UID with nothing, as if it were gone. A look at the mailbox is what tells it.
+  it('asks again after bringing an open mailbox up to date when a message was not found in it', async () => {
+    let told = false
+    const { server, session } = await connected((s) => {
+      s.on('SELECT', (c) => s.replay('02-fetch', 'SELECT INBOX', c.tag))
+      s.on('NOOP', (c) => {
+        told = true
+        return FakeServer.ok(c.tag)
+      })
+      s.on('UID FETCH', (c) => (told ? s.replay('02-fetch', 'UID FETCH 1 (BODY.PEEK[])', c.tag) : FakeServer.ok(c.tag)))
+    })
+    await session.fetchFullMessage('INBOX', 1)
+    expect(server.commands.filter((c) => c === 'NOOP')).toHaveLength(0)
+
+    const message = await session.fetchFullMessage('INBOX', 2)
+
+    expect(message).toBeDefined()
+    expect(server.commands.filter((c) => c === 'NOOP')).toHaveLength(1)
+  })
+
+  it('does not ask twice about a message in a mailbox that was just opened, nor believe a second silence', async () => {
+    const { server, session } = await connected((s) => {
+      s.on('SELECT', (c) => s.replay('02-fetch', 'SELECT INBOX', c.tag))
+      s.on('NOOP', (c) => FakeServer.ok(c.tag))
+      s.on('UID FETCH', (c) => FakeServer.ok(c.tag))
+    })
+    expect(await session.fetchFullMessage('INBOX', 5)).toBeUndefined()
+    expect(server.commands.filter((c) => c.startsWith('UID FETCH'))).toHaveLength(1)
+
+    expect(await session.fetchFullMessage('INBOX', 6)).toBeUndefined()
+    expect(server.commands.filter((c) => c.startsWith('UID FETCH'))).toHaveLength(3)
+  })
+
   it('sets, adds and removes flags', async () => {
     const { server, session } = await connected((s) => {
       s.on('SELECT', (c) => selectReply(c.tag, 3))
@@ -675,6 +709,8 @@ describe('keeping watch', () => {
       s.on('IDLE', () => `+ idling${CRLF}`)
       s.on('UID FETCH', (c) => FakeServer.ok(c.tag))
       s.on('UID STORE', (c) => FakeServer.ok(c.tag))
+      // Asked when a fetch found nothing, before it is believed
+      s.on('NOOP', (c) => FakeServer.ok(c.tag))
     })
     session.watchMailbox('INBOX', () => arrivals.push(arrivals.length + 1))
     await settle(120)
