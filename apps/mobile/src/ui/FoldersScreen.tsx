@@ -1,8 +1,11 @@
-import { FlatList, Pressable, Text, View } from 'react-native'
+import { FlatList, Text, View } from 'react-native'
 import type { FoldersState } from '../app/screens'
 import type { Folder } from '../folders'
-import { BackLink, Button } from './controls'
-import { styles } from './styles'
+import { Button } from './controls'
+import { folderLabel } from './folderLabel'
+import { Header } from './Header'
+import { ListRow } from './ListRow'
+import { useStyles } from './useStyles'
 
 export function FoldersScreen(props: {
   state: FoldersState
@@ -12,11 +15,11 @@ export function FoldersScreen(props: {
   onConnect: () => void
   onCompose: () => void
 }) {
-  const { account, folders, offline } = props.state
+  const styles = useStyles()
+  const { account, folders, unread, offline } = props.state
   return (
     <View style={styles.fill}>
-      <BackLink label="‹ Konten" onPress={props.onBack} />
-      <Text style={styles.title}>{account.displayName}</Text>
+      <Header title={account.displayName} back={{ label: 'Konten', onPress: props.onBack }} />
       {offline ? (
         <View>
           <Text style={styles.error}>{offline}</Text>
@@ -27,14 +30,11 @@ export function FoldersScreen(props: {
         data={folders}
         keyExtractor={(folder) => folder.id}
         renderItem={({ item }) => (
-          <Pressable style={styles.item} onPress={() => props.onOpen(item)}>
-            <Text style={styles.itemTitle}>{item.imapPath}</Text>
-            {item.specialUse ? <Text style={styles.itemMeta}>{item.specialUse}</Text> : null}
-          </Pressable>
+          <ListRow title={folderLabel(item)} count={unread[item.id]} onPress={() => props.onOpen(item)} />
         )}
       />
       <Button label="Neue Nachricht" onPress={props.onCompose} />
-      <Button label="Konto entfernen" onPress={props.onRemove} />
+      <Button label="Konto entfernen" variant="danger" onPress={props.onRemove} />
     </View>
   )
 }

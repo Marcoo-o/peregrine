@@ -1,9 +1,9 @@
 import { FlatList, Text, View } from 'react-native'
 import type { UnifiedState } from '../app/screens'
 import type { UnifiedMessage } from '../unified'
-import { BackLink } from './controls'
+import { Header } from './Header'
 import { MessageRow } from './MessageRow'
-import { styles } from './styles'
+import { useStyles } from './useStyles'
 
 /** The inboxes of all accounts in one list, newest first, each message marked with its account. */
 export function UnifiedScreen(props: {
@@ -12,11 +12,11 @@ export function UnifiedScreen(props: {
   onRefresh: () => void
   onOpen: (message: UnifiedMessage) => void
 }) {
+  const styles = useStyles()
   const { messages, busy, problems } = props.state
   return (
     <View style={styles.fill}>
-      <BackLink label="‹ Konten" onPress={props.onAccounts} />
-      <Text style={styles.title}>Alle Posteingänge</Text>
+      <Header title="Alle Posteingänge" back={{ label: 'Konten', onPress: props.onAccounts }} />
       {problems.map((problem) => (
         <Text key={problem.accountId} style={styles.error}>
           {problem.accountName}: {problem.error}
@@ -31,7 +31,9 @@ export function UnifiedScreen(props: {
         renderItem={({ item }) => (
           <MessageRow
             message={item}
-            byline={`${item.accountName}  ·  ${item.sender}`}
+            sender={item.sender}
+            account={item.accountName}
+            accountColor={item.accountColor}
             pendingNote={item.pendingMoveTo ? 'wird verschoben, sobald es geht' : undefined}
             onPress={() => props.onOpen(item)}
           />

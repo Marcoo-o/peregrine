@@ -1,9 +1,11 @@
-import { ActivityIndicator, FlatList, Text, View } from 'react-native'
+import { FlatList, Text, View } from 'react-native'
 import type { MessagesState } from '../app/screens'
 import type { StoredMessage } from '../messages'
-import { BackLink } from './controls'
+import { Spinner } from './controls'
+import { folderLabel } from './folderLabel'
+import { Header } from './Header'
 import { MessageRow } from './MessageRow'
-import { styles } from './styles'
+import { useStyles } from './useStyles'
 
 /** What is said about a message whose move waits for a connection: where it is going. */
 function pendingNote(message: StoredMessage, folderNames: Record<string, string>): string | undefined {
@@ -16,12 +18,12 @@ export function MessagesScreen(props: {
   onBack: () => void
   onOpen: (message: StoredMessage) => void
 }) {
+  const styles = useStyles()
   const { folder, messages, folderNames, busy, error } = props.state
   return (
     <View style={styles.fill}>
-      <BackLink label="‹ Ordner" onPress={props.onBack} />
-      <Text style={styles.title}>{folder.displayName}</Text>
-      {busy ? <ActivityIndicator style={styles.spinner} /> : null}
+      <Header title={folderLabel(folder)} back={{ label: 'Ordner', onPress: props.onBack }} />
+      {busy ? <Spinner /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FlatList
         data={messages}
@@ -30,7 +32,7 @@ export function MessagesScreen(props: {
         renderItem={({ item }) => (
           <MessageRow
             message={item}
-            byline={item.sender}
+            sender={item.sender}
             pendingNote={pendingNote(item, folderNames)}
             onPress={() => props.onOpen(item)}
           />

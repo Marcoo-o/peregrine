@@ -1,6 +1,12 @@
-import { ActivityIndicator } from 'react-native'
-import { styles } from './styles'
+import { View } from 'react-native'
+import { Spinner } from './controls'
+import { useStyles } from './useStyles'
 
 export function LoadingScreen() {
-  return <ActivityIndicator style={styles.centered} size="large" />
+  const styles = useStyles()
+  return (
+    <View style={[styles.fill, styles.centerContent]}>
+      <Spinner size="large" />
+    </View>
+  )
 }

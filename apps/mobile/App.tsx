@@ -11,19 +11,22 @@ import { createPlatform } from './src/platform'
 import { LoadingScreen } from './src/ui/LoadingScreen'
 import { ScreenView } from './src/ui/ScreenView'
 import { StatusLine } from './src/ui/StatusLine'
-import { styles } from './src/ui/styles'
+import { useStyles } from './src/ui/useStyles'
+import { useTheme } from './src/ui/useTheme'
 
 /**
  * The prototype of stage 5: any number of accounts, a unified inbox, the folders of an account, a
  * message opened, answered, marked, moved or deleted, files attached and a new message written.
  * Everything that changes mail goes through the offline queue, so the screens work the same without
- * a connection. The screens are as plain as they can be and are meant to be thrown away. What is being
- * tried is everything underneath them, in `src/app`.
+ * a connection. What the screens do is in `src/app`, and what they look like in `src/ui`, in the colours
+ * of the theme the system has chosen.
  */
 export default function App() {
   const [store] = useState(() => new AppStore())
   const [application, setApplication] = useState<Application | null>(null)
   const state = useSyncExternalStore(store.subscribe, () => store.state)
+  const styles = useStyles()
+  const { scheme } = useTheme()
 
   useEffect(() => {
     let cancelled = false
@@ -52,7 +55,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
       <SafeAreaView style={styles.page}>
         {application && showsQueueStatus(state.screen) ? (
           <StatusLine

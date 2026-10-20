@@ -1,40 +1,176 @@
 import { StyleSheet } from 'react-native'
+import { SIZE, type Theme } from './theme'
 
-/** The look of the screens, which are plain on purpose: what is being tried is everything underneath them. */
-export const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: '#fff', padding: 16 },
-  fill: { flex: 1 },
-  centered: { flex: 1 },
-  form: { gap: 12 },
-  row: { flexDirection: 'row', gap: 8 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
-  title: { fontSize: 22, fontWeight: '600', marginVertical: 8, color: '#111' },
-  hint: { color: '#555', marginBottom: 8 },
-  error: { color: '#b00020', marginVertical: 8 },
-  status: { backgroundColor: '#f3f0ff', borderRadius: 8, padding: 8, marginBottom: 8 },
-  statusText: { color: '#3b2a8c' },
-  statusProblem: { color: '#b00020', marginTop: 2 },
-  pending: { fontSize: 13, color: '#3b2a8c', marginTop: 2 },
-  input: { borderWidth: 1, borderColor: '#bbb', borderRadius: 8, padding: 12, fontSize: 16, color: '#111' },
-  multiline: { minHeight: 200 },
-  button: { backgroundColor: '#3b2a8c', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 8 },
-  buttonDisabled: { opacity: 0.4 },
-  buttonText: { color: '#fff', fontSize: 16 },
-  chip: { borderWidth: 1, borderColor: '#3b2a8c', borderRadius: 16, paddingVertical: 6, paddingHorizontal: 14 },
-  chipActive: { backgroundColor: '#3b2a8c' },
-  chipText: { color: '#3b2a8c' },
-  chipTextActive: { color: '#fff' },
-  item: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#ccc' },
-  itemTitle: { fontSize: 16, color: '#111' },
-  unread: { fontWeight: '700' },
-  itemMeta: { fontSize: 13, color: '#666', marginTop: 2 },
-  link: { color: '#3b2a8c', fontSize: 16, paddingVertical: 4 },
-  spinner: { marginVertical: 8 },
-  body: { fontSize: 15, lineHeight: 22, color: '#111', paddingBottom: 24 },
-  section: { marginTop: 16, marginBottom: 4, fontSize: 13, fontWeight: '600', color: '#666', textTransform: 'uppercase' },
-  setting: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 6 },
-  settingLabel: { flex: 1, fontSize: 16, color: '#111' },
-  timeInput: { width: 90, textAlign: 'center' },
-  attachments: { marginTop: 8, marginBottom: 24 },
-  attachment: { paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#ccc', gap: 4 }
-})
+/**
+ * The look of the screens, made from the tokens of a theme. The same shapes as the desktop's: a page, what
+ * stands out of it with a thin border, an accent for what can be done and for what is chosen, a tint of
+ * red for what went wrong. Nothing here names a colour: they all come from the palette.
+ */
+function createStyles({ colors }: Theme) {
+  const field = {
+    minHeight: SIZE.target,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: SIZE.radius,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: colors.text
+  } as const
+
+  const button = {
+    minHeight: SIZE.target,
+    borderRadius: SIZE.radius,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center'
+  } as const
+
+  return StyleSheet.create({
+    page: { flex: 1, backgroundColor: colors.background, paddingHorizontal: SIZE.padding, paddingTop: SIZE.gap },
+    fill: { flex: 1 },
+    centerContent: { justifyContent: 'center', alignItems: 'center' },
+    form: { gap: 12, paddingBottom: SIZE.padding },
+    row: { flexDirection: 'row', gap: SIZE.gap },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: SIZE.gap, marginVertical: SIZE.gap },
+
+    // The top of a screen: the way back, and what the screen is.
+    back: { minHeight: SIZE.target, justifyContent: 'center', alignSelf: 'flex-start' },
+    backText: { color: colors.accent, fontSize: 16, fontWeight: '500' },
+    title: { fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 8 },
+    subtitle: { fontSize: 14, color: colors.muted, marginBottom: 8 },
+
+    hint: { color: colors.muted, fontSize: 14, lineHeight: 20, marginBottom: SIZE.gap },
+    // What went wrong, in a block of its own so that it is not taken for part of the list.
+    error: {
+      color: colors.danger,
+      backgroundColor: colors.dangerSoft,
+      borderRadius: SIZE.radius,
+      padding: 12,
+      marginVertical: SIZE.gap,
+      fontSize: 14,
+      lineHeight: 20
+    },
+    // What is going on behind the screen: no connection, what waits for one.
+    status: { backgroundColor: colors.accentSoft, borderRadius: SIZE.radius, padding: 12, marginBottom: SIZE.gap },
+    statusText: { color: colors.accent, fontSize: 14 },
+    statusProblem: { color: colors.danger, fontSize: 14, marginTop: 4 },
+    pending: { fontSize: 13, color: colors.accent, marginTop: 2 },
+
+    input: field,
+    inputFocused: { borderColor: colors.accent },
+    multiline: { minHeight: 200 },
+
+    button: { ...button, backgroundColor: colors.accent, borderColor: colors.accent, marginTop: SIZE.gap },
+    buttonSecondary: { ...button, backgroundColor: colors.surface, borderColor: colors.border, marginTop: SIZE.gap },
+    buttonDanger: { ...button, backgroundColor: colors.surface, borderColor: colors.danger, marginTop: SIZE.gap },
+    buttonDisabled: { opacity: 0.4 },
+    buttonText: { color: colors.onAccent, fontSize: 16, fontWeight: '600' },
+    buttonTextSecondary: { color: colors.text, fontSize: 16, fontWeight: '600' },
+    buttonTextDanger: { color: colors.danger, fontSize: 16, fontWeight: '600' },
+
+    // What is chosen out of several, and a small thing to do.
+    chip: {
+      minHeight: 40,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      borderRadius: 999,
+      paddingHorizontal: 16,
+      justifyContent: 'center'
+    },
+    chipActive: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
+    chipText: { color: colors.text, fontSize: 15 },
+    chipTextActive: { color: colors.accent, fontSize: 15, fontWeight: '600' },
+
+    // A line of a list.
+    item: {
+      minHeight: SIZE.target,
+      paddingVertical: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border
+    },
+    itemTitle: { fontSize: 16, color: colors.text },
+    // A line that leads somewhere: the colour of an account, the name, a count and an arrow.
+    listRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    dot: { width: 10, height: 10, borderRadius: 5 },
+    count: {
+      minWidth: 24,
+      textAlign: 'center',
+      overflow: 'hidden',
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.accent,
+      backgroundColor: colors.accentSoft,
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 2
+    },
+    chevron: { fontSize: 22, color: colors.muted },
+    // A message in a list: a stripe for the account, and two lines.
+    messageRow: { flexDirection: 'row', gap: 10 },
+    stripe: { width: 4, borderRadius: 2, alignSelf: 'stretch' },
+    messageHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
+    sender: { flex: 1, fontSize: 15, color: colors.muted },
+    from: { fontSize: 15, color: colors.text },
+    date: { fontSize: 12, color: colors.muted },
+    subject: { fontSize: 15, color: colors.muted, marginTop: 2 },
+    // What has not been read is in the colour of the text, and the rest is muted.
+    unread: { fontWeight: '700', color: colors.text },
+    itemMeta: { fontSize: 13, color: colors.muted, marginTop: 2 },
+    link: { color: colors.accent, fontSize: 16, paddingVertical: 4 },
+    spinner: { marginVertical: SIZE.gap },
+
+    body: { fontSize: 16, lineHeight: 24, color: colors.text, paddingBottom: 24 },
+    section: {
+      marginTop: 24,
+      marginBottom: 4,
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      color: colors.muted,
+      textTransform: 'uppercase'
+    },
+    // Settings that belong together, in one block like the desktop's.
+    group: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: SIZE.radius,
+      paddingHorizontal: 12,
+      marginTop: 4
+    },
+    setting: {
+      minHeight: SIZE.target,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12
+    },
+    settingLabel: { flex: 1, fontSize: 16, color: colors.text },
+    timeInput: { width: 90, textAlign: 'center', minHeight: 40, paddingVertical: 6 },
+    attachments: { marginTop: SIZE.gap, marginBottom: 24 },
+    attachment: {
+      paddingVertical: SIZE.gap,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
+      gap: 4
+    }
+  })
+}
+
+export type Styles = ReturnType<typeof createStyles>
+
+const cache = new Map<Theme, Styles>()
+
+/** The styles of a theme, made once: a theme is a constant, and a style sheet is not made on every render. */
+export function stylesFor(theme: Theme): Styles {
+  let styles = cache.get(theme)
+  if (!styles) {
+    styles = createStyles(theme)
+    cache.set(theme, styles)
+  }
+  return styles
+}

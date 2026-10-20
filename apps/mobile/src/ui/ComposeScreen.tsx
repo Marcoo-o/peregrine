@@ -1,11 +1,12 @@
-import { ActivityIndicator, Pressable, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import type { ComposeState } from '../app/screens'
 import { formatSize } from '../attachmentText'
 import { hasRecipient, type Draft } from '../draft'
 import type { Files } from '../files'
-import { BackLink, Button, Chip } from './controls'
+import { Button, Chip, Spinner } from './controls'
 import { FormInput, FormScroll } from './FormScroll'
-import { styles } from './styles'
+import { Header } from './Header'
+import { useStyles } from './useStyles'
 import { useComposeForm } from './useComposeForm'
 
 export function ComposeScreen(props: {
@@ -14,15 +15,15 @@ export function ComposeScreen(props: {
   onSend: (draft: Draft) => void
   onCancel: (draft: Draft) => void
 }) {
+  const styles = useStyles()
   const { account, busy, error } = props.state
   const form = useComposeForm(props.state.draft, props.files)
   const { draft } = form
 
   return (
     <FormScroll>
-      <BackLink label="‹ Abbrechen" onPress={() => props.onCancel(draft)} />
-      <Text style={styles.title}>Neue Nachricht</Text>
-      <Text style={styles.itemMeta}>Von {account.emailAddress || account.displayName}</Text>
+      <Header title="Neue Nachricht" back={{ label: 'Abbrechen', onPress: () => props.onCancel(draft) }} />
+      <Text style={styles.subtitle}>Von {account.emailAddress || account.displayName}</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FormInput
         placeholder="An"
@@ -69,7 +70,7 @@ export function ComposeScreen(props: {
           Du schreibst von einem Anhang, aber es ist keiner angehängt. Tippe noch einmal, wenn die Nachricht so raus soll.
         </Text>
       ) : null}
-      {busy ? <ActivityIndicator style={styles.spinner} /> : null}
+      {busy ? <Spinner /> : null}
       <Button
         label={form.confirming ? 'Trotzdem senden' : 'Senden'}
         disabled={busy || !hasRecipient(draft)}
