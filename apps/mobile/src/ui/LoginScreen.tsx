@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ScrollView, Text, TextInput } from 'react-native'
+import { Text } from 'react-native'
 import {
   initialFields,
   isSubmittable,
@@ -10,6 +10,7 @@ import {
   type FormFields
 } from '../app/accountForm'
 import { BackLink, Button } from './controls'
+import { FormInput, FormScroll } from './FormScroll'
 import { ServerFields } from './ServerFields'
 import { styles } from './styles'
 
@@ -24,12 +25,11 @@ export function LoginScreen(props: {
   const set = (patch: Partial<FormFields>) => setFields((current) => ({ ...current, ...patch }))
 
   return (
-    <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+    <FormScroll>
       <Text style={styles.title}>Peregrine</Text>
       <Text style={styles.hint}>Ein Konto per IMAP verbinden. Das Passwort bleibt verschlüsselt auf diesem Gerät.</Text>
       {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
-      <TextInput
-        style={styles.input}
+      <FormInput
         placeholder="E-Mail-Adresse (alex@example.org)"
         autoCapitalize="none"
         autoCorrect={false}
@@ -47,16 +47,14 @@ export function LoginScreen(props: {
         onPort={(port) => set({ port })}
         onSecure={(secure) => setFields((current) => withImapSecurity(current, secure))}
       />
-      <TextInput
-        style={styles.input}
+      <FormInput
         placeholder="Benutzername"
         autoCapitalize="none"
         autoCorrect={false}
         value={fields.username}
         onChangeText={(username) => set({ username })}
       />
-      <TextInput
-        style={styles.input}
+      <FormInput
         placeholder="Passwort"
         secureTextEntry
         autoCapitalize="none"
@@ -78,6 +76,6 @@ export function LoginScreen(props: {
       />
       <Button label="Verbinden" disabled={!isSubmittable(fields)} onPress={() => props.onSubmit(toAccountForm(fields))} />
       <BackLink label="‹ Zurück zu den Konten" onPress={props.onCancel} />
-    </ScrollView>
+    </FormScroll>
   )
 }

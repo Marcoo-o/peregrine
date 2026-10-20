@@ -1,9 +1,10 @@
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import type { ComposeState } from '../app/screens'
 import { formatSize } from '../attachmentText'
 import { hasRecipient, type Draft } from '../draft'
 import type { Files } from '../files'
 import { BackLink, Button, Chip } from './controls'
+import { FormInput, FormScroll } from './FormScroll'
 import { styles } from './styles'
 import { useComposeForm } from './useComposeForm'
 
@@ -18,13 +19,12 @@ export function ComposeScreen(props: {
   const { draft } = form
 
   return (
-    <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+    <FormScroll>
       <BackLink label="‹ Abbrechen" onPress={() => props.onCancel(draft)} />
       <Text style={styles.title}>Neue Nachricht</Text>
       <Text style={styles.itemMeta}>Von {account.emailAddress || account.displayName}</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <TextInput
-        style={styles.input}
+      <FormInput
         placeholder="An"
         autoCapitalize="none"
         autoCorrect={false}
@@ -32,8 +32,7 @@ export function ComposeScreen(props: {
         value={draft.to}
         onChangeText={(to) => form.update({ to })}
       />
-      <TextInput
-        style={styles.input}
+      <FormInput
         placeholder="Kopie"
         autoCapitalize="none"
         autoCorrect={false}
@@ -41,14 +40,13 @@ export function ComposeScreen(props: {
         value={draft.cc}
         onChangeText={(cc) => form.update({ cc })}
       />
-      <TextInput
-        style={styles.input}
+      <FormInput
         placeholder="Betreff"
         value={draft.subject}
         onChangeText={(subject) => form.update({ subject })}
       />
-      <TextInput
-        style={[styles.input, styles.multiline]}
+      <FormInput
+        style={styles.multiline}
         placeholder="Nachricht"
         multiline
         textAlignVertical="top"
@@ -77,6 +75,6 @@ export function ComposeScreen(props: {
         disabled={busy || !hasRecipient(draft)}
         onPress={() => form.mayGo() && props.onSend(draft)}
       />
-    </ScrollView>
+    </FormScroll>
   )
 }

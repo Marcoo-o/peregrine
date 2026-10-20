@@ -1,6 +1,7 @@
-import { TextInput, View } from 'react-native'
+import { View } from 'react-native'
 import type { FormSecurity } from '../app/accountForm'
 import { Chip } from './controls'
+import { FormInput } from './FormScroll'
 import { styles } from './styles'
 
 /** The three fields that name a server: its address, how to connect to it, and the port. */
@@ -16,8 +17,7 @@ export function ServerFields(props: {
 }) {
   return (
     <>
-      <TextInput
-        style={styles.input}
+      <FormInput
         placeholder={props.hostPlaceholder}
         autoCapitalize="none"
         autoCorrect={false}
@@ -28,8 +28,7 @@ export function ServerFields(props: {
         <Chip label="TLS" active={props.secure === 'tls'} onPress={() => props.onSecure('tls')} />
         <Chip label="STARTTLS" active={props.secure === 'starttls'} onPress={() => props.onSecure('starttls')} />
       </View>
-      <TextInput
-        style={styles.input}
+      <FormInput
         placeholder={props.portPlaceholder}
         keyboardType="number-pad"
         value={props.port}
