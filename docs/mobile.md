@@ -430,10 +430,7 @@ told apart now.
 **What this step has not shown.** A real device, a real provider, and anything that takes long: how a
 list of several thousand messages behaves, or a connection that drops half way through an action. The
 merge, the selection of the inboxes, the connections and the refresh with one account down are tested on
-the phone's data with scripted servers. Rough places the emulator showed: the reason a message could not
-be read without a connection is the library's own English text, "connection closed", where the rest of the
-screens speak German, and the form does not move the field that is being typed in above the keyboard.
-Left out: unread counts, a choice of which accounts are in the
+the phone's data with scripted servers. Left out: unread counts, a choice of which accounts are in the
 list, search. A message that is already in the list is not removed from it when the server no longer
 has it until that inbox is fetched again and, as everywhere on the phone yet, a fetch only looks at the
 newest 50, so deletions made elsewhere to older ones are not noticed.
@@ -486,9 +483,8 @@ there before and gone after, and the copy in the Sent folder was there.
 **What this has not shown.** Anything large: a file of many megabytes, which crosses the bridge as one
 string and is encoded in JavaScript. More than one file picked at once, though the code takes a list.
 A real PDF viewer, an image, a file from a cloud provider whose pick takes time to download. And a
-message whose queue run fails with the files already copied: then they stay, as they should, and are
-removed only by a later send, and one that is given up on and discarded leaves its copies behind. That
-is a leak of storage and not of anything else, and it is not handled yet. The picker reports a CSV as
+message whose queue run fails with the files already copied: then they stay, as they should, until it
+is sent or discarded. The picker reports a CSV as
 `text/comma-separated-values`, which is a type that exists and is rarer than `text/csv`; it is sent as
 the phone gave it.
 
@@ -519,6 +515,24 @@ covers the navigation that had a mistake no test caught, leaving a message after
 the list again, and the test fails when the old mistake is put back. The behaviour did not change: it was
 used again on the emulator after the move, opening a message, deleting it, writing one, attaching a
 file and sending it, and the server and the screens showed what they had before.
+
+**Three rough places, cleaned up.** The emulator and the first use had shown three, and stage 6 is not
+built on them.
+
+- *Copies of attached files were left behind* by a message that was discarded after it failed too often,
+  by an account that was removed with a message waiting in its queue, and by an application that was
+  stopped between picking a file and sending. One sweep covers all three: it asks the queue for every
+  message there is, those given up on and those scheduled for later included, and has the native module
+  remove every copy that none of them refers to. It runs when the application starts, after what failed
+  was discarded and after an account was removed. A sweep that fails is logged and stops nothing.
+- *Errors about the network were in English*, in several wordings for the same thing, from the platform
+  and from the libraries. Now what is certain from how an error is worded is said in German: that the
+  connection ended, that the server cannot be reached, that it does not answer, that the encrypted
+  connection could not be made. The original text follows in brackets for whoever has to look it up. A
+  server's own words are never guessed at.
+- *The forms were covered by the keyboard.* The form for an account and the one for writing a message make
+  room for it now, and scroll the field that is typed in up to where it can be seen. On the emulator the
+  last field of the long form was in view above the keyboard, where it had been under it.
 
 ## What stage 4 found
 
