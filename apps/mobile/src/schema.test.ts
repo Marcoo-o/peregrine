@@ -52,8 +52,8 @@ describe('a new installation', () => {
   it('gets the newest schema and nothing of the old one', async () => {
     const made = fakeConnection()
     await migrate(new OpSqliteDb(made.connection))
-    expect(tables(made.raw)).toEqual(['accounts', 'folders', 'messages', 'pending_actions'])
-    expect(version(made.raw)).toBe(2)
+    expect(tables(made.raw)).toEqual(['accounts', 'folders', 'messages', 'pending_actions', 'settings'])
+    expect(version(made.raw)).toBe(3)
   })
 
   it('can be migrated again without harm, as it is at every start', async () => {
@@ -62,7 +62,7 @@ describe('a new installation', () => {
     await migrate(db)
     made.raw.prepare("INSERT INTO accounts (id, display_name, email_address, imap_host, imap_port, imap_secure, imap_username, password, created_at) VALUES ('a','a','','h',1,'tls','u','p',0)").run()
     await migrate(db)
-    expect(version(made.raw)).toBe(2)
+    expect(version(made.raw)).toBe(3)
     expect((made.raw.prepare('SELECT COUNT(*) AS n FROM accounts').get() as { n: number }).n).toBe(1)
   })
 })
@@ -98,9 +98,9 @@ describe('the migration from the prototype', () => {
   it('drops the cache of message headers and the old tables, and has the new ones', async () => {
     const { db, raw } = installedPrototype()
     await migrate(db)
-    expect(tables(raw)).toEqual(['accounts', 'folders', 'messages', 'pending_actions'])
+    expect(tables(raw)).toEqual(['accounts', 'folders', 'messages', 'pending_actions', 'settings'])
     expect((raw.prepare('SELECT COUNT(*) AS n FROM messages').get() as { n: number }).n).toBe(0)
-    expect(version(raw)).toBe(2)
+    expect(version(raw)).toBe(3)
   })
 
   it('is whole or nothing: a failure part way leaves the prototype as it was', async () => {
