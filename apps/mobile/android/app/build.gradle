@@ -119,6 +119,10 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
+    // The scheduler for looking for new mail while the application is closed. It keeps the work across a
+    // restart of the phone and runs it when there is a network.
+    implementation("androidx.work:work-runtime:2.10.0")
+
     // The JVM tests, which run without a phone: the certificate check in TlsUpgrade.
     testImplementation("junit:junit:4.13.2")
 

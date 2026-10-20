@@ -90,7 +90,11 @@ const MIGRATIONS: string[][] = [
     'CREATE INDEX idx_folders_account ON folders(account_id)',
     'CREATE INDEX idx_messages_account ON messages(account_id)',
     ...PENDING_ACTIONS_SCHEMA
-  ]
+  ],
+  // 3. What the user has set. One row for each group of settings, its value written as JSON, so that
+  // a group can gain a setting without a migration: what is missing from a stored value is what it
+  // was before the setting existed, and the code says what that is.
+  ['CREATE TABLE settings (name TEXT PRIMARY KEY, value TEXT NOT NULL)']
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */

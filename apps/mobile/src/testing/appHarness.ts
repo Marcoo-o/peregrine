@@ -2,6 +2,8 @@ import type { FetchedMessage, ImapSession, MailboxEntry } from '@peregrine/core/
 import { FakeSmtpServer } from '../../../../packages/smtp/test-support/fakeServer'
 import { addAccount, type Account, type NewAccount } from '../accounts'
 import { Application, createApplication } from '../app/Application'
+import type { Notifications, SyncSchedule } from '../background/devices'
+import type { MailNotification, MessageTarget } from '../background/notifications'
 import type { ImapLogin } from '../app/accountForm'
 import type { Platform } from '../app/services'
 import { AppStore } from '../app/store'
@@ -187,6 +189,62 @@ export class FakeFiles implements Files {
   }
 }
 
+/** The device's notifications, which keeps what it was asked to show and answers as it is told to. */
+export class FakeNotifications implements Notifications {
+  readonly shown: MailNotification[] = []
+  cleared = 0
+  /** Whether notifications are allowed now, and whether the user will allow them when asked. */
+  allowed = false
+  willAllow = true
+  /** The messages taps led to, given out one at a time. */
+  readonly launchTargets: MessageTarget[] = []
+
+  async permitted(): Promise<boolean> {
+    return this.allowed
+  }
+
+  async ensurePermission(): Promise<boolean> {
+    if (!this.allowed && this.willAllow) this.allowed = true
+    return this.allowed
+  }
+
+  async show(notification: MailNotification): Promise<void> {
+    this.shown.push(notification)
+  }
+
+  async clearAll(): Promise<void> {
+    this.cleared += 1
+  }
+
+  async consumeLaunchTarget(): Promise<MessageTarget | null> {
+    return this.launchTargets.shift() ?? null
+  }
+}
+
+/** The platform's schedule, which writes down what it was told. */
+export class FakeSyncSchedule implements SyncSchedule {
+  readonly calls: string[] = []
+  failWith: Error | null = null
+
+  private record(call: string): Promise<void> {
+    if (this.failWith) return Promise.reject(this.failWith)
+    this.calls.push(call)
+    return Promise.resolve()
+  }
+
+  schedule(minutes: number): Promise<void> {
+    return this.record(`schedule ${minutes}`)
+  }
+
+  cancel(): Promise<void> {
+    return this.record('cancel')
+  }
+
+  runNow(): Promise<void> {
+    return this.record('runNow')
+  }
+}
+
 export const account = (name: string, over: Partial<NewAccount> = {}): NewAccount => ({
   displayName: name,
   emailAddress: `${name}@example.org`,
@@ -212,11 +270,15 @@ export async function appHarness() {
   const server = new FakeMailServer()
   const files = new FakeFiles()
   const smtp = new FakeSmtpServer()
+  const notifications = new FakeNotifications()
+  const syncSchedule = new FakeSyncSchedule()
   const logs: string[] = []
   const platform: Platform = {
     connectImap: async (login) => server.connect(login) as unknown as ImapSession,
     makeTransport: () => smtp.transport,
     files,
+    notifications,
+    syncSchedule,
     log: { warn: (message) => logs.push(message), error: (message) => logs.push(message) }
   }
   const store = new AppStore()
@@ -236,7 +298,7 @@ export async function appHarness() {
 
   const folderOf = (folders: Folder[], path: string): Folder => folders.find((f) => f.imapPath === path) as Folder
 
-  return { app, store, db, raw, server, files, smtp, logs, givenAccount, folderOf }
+  return { app, store, db, raw, server, files, smtp, notifications, syncSchedule, logs, givenAccount, folderOf }
 }
 
 /**

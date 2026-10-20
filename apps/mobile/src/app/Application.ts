@@ -1,10 +1,12 @@
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import { AccountSetup } from './AccountSetup'
+import { describeError } from '../errors'
 import { ComposeController } from './ComposeController'
 import { MessageController } from './MessageController'
 import { Navigator } from './Navigator'
 import { discardFailedActions, refreshQueueStatus } from './queueStatus'
 import { createServices, type Platform, type Services } from './services'
+import { SettingsController } from './SettingsController'
 import type { AppStore } from './store'
 
 /**
@@ -16,6 +18,7 @@ export class Application {
   readonly messages: MessageController
   readonly compose: ComposeController
   readonly accounts: AccountSetup
+  readonly settings: SettingsController
 
   constructor(
     readonly services: Services,
@@ -25,12 +28,33 @@ export class Application {
     this.messages = new MessageController(services, store, this.navigator)
     this.compose = new ComposeController(services, store, this.navigator)
     this.accounts = new AccountSetup(services, store, this.navigator)
+    this.settings = new SettingsController(services, store, this.navigator)
   }
 
-  /** Starts the application: removes what was left behind, then shows the first screen. */
+  /**
+   * Starts the application: removes what was left behind, makes the platform's schedule for looking for new
+   * mail what the settings say, shows the first screen, and opens the message a notification was tapped for
+   * when it is that which started the application.
+   */
   async start(): Promise<void> {
     await this.services.sweepCopies()
+    await this.settings.applySchedule()
     await this.navigator.start()
+    await this.openLaunchTarget()
+  }
+
+  /**
+   * Opens the message a notification was tapped for, which the platform keeps until it is asked. Called at
+   * the start and whenever the application comes to the front, where a tap on a notification arrives when
+   * it is running already.
+   */
+  async openLaunchTarget(): Promise<void> {
+    try {
+      const target = await this.services.notifications.consumeLaunchTarget()
+      if (target) await this.messages.openTarget(target)
+    } catch (error) {
+      this.services.log.error(`the message of a notification could not be opened: ${describeError(error)}`)
+    }
   }
 
   /** Gives up on the actions that failed too often, and with them the files they carried. */

@@ -456,13 +456,22 @@ export class ImapClientSession implements ImapSession {
     // Built before anything is sent, here and in the methods below. A value that is not allowed
     // in a command is refused without the connection having done anything on its account.
     const set = sequenceSet([uid])
-    return this.withMailbox(imapPath, async () => {
+    const fetch = async (): Promise<FullMessage | undefined> => {
       const result = await this.client.command(['UID', 'FETCH', set, '(BODY.PEEK[])'])
       for (const message of dataOf(result, 'FETCH')) {
         const source = parseFetch(message).sections.get('BODY[]')
         if (source) return { source }
       }
       return undefined
+    }
+    return this.withMailbox(imapPath, async (_selected, justSelected) => {
+      const found = await fetch()
+      if (found || justSelected) return found
+      // A mailbox that has been open for a while does not know the messages that came after it was
+      // opened, and is silent about a UID it does not know. That is what a notification points at.
+      // So it is brought up to date, and the answer is asked for once more before it is believed.
+      await this.refresh()
+      return fetch()
     })
   }
 

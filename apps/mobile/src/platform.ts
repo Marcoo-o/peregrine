@@ -1,6 +1,6 @@
 import { ImapClientSession } from '@peregrine/imap/session'
 import type { Platform } from './app/services'
-import { createFiles, createTransport } from './native'
+import { createFiles, createNotifications, createSyncSchedule, createTransport } from './native'
 
 /** What the application gets from this device: the network, the files, and the console to log to. */
 export function createPlatform(): Platform {
@@ -12,6 +12,8 @@ export function createPlatform(): Platform {
     },
     makeTransport: () => createTransport(),
     files: createFiles(),
+    notifications: createNotifications(),
+    syncSchedule: createSyncSchedule(),
     log: { warn: (message) => console.warn(message), error: (message) => console.error(message) }
   }
 }

@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react'
 import type { Application } from '../app/Application'
 import type { Screen } from '../app/screens'
 import { AccountsScreen } from './AccountsScreen'
@@ -8,11 +9,12 @@ import { LoginScreen } from './LoginScreen'
 import { MessageScreen } from './MessageScreen'
 import { MessagesScreen } from './MessagesScreen'
 import { MoveScreen } from './MoveScreen'
+import { SettingsScreen } from './SettingsScreen'
 import { UnifiedScreen } from './UnifiedScreen'
 
 /** The screen for what the application is showing, with what each of its buttons does handed to it. */
-export function ScreenView(props: { application: Application; screen: Screen }) {
-  const { navigator, messages, compose, accounts, services } = props.application
+export function ScreenView(props: { application: Application; screen: Screen }): ReactElement {
+  const { navigator, messages, compose, accounts, settings, services } = props.application
   const { screen } = props
 
   switch (screen.name) {
@@ -25,6 +27,7 @@ export function ScreenView(props: { application: Application; screen: Screen }) 
           onOpen={(account) => navigator.openAccount(account)}
           onAdd={() => navigator.showLogin()}
           onUnified={() => navigator.showUnified({ refresh: true })}
+          onSettings={() => settings.show()}
         />
       )
     case 'login':
@@ -93,6 +96,20 @@ export function ScreenView(props: { application: Application; screen: Screen }) 
           files={services.files}
           onSend={(draft) => compose.send(screen, draft)}
           onCancel={(draft) => compose.cancel(screen, draft)}
+        />
+      )
+    case 'settings':
+      return (
+        <SettingsScreen
+          state={screen}
+          onBack={() => settings.back()}
+          onEnabled={(enabled) => settings.setEnabled(enabled)}
+          onPreview={(preview) => settings.setPreview(preview)}
+          onQuietHours={(on) => settings.setQuietHours(on)}
+          onQuietTime={(end, value) => settings.setQuietTime(end, value)}
+          onMuted={(accountId) => settings.toggleMuted(accountId)}
+          onInterval={(minutes) => settings.setInterval(minutes)}
+          onRunNow={() => settings.runNow()}
         />
       )
   }

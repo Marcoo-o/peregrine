@@ -260,7 +260,9 @@ Out, for now:
    data for several accounts with the queue's storage, the application acting on mail through the
    queue and sending, the unified inbox, and attachments. What is left of the stage is what it
    did not set out to do, see the end of "What stage 5 found so far".
-6. Notifications by periodic sync.
+6. Notifications by periodic sync. **Written, and shown on the emulator**: a notification for a
+   message that came while the application was closed, and a tap on it that opens the message. What
+   it found is under "What stage 6 found".
 7. Push as an opt-in, if the platform rules still allow what is wanted by then.
 
 Stages 1 to 3 improve the desktop whether or not a phone ever appears. That is the test of
@@ -533,6 +535,52 @@ built on them.
 - *The forms were covered by the keyboard.* The form for an account and the one for writing a message make
   room for it now, and scroll the field that is typed in up to where it can be seen. On the emulator the
   last field of the long form was in view above the keyboard, where it had been under it.
+
+## What stage 6 found
+
+The decision from "Push, and a correction" held: the default is a periodic look on the platform's own
+scheduler, and nothing holds a connection open. The look runs as unique periodic work of WorkManager,
+which Android runs no sooner than every fifteen minutes and later when the phone lies still or the
+battery is low, and only with a network. The settings offer 15, 30 and 60 minutes and 2 and 4 hours, and
+say what the floor is. A button looks at once, for whoever wants to see that it works.
+
+- *What counts as new mail* is decided in `src/background`, without the platform. Before the look the
+  highest UID of every inbox is noted. After it, a message is new when its UID is higher than that and it
+  is not read. An inbox that was not known before, such as that of an account just added, counts for
+  nothing, so a new account does not announce everything it holds. The rules of the desktop decide
+  whether to say so (`shouldNotify` and its policy in `@peregrine/core`): switched on or off, quiet hours
+  across midnight, muted accounts. One message is shown as who wrote and what about, several as a count
+  for the account, and either can be left without the preview, which is also what a locked screen shows.
+- *The look itself* is the same code that the application uses to refresh its inboxes, run without a
+  screen. The scheduler's job starts a task of React Native that JavaScript registered, from the job and
+  not from a service, because a service cannot be started from the background on a current phone and a
+  job is where that is not refused. It does nothing while the application is on the screen, which looks
+  after its own mail, and it never throws: a task that fails logs and ends, and the next time comes anyway.
+- *The database is opened once for the whole process*, so the screens and the task share a connection when
+  they run together.
+- *The settings* are a screen of their own, reached from the accounts, kept in a table that migration 3
+  made. The permission for notifications is asked for where they are switched on, not at the first start.
+  When it is not given they stay off and the screen says why. The schedule of the platform is made what the
+  settings say at every start, so it is right after an update or a reinstall too.
+- *A tap on a notification* opens the message from the application's own copy, which the look wrote. The
+  native side remembers what was tapped and the application asks for it when it starts and when it comes to
+  the front.
+
+Two mistakes were found by using it, and are covered by a test each. A message that came while the
+application was in the background was answered with nothing when it was fetched on a connection that had
+the mailbox open already, so it showed as no longer on the server and opened fine from the list a moment
+later. The connection did not know of messages that came after it opened the mailbox. It is now brought up
+to date and asked once more before the answer is believed. And the button to look now went to the same
+task as the periodic look, which does nothing while the application is open, so it did nothing. It is
+passed on as forced now. A third, found while writing the tests, was an order that came from random ids and
+passed by chance: the notifications of an account now come in the order of the accounts.
+
+Shown on an Android 16 emulator: the permission asked for in the settings, the schedule showing up in the
+system's list of jobs, a message delivered to the server while the application was in the background, the
+notification with sender, subject and account, and the tap opening the message with its text. Not shown, and
+not testable there: how a maker's own battery rules treat a job that runs every half hour, which is what is
+left of "The rules for foreground services have tightened" for the periodic way too. The quiet hours and the
+muted accounts are covered by tests against the logic and were not run on the emulator.
 
 ## What stage 4 found
 
