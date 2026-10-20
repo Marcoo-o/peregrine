@@ -1,6 +1,8 @@
 import { analyzeAttachmentName, type AttachmentFinding } from '@peregrine/core/attachmentSafety'
 import { safeFilename } from '@peregrine/core/safeFilename'
 import { decodeMimeWords } from '@peregrine/imap/mime'
+import { contentIdOf, referencedCids } from './contentIds'
+import { readMessage } from './messageText'
 import { childrenOf, parseHeaderValue, splitPart, undoTransferEncoding, type Part } from './mimeParts'
 import { extensionFor, OCTET_STREAM } from './mimeTypes'
 
@@ -31,9 +33,9 @@ function nameOf(part: Part): string | null {
 /**
  * Whether a part is an attachment and not a part of the text.
  *
- * It says so itself, or it has a name, or it is a file by its type: an image that is shown inside the
- * message has no name and is not text, and is listed all the same, as the attachment it is for anybody
- * who wants it. Text that has no name is the message.
+ * It says so itself, or it has a name, or it is a file by its type: an image that is not text is one
+ * though it has no name, as the attachment it is for anybody who wants it. Text that has no name is the
+ * message. Whether the HTML of the message shows it itself is not asked here: see `isShownInMessage`.
  */
 function isAttachment(part: Part): boolean {
   const type = parseHeaderValue(part.headers.get('content-type'))
@@ -42,6 +44,17 @@ function isAttachment(part: Part): boolean {
   if (nameOf(part) !== null) return true
   const kind = type.value || 'text/plain'
   return !kind.startsWith('text/')
+}
+
+/**
+ * Whether the HTML of the message shows this part itself, by its content id. An image the message is made of is
+ * part of the message and not something that came with it, so it is not listed as an attachment. A part that
+ * the message sends as an attachment is listed whatever refers to it.
+ */
+function isShownInMessage(part: Part, shown: Set<string>): boolean {
+  const id = contentIdOf(part.headers.get('content-id')).toLowerCase()
+  if (id === '' || !shown.has(id)) return false
+  return parseHeaderValue(part.headers.get('content-disposition')).value !== 'attachment'
 }
 
 function describe(part: Part, id: string, position: number): AttachmentInfo {
@@ -64,13 +77,14 @@ function describe(part: Part, id: string, position: number): AttachmentInfo {
 /** The attachments of a message, in the order they are in it. */
 export function listAttachments(source: Uint8Array): AttachmentInfo[] {
   const found: AttachmentInfo[] = []
+  const shown = referencedCids(readMessage(source).html ?? '')
   const walk = (part: Part, id: string): void => {
     const children = childrenOf(part)
     if (children.length > 0) {
       children.forEach((child, index) => walk(child, id === '' ? String(index + 1) : `${id}.${index + 1}`))
       return
     }
-    if (isAttachment(part)) found.push(describe(part, id === '' ? '1' : id, found.length + 1))
+    if (isAttachment(part) && !isShownInMessage(part, shown)) found.push(describe(part, id === '' ? '1' : id, found.length + 1))
   }
   walk(splitPart(source), '')
   return found

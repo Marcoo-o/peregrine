@@ -101,6 +101,58 @@ describe('the attachments of a message', () => {
     expect(image).toMatchObject({ filename: 'anhang-1.png', originalName: null, contentType: 'image/png' })
   })
 
+  it('does not list an image that the HTML of the message shows itself, which is part of the message', () => {
+    const source = crlf([
+      'Content-Type: multipart/related; boundary="b"',
+      '',
+      '--b',
+      'Content-Type: text/html',
+      '',
+      '<p>Hi</p><img src="cid:logo%40example.net"><div style="background:url(cid:bg)"></div>',
+      '--b',
+      'Content-Type: image/png',
+      'Content-ID: <logo@example.net>',
+      'Content-Disposition: inline',
+      '',
+      'AAAA',
+      '--b',
+      'Content-Type: image/gif',
+      'Content-ID: <bg>',
+      '',
+      'BBBB',
+      '--b',
+      'Content-Type: image/png',
+      'Content-ID: <unused>',
+      'Content-Disposition: inline',
+      '',
+      'CCCC',
+      '--b--',
+      ''
+    ])
+    // Only the one that nothing refers to is left, for anybody who wants it.
+    expect(listAttachments(source).map((a) => [a.id, a.contentType])).toEqual([['4', 'image/png']])
+  })
+
+  it('lists an image that has a content id and that the message sends as an attachment, though the HTML refers to it', () => {
+    const source = crlf([
+      'Content-Type: multipart/mixed; boundary="b"',
+      '',
+      '--b',
+      'Content-Type: text/html',
+      '',
+      '<img src="cid:photo">',
+      '--b',
+      'Content-Type: image/jpeg; name="photo.jpg"',
+      'Content-ID: <photo>',
+      'Content-Disposition: attachment; filename="photo.jpg"',
+      '',
+      'DDDD',
+      '--b--',
+      ''
+    ])
+    expect(listAttachments(source).map((a) => a.filename)).toEqual(['photo.jpg'])
+  })
+
   it('lists a message that was attached', () => {
     const [forwarded] = listAttachments(mixed(['--b', 'Content-Type: message/rfc822', '', 'Subject: old', '', 'body', '']))
     expect(forwarded.contentType).toBe('message/rfc822')

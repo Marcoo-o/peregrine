@@ -1,4 +1,5 @@
 import { decodeCharset, decodeMimeWords, encodeBase64 } from '@peregrine/imap/mime'
+import { contentIdOf } from './contentIds'
 import { childrenOf, parseHeaderValue, splitPart, undoTransferEncoding, type Part } from './mimeParts'
 
 /** A message as the screens show it: the few headers that identify it, its text and its HTML. */
@@ -90,7 +91,7 @@ function inlineImagesOf(top: Part): Record<string, string> {
       childrenOf(part).forEach(visit)
       return
     }
-    const id = (part.headers.get('content-id') ?? '').replace(/^\s*<|>\s*$/g, '')
+    const id = contentIdOf(part.headers.get('content-id'))
     if (!id || !INLINE_IMAGE_TYPES.has(type.value) || id in images) return
     if (part.body.length > MAX_INLINE_IMAGE_ENCODED) return
     const bytes = undoTransferEncoding(part)

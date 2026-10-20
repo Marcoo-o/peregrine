@@ -1,4 +1,5 @@
 import { mailContentCsp } from '@peregrine/core/mailCsp'
+import { decodeCid } from '../contentIds'
 
 export interface MailDocumentOptions {
   /** The HTML of the message, as the sender wrote it. */
@@ -33,15 +34,7 @@ const REMOVED_TAGS = /<\/?(script|iframe|object|embed|noscript|title|base|meta|l
 
 /** Puts the data of an inline image where the message names it by content id. */
 function withInlineImages(html: string, images: Record<string, string>): string {
-  return html.replace(/cid:([^"'\s)<>]+)/gi, (whole, id: string) => {
-    let name = id
-    try {
-      name = decodeURIComponent(id)
-    } catch {
-      // not percent-encoded, which is also how it is written
-    }
-    return images[name] ?? images[id] ?? whole
-  })
+  return html.replace(/cid:([^"'\s)<>]+)/gi, (whole, id: string) => images[decodeCid(id)] ?? images[id] ?? whole)
 }
 
 /**
