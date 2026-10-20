@@ -265,6 +265,9 @@ Out, for now:
    it found is under "What stage 6 found".
 7. Push as an opt-in, if the platform rules still allow what is wanted by then.
 
+Between 6 and 7 the screens were given the look of the desktop application, made for the phone. What
+that is, and what it left out, is under "What the design found".
+
 Stages 1 to 3 improve the desktop whether or not a phone ever appears. That is the test of
 whether this plan is honest rather than hopeful: if the first half only pays off when the second
 half ships, it is a bet, not a plan.
@@ -581,6 +584,38 @@ notification with sender, subject and account, and the tap opening the message w
 not testable there: how a maker's own battery rules treat a job that runs every half hour, which is what is
 left of "The rules for foreground services have tightened" for the periodic way too. The quiet hours and the
 muted accounts are covered by tests against the logic and were not run on the emulator.
+
+## What the design found
+
+The screens had been plain on purpose, with a colour written into every style. They are now made of the
+desktop's tokens (`src/renderer/src/styles.css`): its light and dark palette, its blue accent, the tints for
+what is chosen and for what went wrong. `src/ui/theme.ts` has them, `styles.ts` makes the style sheet of
+a theme once, and no screen names a colour. The theme is the system's and changes while the application
+runs, with the status bar.
+
+- *The colours are measured, not only copied.* `theme.test.ts` checks that every colour that is read on
+  another has the 4.5 to 1 that WCAG asks of text, in both themes. One value of the desktop fails: the
+  warning yellow is 3.4 to 1 on the light page, which is fine for an icon and not for words. The phone's
+  is a darker one, with a comment that says why it differs.
+- *What carries over from the desktop's lists:* the account colour as a stripe in front of a message in
+  the unified list, subject and sender in bold and the colour of the text while a message is unread, the
+  unread count of a folder in a pill of the accent, the folders named by their role. These needed data the
+  phone did not have. An account has a colour, given when it is added by the desktop's rule, and migration 4
+  gave the accounts that were there one each. The unread counts are counted in SQL.
+- *What is made for the phone:* a header with the way back and the title, targets of 48 dp, buttons that
+  are filled, outlined or red by what they do, a ring in the accent on the field being typed in, settings
+  in groups, and a date as short as it can be: the time for today, the day and month for this year, the
+  whole date for older mail. Hover and the density of the desktop's rows are left out: neither means
+  anything under a thumb.
+- *Left out for now:* icons. The desktop draws them with an icon library, which on the phone is a native
+  module more to build and to keep. Text and the colours carry the screens for the time being. The
+  accent is fixed to the desktop's blue, where the desktop lets the user choose one of twelve. Both can
+  be added on top of what is here without changing it.
+
+Shown on an Android 16 emulator in light and in dark, switching the system's setting while the application
+ran: the unified list, the accounts, the folders with their counts, a folder, an open message and the
+settings. Not shown: a screen with a very large system font, which is where a layout made of fixed
+heights would break first.
 
 ## What stage 4 found
 
