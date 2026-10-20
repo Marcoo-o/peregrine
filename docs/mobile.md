@@ -497,6 +497,29 @@ images, attachments in drafts, drafts at all, OAuth, scheduled sending, search, 
 of which accounts are in the unified list, and the things that only a real device and a real provider
 can show.
 
+**How the application is built.** Over stage 5 `App.tsx` grew to a thousand lines that held the state,
+the navigation, the connections, the actions on mail and every screen. It is split by what each part
+is for, and `App.tsx` is the 63 lines that remain: open the database, build the application, hand the
+store to the screens.
+
+- `src/app` is the application without a screen, in plain TypeScript that knows nothing of React. An
+  `AppStore` holds what the screens show and tells its listeners when it changes. The services
+  (connections, queue, mail actions, files) are made in one place from what the device gives, which is
+  the `Platform`. A `Navigator` decides which screen is shown when, a `MessageController` works on the
+  open message, a `ComposeController` writes and sends, and an `AccountSetup` adds and removes accounts.
+  What the form for an account needs to know is in `accountForm.ts`, apart from the form.
+- `src/ui` is the screens, one component per file, with what they share (the styles, the button and
+  the chip, the row of a message, the list of attachments, the fields that name a server) apart from
+  them. A screen gets its state and what each of its buttons does. One switch chooses the screen for the
+  state, and the compiler checks that every kind of state has one.
+
+The point of the split is that the logic can be tested without a screen. It runs in the tests against
+a real database and pretend servers, files and a sending server, which the screens could not. That
+covers the navigation that had a mistake no test caught, leaving a message after an action not showing
+the list again, and the test fails when the old mistake is put back. The behaviour did not change: it was
+used again on the emulator after the move, opening a message, deleting it, writing one, attaching a
+file and sending it, and the server and the screens showed what they had before.
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was
