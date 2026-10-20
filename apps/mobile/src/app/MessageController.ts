@@ -4,7 +4,7 @@ import type { Account } from '../accounts'
 import { getAccount } from '../accounts'
 import { attachmentContent, listAttachments, type AttachmentInfo } from '../attachments'
 import { refusalText } from '../attachmentText'
-import { describeError } from '../errors'
+import { describeError, explainError } from '../errors'
 import { FLAGGED, SEEN } from '../flags'
 import { getFolder, listFolders, type Folder } from '../folders'
 import type { MailActions } from '../mailActions'
@@ -59,7 +59,7 @@ export class MessageController {
         attachments: this.attachmentsOf(full.source)
       })
     } catch (error) {
-      this.store.showScreen({ name: 'message', ...opened, error: describeError(error) })
+      this.store.showScreen({ name: 'message', ...opened, error: explainError(error) })
     }
   }
 
@@ -135,7 +135,7 @@ export class MessageController {
       const saved = await this.services.files.save(info.filename, info.contentType, content)
       this.showNotice(state, saved ? `Gespeichert: ${info.filename}` : undefined)
     } catch (error) {
-      this.showNotice(state, `Speichern ging nicht: ${describeError(error)}`)
+      this.showNotice(state, `Speichern ging nicht: ${explainError(error)}`)
     }
   }
 
@@ -152,7 +152,7 @@ export class MessageController {
       await this.services.files.open(info.filename, info.contentType, content)
       this.showNotice(state, undefined)
     } catch (error) {
-      this.showNotice(state, `Öffnen ging nicht: ${describeError(error)}`)
+      this.showNotice(state, `Öffnen ging nicht: ${explainError(error)}`)
     }
   }
 

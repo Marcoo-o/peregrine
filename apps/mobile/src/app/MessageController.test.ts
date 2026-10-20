@@ -98,7 +98,7 @@ describe('opening a message', () => {
     t.app.services.connections.drop(t.work.id)
     t.server.unreachable.add('work')
     await t.app.messages.open(t.work, t.folder, t.summary, 'folder')
-    expect(t.store.screen).toMatchObject({ name: 'message', error: 'work: connection refused' })
+    expect(t.store.screen).toMatchObject({ name: 'message', error: 'Der Server ist nicht erreichbar. (work: connection refused)' })
   })
 
   it('opens a message of the unified list by its account and folder', async () => {

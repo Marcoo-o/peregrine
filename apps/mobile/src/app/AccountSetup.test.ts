@@ -44,7 +44,7 @@ describe('signing in', () => {
     await t.app.accounts.signIn(typed)
 
     expect(await listAccounts(t.db)).toEqual([])
-    expect(t.store.screen).toEqual({ name: 'login', error: 'work: connection refused' })
+    expect(t.store.screen).toEqual({ name: 'login', error: 'Der Server ist nicht erreichbar. (work: connection refused)' })
     expect(t.app.accounts.lastAttempt).toBe(typed)
   })
 

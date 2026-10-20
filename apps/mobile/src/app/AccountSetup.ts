@@ -1,5 +1,5 @@
 import { addAccount, removeAccount, type Account } from '../accounts'
-import { describeError } from '../errors'
+import { explainError } from '../errors'
 import { newAccountFrom, type AccountForm } from './accountForm'
 import type { Navigator } from './Navigator'
 import type { Services } from './services'
@@ -29,7 +29,7 @@ export class AccountSetup {
       this.services.connections.adopt(account.id, session)
       await this.navigator.showFolders(account, session)
     } catch (error) {
-      this.store.showScreen({ name: 'login', error: describeError(error) })
+      this.store.showScreen({ name: 'login', error: explainError(error) })
     }
   }
 

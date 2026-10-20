@@ -1,4 +1,5 @@
 import type { PendingSummary } from '@peregrine/core/pendingActions'
+import { explainError } from '../errors'
 import type { Services } from './services'
 import type { AppState, AppStore } from './store'
 
@@ -6,7 +7,8 @@ import type { AppState, AppStore } from './store'
 export async function refreshQueueStatus(services: Pick<Services, 'mail'>, store: AppStore): Promise<void> {
   const { statusAccountId } = store.state
   const summary = await services.mail.waiting()
-  const problem = statusAccountId ? await services.mail.lastProblem(statusAccountId) : null
+  const reason = statusAccountId ? await services.mail.lastProblem(statusAccountId) : null
+  const problem = reason === null ? null : explainError(reason)
   store.setWaiting({ summary, problem })
 }
 
