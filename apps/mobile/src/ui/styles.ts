@@ -1,0 +1,36 @@
+import { StyleSheet } from 'react-native'
+
+/** The look of the screens, which are plain on purpose: what is being tried is everything underneath them. */
+export const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: '#fff', padding: 16 },
+  fill: { flex: 1 },
+  centered: { flex: 1 },
+  form: { gap: 12 },
+  row: { flexDirection: 'row', gap: 8 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
+  title: { fontSize: 22, fontWeight: '600', marginVertical: 8, color: '#111' },
+  hint: { color: '#555', marginBottom: 8 },
+  error: { color: '#b00020', marginVertical: 8 },
+  status: { backgroundColor: '#f3f0ff', borderRadius: 8, padding: 8, marginBottom: 8 },
+  statusText: { color: '#3b2a8c' },
+  statusProblem: { color: '#b00020', marginTop: 2 },
+  pending: { fontSize: 13, color: '#3b2a8c', marginTop: 2 },
+  input: { borderWidth: 1, borderColor: '#bbb', borderRadius: 8, padding: 12, fontSize: 16, color: '#111' },
+  multiline: { minHeight: 200 },
+  button: { backgroundColor: '#3b2a8c', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 8 },
+  buttonDisabled: { opacity: 0.4 },
+  buttonText: { color: '#fff', fontSize: 16 },
+  chip: { borderWidth: 1, borderColor: '#3b2a8c', borderRadius: 16, paddingVertical: 6, paddingHorizontal: 14 },
+  chipActive: { backgroundColor: '#3b2a8c' },
+  chipText: { color: '#3b2a8c' },
+  chipTextActive: { color: '#fff' },
+  item: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#ccc' },
+  itemTitle: { fontSize: 16, color: '#111' },
+  unread: { fontWeight: '700' },
+  itemMeta: { fontSize: 13, color: '#666', marginTop: 2 },
+  link: { color: '#3b2a8c', fontSize: 16, paddingVertical: 4 },
+  spinner: { marginVertical: 8 },
+  body: { fontSize: 15, lineHeight: 22, color: '#111', paddingBottom: 24 },
+  attachments: { marginTop: 8, marginBottom: 24 },
+  attachment: { paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#ccc', gap: 4 }
+})

@@ -17,8 +17,8 @@ export class Connections {
 
   constructor(
     private readonly connectTo: (account: Account) => Promise<ImapSession>,
-    /** Called when an account is connected or lost, so that a screen can say so. */
-    private readonly changed: () => void = () => undefined
+    /** Called with the accounts that are connected whenever one is gained or lost, so that a screen can say so. */
+    private readonly changed: (connectedIds: string[]) => void = () => undefined
   ) {}
 
   /** The connection of an account, or null when it has none. */
@@ -59,10 +59,10 @@ export class Connections {
       // Only the connection that is in use is forgotten: one that was replaced ended on purpose.
       if (this.open.get(accountId) === session) {
         this.open.delete(accountId)
-        this.changed()
+        this.changed(this.connectedIds)
       }
     })
-    this.changed()
+    this.changed(this.connectedIds)
   }
 
   /** Lets go of one account's connection. */
@@ -71,7 +71,7 @@ export class Connections {
     if (!session) return
     this.open.delete(accountId)
     session.disconnect().catch(() => undefined)
-    this.changed()
+    this.changed(this.connectedIds)
   }
 
   dropAll(): void {

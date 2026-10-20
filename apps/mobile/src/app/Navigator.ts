@@ -1,0 +1,145 @@
+import type { ImapSession } from '@peregrine/core/imapSession'
+import { listAccounts, type Account } from '../accounts'
+import { describeError } from '../errors'
+import { listFolders, syncFolders, type Folder } from '../folders'
+import { listMessages } from '../messages'
+import { syncFolder } from '../sync'
+import { listUnified, refreshInboxes, type RefreshResult } from '../unified'
+import { refreshQueueStatus } from './queueStatus'
+import type { Services } from './services'
+import type { AppStore } from './store'
+
+const NO_CONNECTION_NOTICE = 'Keine Verbindung. Gezeigt wird, was schon geladen ist.'
+
+/**
+ * Which screen is shown when: the list of accounts, the unified inbox, the folders of an account and
+ * the messages of a folder. What a screen shows is read from the database first and brought up to date
+ * from the servers after, so that a server that is down costs a line that says so and not the screen.
+ */
+export class Navigator {
+  constructor(
+    private readonly services: Services,
+    private readonly store: AppStore
+  ) {}
+
+  /** The first screen: the unified inbox when there are accounts to unify, the one account when there is one. */
+  async start(): Promise<void> {
+    const accounts = await listAccounts(this.services.db)
+    if (accounts.length >= 2) await this.showUnified({ refresh: true })
+    else if (accounts.length === 1) await this.openAccount(accounts[0])
+    else await this.showAccounts()
+  }
+
+  /** The list of accounts, or the form when there is none. */
+  async showAccounts(error?: string): Promise<void> {
+    this.store.setStatusAccount(null)
+    const accounts = await listAccounts(this.services.db)
+    this.store.showScreen(accounts.length === 0 ? { name: 'login', error } : { name: 'accounts', accounts, error })
+  }
+
+  showLogin(): void {
+    this.store.showScreen({ name: 'login' })
+  }
+
+  /** Leaves the form for the list of accounts, when there is one to go back to. */
+  async leaveLogin(): Promise<void> {
+    const accounts = await listAccounts(this.services.db)
+    if (accounts.length > 0) await this.showAccounts()
+  }
+
+  /**
+   * Connects an account and shows its folders. When it cannot be reached and has folders from before,
+   * those are shown with the reason, and what is decided there waits for a connection.
+   */
+  async openAccount(account: Account): Promise<void> {
+    this.store.showScreen({ name: 'loading' })
+    this.store.setStatusAccount(account.id)
+    try {
+      await this.showFolders(account, await this.services.connections.ensure(account))
+    } catch (error) {
+      await this.showFoldersOffline(account, describeError(error))
+    }
+  }
+
+  /** With a connection that works: replays what waited for one, takes the folders from the server. */
+  async showFolders(account: Account, imap: ImapSession): Promise<void> {
+    const { db, mail } = this.services
+    this.store.setStatusAccount(account.id)
+    await mail.flush(account.id)
+    await syncFolders(db, account.id, await imap.listMailboxes())
+    this.store.showScreen({ name: 'folders', account, folders: await listFolders(db, account.id) })
+    this.refreshStatus()
+  }
+
+  /** The folders as they were last fetched, for going back to them without asking the server. */
+  async showStoredFolders(account: Account): Promise<void> {
+    const folders = await listFolders(this.services.db, account.id)
+    this.store.showScreen({ name: 'folders', account, folders })
+  }
+
+  private async showFoldersOffline(account: Account, reason: string): Promise<void> {
+    const folders = await listFolders(this.services.db, account.id)
+    if (folders.length === 0) {
+      await this.showAccounts(`${account.displayName}: ${reason}`)
+      return
+    }
+    this.store.showScreen({ name: 'folders', account, folders, offline: reason })
+    this.refreshStatus()
+  }
+
+  /**
+   * The newest messages of every account's inbox in one list. It is shown at once from what is stored
+   * and, when asked, brought up to date after, account by account.
+   */
+  async showUnified(options: { refresh: boolean }): Promise<void> {
+    const { db, connections, mail } = this.services
+    this.store.setStatusAccount(null)
+    await this.showUnifiedList(options.refresh, [], 'navigating')
+    if (!options.refresh) return
+
+    const results = await refreshInboxes({ db, connections, mail }, await listAccounts(db))
+    await this.showUnifiedList(false, results.filter((result) => result.error !== undefined), 'updating')
+    this.refreshStatus()
+  }
+
+  /**
+   * Going to the list always shows it. The update after a fetch only goes onto the list: not over a
+   * screen the user has moved on to while the accounts were being fetched.
+   */
+  private async showUnifiedList(busy: boolean, problems: RefreshResult[], reason: 'navigating' | 'updating'): Promise<void> {
+    const messages = await listUnified(this.services.db)
+    if (reason === 'updating' && this.store.screen.name !== 'unified') return
+    this.store.showScreen({ name: 'unified', messages, busy, problems })
+  }
+
+  /** The messages of a folder from the database, and a sync with the server when asked to and there is one. */
+  async showMessages(account: Account, folder: Folder, options: { sync: boolean }): Promise<void> {
+    const imap = this.services.connections.get(account.id)
+    if (!options.sync) return this.showStoredMessages(account, folder, { busy: false })
+    if (!imap) return this.showStoredMessages(account, folder, { busy: false, error: NO_CONNECTION_NOTICE })
+
+    await this.showStoredMessages(account, folder, { busy: true })
+    try {
+      await syncFolder(imap, this.services.db, folder)
+      await this.showStoredMessages(account, folder, { busy: false })
+    } catch (error) {
+      await this.showStoredMessages(account, folder, { busy: false, error: describeError(error) })
+    }
+  }
+
+  private async showStoredMessages(
+    account: Account,
+    folder: Folder,
+    status: { busy: boolean; error?: string }
+  ): Promise<void> {
+    const { db } = this.services
+    const folderNames = Object.fromEntries((await listFolders(db, account.id)).map((f) => [f.id, f.displayName]))
+    const messages = await listMessages(db, folder.id)
+    this.store.showScreen({ name: 'messages', account, folder, messages, folderNames, ...status })
+  }
+
+  /** Reads what waits in the queue into the store, without making anybody wait for it. */
+  refreshStatus(): void {
+    void refreshQueueStatus(this.services, this.store)
+  }
+}
