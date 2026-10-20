@@ -95,4 +95,49 @@ class ConfinedFilesTest {
   fun an_ordinary_name_is_left_alone() {
     assertEquals("Rechnung März 2026.pdf", ConfinedFiles.safeName("Rechnung März 2026.pdf", "file"))
   }
+
+  /** A copy as pick makes it: a file in a directory of its own. */
+  private fun copy(root: File, directory: String, name: String): File =
+    File(File(root, directory).apply { mkdirs() }, name).apply { writeText("x") }
+
+  @Test
+  fun the_directory_of_a_copy_that_is_kept_is_not_an_orphan() {
+    val root = root()
+    val kept = copy(root, "one", "a.pdf")
+    copy(root, "two", "b.pdf")
+    val orphans = ConfinedFiles.orphans(root, listOf(kept.path)).map { it.name }
+    assertEquals(listOf("two"), orphans)
+  }
+
+  @Test
+  fun every_directory_is_an_orphan_when_nothing_is_kept() {
+    val root = root()
+    copy(root, "one", "a.pdf")
+    copy(root, "two", "b.pdf")
+    assertEquals(listOf("one", "two"), ConfinedFiles.orphans(root, emptyList()).map { it.name }.sorted())
+  }
+
+  @Test
+  fun a_directory_with_two_copies_stays_while_either_is_kept() {
+    val root = root()
+    copy(root, "one", "a.pdf")
+    val second = copy(root, "one", "b.pdf")
+    assertEquals(emptyList<File>(), ConfinedFiles.orphans(root, listOf(second.path)))
+  }
+
+  @Test
+  fun a_path_that_is_not_below_the_root_protects_nothing() {
+    val root = root()
+    copy(root, "one", "a.pdf")
+    val elsewhere = folder.newFile("other.txt")
+    assertEquals(listOf("one"), ConfinedFiles.orphans(root, listOf(elsewhere.path, "")).map { it.name })
+  }
+
+  @Test
+  fun a_kept_path_that_is_not_there_does_not_make_a_directory_that_is_not_there() {
+    val root = root()
+    copy(root, "one", "a.pdf")
+    val missing = File(root, "gone/c.pdf").path
+    assertEquals(listOf("one"), ConfinedFiles.orphans(root, listOf(missing)).map { it.name })
+  }
 }

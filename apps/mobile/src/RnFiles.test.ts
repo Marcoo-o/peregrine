@@ -17,6 +17,7 @@ function fakeNative(over: Partial<NativeFiles> = {}) {
       return 'aGVsbG8='
     },
     remove: async (paths) => void calls.push(`remove ${paths.join(',')}`),
+    keepOnly: async (paths) => void calls.push(`keepOnly ${paths.join(',')}`),
     save: async (name, type, base64) => {
       calls.push(`save ${name} ${type} ${base64}`)
       return true
@@ -74,5 +75,14 @@ describe('the files of the device', () => {
       }
     })
     await expect(files.read('/store/gone')).rejects.toThrow('No such file')
+  })
+})
+
+describe('sweeping the copies', () => {
+  it('tells the native side which copies to keep, an empty list included, which keeps none', async () => {
+    const { files, calls } = fakeNative()
+    await files.keepOnly(['/store/1/a.pdf'])
+    await files.keepOnly([])
+    expect(calls).toEqual(['keepOnly /store/1/a.pdf', 'keepOnly '])
   })
 })

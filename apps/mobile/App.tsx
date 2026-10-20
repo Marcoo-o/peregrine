@@ -34,7 +34,7 @@ export default function App() {
         if (cancelled) return
         started = createApplication(db, createPlatform(), store)
         setApplication(started)
-        await started.navigator.start()
+        await started.start()
       } catch (error) {
         if (!cancelled) store.showScreen({ name: 'login', error: describeError(error) })
       }

@@ -149,6 +149,8 @@ export class FakeFiles implements Files {
   readonly picked: PickedFile[] = []
   readonly stored = new Map<string, Uint8Array>()
   readonly removed: string[] = []
+  /** What the last sweep was told to keep, or null when there was none. */
+  kept: string[] | null = null
   readonly saved: { name: string; contentType: string; content: Uint8Array }[] = []
   readonly opened: { name: string; contentType: string; content: Uint8Array }[] = []
   /** What the user chooses in the dialog for saving: true to save, false to cancel. */
@@ -167,6 +169,10 @@ export class FakeFiles implements Files {
 
   async remove(paths: string[]): Promise<void> {
     this.removed.push(...paths)
+  }
+
+  async keepOnly(paths: string[]): Promise<void> {
+    this.kept = [...paths]
   }
 
   async save(name: string, contentType: string, content: Uint8Array): Promise<boolean> {

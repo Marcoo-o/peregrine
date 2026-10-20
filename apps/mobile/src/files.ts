@@ -23,6 +23,11 @@ export interface FileAccess {
 export interface Files extends FileAccess {
   /** Lets the user pick files and copies them into the application's storage. No pick gives an empty list. */
   pick(): Promise<PickedFile[]>
+  /**
+   * Removes every copy made by `pick` that is not in the list, which is what the queue still refers to.
+   * Not to be called while a message is being written, whose copies are not in the queue yet.
+   */
+  keepOnly(paths: string[]): Promise<void>
   /** Lets the user choose where to save a file. False when they chose none. */
   save(name: string, contentType: string, content: Uint8Array): Promise<boolean>
   /** Hands a file to another application to show. */

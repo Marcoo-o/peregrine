@@ -112,6 +112,16 @@ export async function listScheduled(db: SqlDb): Promise<PendingAction[]> {
 }
 
 /**
+ * Every action there is, in the order they were made: those given up on and those scheduled for later
+ * too, which `listPendingActions` leaves out because they are not to be replayed. For finding what
+ * something refers to, such as the files a queued message carries, and not for running anything.
+ */
+export async function listAllActions(db: SqlDb): Promise<PendingAction[]> {
+  const rows = await db.all<PendingRow>('SELECT * FROM pending_actions ORDER BY id')
+  return rows.map(toAction)
+}
+
+/**
  * Everything still to be done for one account, oldest first.
  *
  * Actions that were given up on stay in the table but are not handed out again. They are

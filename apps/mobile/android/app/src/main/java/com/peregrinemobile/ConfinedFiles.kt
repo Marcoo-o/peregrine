@@ -20,6 +20,19 @@ object ConfinedFiles {
     return if (candidate.path.startsWith(base.path + File.separator)) candidate else null
   }
 
+  /**
+   * The directories of copies that none of [keep] lies in, which are the ones to remove. Each copy is
+   * made in a directory of its own, so a copy and its directory go together. A path in [keep] that is not
+   * below [root] protects nothing, and a path that is below it and not there protects nothing either.
+   */
+  fun orphans(root: File, keep: List<String>): List<File> {
+    val base = root.canonicalFile
+    val kept = keep.mapNotNull { resolve(root, it) }
+    return base.listFiles().orEmpty().filter { child ->
+      kept.none { it.path.startsWith(child.path + File.separator) }
+    }
+  }
+
   private const val MAX_LENGTH = 120
   private val FORBIDDEN = "/\\:*?\"<>|"
 

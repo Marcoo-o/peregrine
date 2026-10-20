@@ -6,6 +6,7 @@ export interface NativeFiles {
   pick(): Promise<{ path: string; name: string; size: number; mimeType: string }[]>
   read(path: string): Promise<string>
   remove(paths: string[]): Promise<void>
+  keepOnly(paths: string[]): Promise<void>
   save(name: string, mimeType: string, base64: string): Promise<boolean>
   open(name: string, mimeType: string, base64: string): Promise<void>
 }
@@ -33,6 +34,10 @@ export class RnFiles implements Files {
 
   remove(paths: string[]): Promise<void> {
     return paths.length === 0 ? Promise.resolve() : this.native.remove(paths)
+  }
+
+  keepOnly(paths: string[]): Promise<void> {
+    return this.native.keepOnly(paths)
   }
 
   save(name: string, contentType: string, content: Uint8Array): Promise<boolean> {

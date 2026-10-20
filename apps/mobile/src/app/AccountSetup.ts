@@ -33,10 +33,11 @@ export class AccountSetup {
     }
   }
 
-  /** Removes an account with its mail and its queue, and lets go of its connection. */
+  /** Removes an account with its mail and its queue and the files its queue carried, and lets go of its connection. */
   async remove(account: Account): Promise<void> {
     this.services.connections.drop(account.id)
     await removeAccount(this.services.db, account.id)
+    await this.services.sweepCopies()
     await this.navigator.showAccounts()
   }
 }
