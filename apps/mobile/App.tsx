@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { StatusBar } from 'react-native'
+import { AppState, StatusBar } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { Application, createApplication } from './src/app/Application'
 import { isOnline } from './src/app/queueStatus'
@@ -28,6 +28,10 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     let started: Application | undefined
+    // A tap on a notification arrives here when the application is running already and comes forward.
+    const watching = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void started?.openLaunchTarget()
+    })
     ;(async () => {
       try {
         const db = await openDatabase()
@@ -41,6 +45,7 @@ export default function App() {
     })()
     return () => {
       cancelled = true
+      watching.remove()
       started?.stop()
     }
   }, [store])

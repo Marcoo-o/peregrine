@@ -14,6 +14,9 @@ const fetched = (uid: number, flags: string[] = []) => ({
   envelope: { subject: `s${uid}`, date: new Date(1000 + uid), from: [{ address: 'a@example.net' }] }
 })
 
+/** The role the server names for the inbox. */
+const INBOX_ROLE = '\\Inbox'
+
 const entry = (path: string, specialUse: string | null = null) => ({
   path,
   name: path,
@@ -100,5 +103,28 @@ describe('the new messages', () => {
     const baselines = await inboxBaselines(db)
     await saveMessages(db, sent, [fetched(1)])
     expect(await newMessagesSince(db, baselines)).toEqual([])
+  })
+})
+
+describe('the order of the new messages', () => {
+  // The ids of folders are made at random, so an order that came from them would change from run to run.
+  // Here the account that was made first has the folder whose id sorts last.
+  it('is the order of the accounts, as the list shows them, and then of the UIDs', async () => {
+    const { db } = await migratedDatabase()
+    const first = await addAccount(db, account('first'), { now: 1 })
+    const second = await addAccount(db, account('second'), { now: 2 })
+    const [inboxFirst] = await syncFolders(db, first.id, [entry('INBOX', INBOX_ROLE)], () => 'z-inbox')
+    const [inboxSecond] = await syncFolders(db, second.id, [entry('INBOX', INBOX_ROLE)], () => 'a-inbox')
+    const baselines = await inboxBaselines(db)
+    await saveMessages(db, inboxSecond, [fetched(1)])
+    await saveMessages(db, inboxFirst, [fetched(2), fetched(1)])
+
+    const found = await newMessagesSince(db, baselines)
+
+    expect(found.map((m) => [m.accountName, m.uid])).toEqual([
+      ['first', 1],
+      ['first', 2],
+      ['second', 1]
+    ])
   })
 })

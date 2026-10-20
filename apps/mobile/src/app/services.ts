@@ -3,6 +3,7 @@ import type { QueueRunner } from '@peregrine/core/offlineQueue'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { Transport } from '@peregrine/imap/transport'
 import { sweepCopies } from '../attachmentCopies'
+import type { Notifications, SyncSchedule } from '../background/devices'
 import { Connections } from '../connections'
 import { describeError } from '../errors'
 import type { Files } from '../files'
@@ -17,11 +18,14 @@ export interface Log {
   error(message: string): void
 }
 
-/** What the application gets from the device: the network, the files, and a place to log to. */
+/** What the application gets from the device: the network, the files, notifications and a place to log to. */
 export interface Platform {
   connectImap(login: ImapLogin): Promise<ImapSession>
   makeTransport(): Transport
   files: Files
+  notifications: Notifications
+  /** When the platform looks for new mail while the application is closed. */
+  syncSchedule: SyncSchedule
   log: Log
 }
 
@@ -32,6 +36,8 @@ export interface Services {
   queue: QueueRunner
   mail: MailActions
   files: Files
+  notifications: Notifications
+  syncSchedule: SyncSchedule
   log: Log
   /** A connection that belongs to no account yet, to find out whether a login works. */
   connectImap(login: ImapLogin): Promise<ImapSession>
@@ -54,7 +60,7 @@ export interface ServiceListeners {
  * and sends what was written, and the actions the screens ask for, which go through the queue.
  */
 export function createServices(db: SqlDb, platform: Platform, listeners: ServiceListeners): Services {
-  const { log, files } = platform
+  const { log, files, notifications, syncSchedule } = platform
   const connections = new Connections(
     (account) => platform.connectImap(imapLoginOf(account)),
     listeners.connectionsChanged
@@ -70,6 +76,8 @@ export function createServices(db: SqlDb, platform: Platform, listeners: Service
     queue,
     mail,
     files,
+    notifications,
+    syncSchedule,
     log,
     connectImap: (login) => platform.connectImap(login),
     sweepCopies: async () => {

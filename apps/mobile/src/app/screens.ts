@@ -1,6 +1,7 @@
 import type { Account } from '../accounts'
 import type { AttachmentInfo } from '../attachments'
 import type { Draft } from '../draft'
+import type { NotificationSettings } from '../settings'
 import type { Folder } from '../folders'
 import type { StoredMessage } from '../messages'
 import type { ReadableMessage } from '../messageText'
@@ -83,6 +84,16 @@ export interface MoveState extends OpenMessage {
   returnTo: MessageState
 }
 
+export interface SettingsState {
+  name: 'settings'
+  settings: NotificationSettings
+  accounts: Account[]
+  /** Whether the system lets the application show notifications at all, whatever is switched on here. */
+  permitted: boolean
+  /** What was said about the last thing done, or nothing. */
+  notice?: string
+}
+
 export interface ComposeState {
   name: 'compose'
   account: Account
@@ -103,6 +114,7 @@ export type Screen =
   | MessageState
   | MoveState
   | ComposeState
+  | SettingsState
 
 /** The screens that are about the mail of the accounts and so show what waits in the queue. */
 export function showsQueueStatus(screen: Screen): boolean {

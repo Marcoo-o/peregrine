@@ -31,6 +31,10 @@ export const styles = StyleSheet.create({
   link: { color: '#3b2a8c', fontSize: 16, paddingVertical: 4 },
   spinner: { marginVertical: 8 },
   body: { fontSize: 15, lineHeight: 22, color: '#111', paddingBottom: 24 },
+  section: { marginTop: 16, marginBottom: 4, fontSize: 13, fontWeight: '600', color: '#666', textTransform: 'uppercase' },
+  setting: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 6 },
+  settingLabel: { flex: 1, fontSize: 16, color: '#111' },
+  timeInput: { width: 90, textAlign: 'center' },
   attachments: { marginTop: 8, marginBottom: 24 },
   attachment: { paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#ccc', gap: 4 }
 })

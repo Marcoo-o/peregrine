@@ -9,6 +9,7 @@ export function AccountsScreen(props: {
   onOpen: (account: Account) => void
   onAdd: () => void
   onUnified: () => void
+  onSettings: () => void
 }) {
   const { accounts, error } = props.state
   return (
@@ -27,6 +28,7 @@ export function AccountsScreen(props: {
         )}
       />
       <Button label="Konto hinzufügen" onPress={props.onAdd} />
+      <Button label="Einstellungen" onPress={props.onSettings} />
     </View>
   )
 }

@@ -11,6 +11,7 @@ import type { MailActions } from '../mailActions'
 import { listMessages, type StoredMessage } from '../messages'
 import { readMessage } from '../messageText'
 import type { UnifiedMessage } from '../unified'
+import type { MessageTarget } from '../background/notifications'
 import type { Navigator } from './Navigator'
 import type { MessageOrigin, MessageState, MoveState } from './screens'
 import type { Services } from './services'
@@ -37,6 +38,16 @@ export class MessageController {
     const account = await getAccount(db, message.accountId)
     const folder = await getFolder(db, message.folderId)
     if (account && folder) await this.open(account, folder, message, 'unified')
+  }
+
+  /** Opens the message a notification was tapped for, if the application still has it. */
+  async openTarget(target: MessageTarget): Promise<void> {
+    const { db } = this.services
+    const account = await getAccount(db, target.accountId)
+    const folder = await getFolder(db, target.folderId)
+    if (!account || !folder) return
+    const summary = (await listMessages(db, folder.id)).find((message) => message.uid === target.uid)
+    if (summary) await this.open(account, folder, summary, 'folder')
   }
 
   /**

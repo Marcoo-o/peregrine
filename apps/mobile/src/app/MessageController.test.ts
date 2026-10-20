@@ -281,3 +281,20 @@ describe('the attachments of a message', () => {
     expect(t.store.screen).toBe(loading)
   })
 })
+
+describe('a message a notification was tapped for', () => {
+  it('is opened from the application’s own copy, and leaving it goes to the folder', async () => {
+    const t = await connectedInbox()
+    await t.app.messages.openTarget({ accountId: t.work.id, folderId: t.folder.id, uid: 1 })
+    expect(t.store.screen).toMatchObject({ name: 'message', origin: 'folder', summary: { uid: 1 } })
+  })
+
+  it('is not opened when the account, the folder or the message is gone', async () => {
+    const t = await connectedInbox()
+    t.store.showScreen({ name: 'login' })
+    await t.app.messages.openTarget({ accountId: 'nobody', folderId: t.folder.id, uid: 1 })
+    await t.app.messages.openTarget({ accountId: t.work.id, folderId: 'nothing', uid: 1 })
+    await t.app.messages.openTarget({ accountId: t.work.id, folderId: t.folder.id, uid: 99 })
+    expect(t.store.screen.name).toBe('login')
+  })
+})

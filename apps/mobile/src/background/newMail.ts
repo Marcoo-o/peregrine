@@ -47,7 +47,7 @@ export async function newMessagesSince(db: SqlDb, baselines: Map<string, number>
      JOIN folders f ON f.id = m.folder_id
      JOIN accounts a ON a.id = m.account_id
      WHERE ${IS_INBOX}
-     ORDER BY m.folder_id, m.uid`
+     ORDER BY a.created_at, a.id, m.folder_id, m.uid`
   )
   return rows
     .filter((row) => {
