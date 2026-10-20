@@ -1,15 +1,16 @@
 import { refusalForOpening } from '@peregrine/core/attachmentSafety'
 import { SNIFF_BYTES } from '@peregrine/core/fileType'
 import type { Account } from '../accounts'
-import { getAccount } from '../accounts'
+import { getAccount, listAccounts } from '../accounts'
 import { attachmentContent, listAttachments, type AttachmentInfo } from '../attachments'
 import { refusalText } from '../attachmentText'
 import { describeError, explainError } from '../errors'
 import { FLAGGED, SEEN } from '../flags'
-import { getFolder, listFolders, type Folder } from '../folders'
+import { getFolder, getFolderBySpecialUse, listFolders, type Folder } from '../folders'
 import type { MailActions } from '../mailActions'
 import { listMessages, type StoredMessage } from '../messages'
 import { readMessage } from '../messageText'
+import { assessMessage, knownDomainsOf } from '../reading/assessment'
 import type { UnifiedMessage } from '../unified'
 import type { MessageTarget } from '../background/notifications'
 import type { Navigator } from './Navigator'
@@ -62,10 +63,14 @@ export class MessageController {
       const imap = await this.services.connections.ensure(account)
       const full = await imap.fetchFullMessage(folder.imapPath, summary.uid)
       if (!full) throw new Error('Die Nachricht gibt es auf dem Server nicht mehr')
+      const message = readMessage(full.source)
+      const knownDomains = knownDomainsOf(await listAccounts(this.services.db))
       this.store.showScreen({
         name: 'message',
         ...opened,
-        message: readMessage(full.source),
+        message,
+        assessment: assessMessage(message, knownDomains),
+        knownDomains,
         source: full.source,
         attachments: this.attachmentsOf(full.source)
       })
@@ -109,6 +114,31 @@ export class MessageController {
     await mail.setFlags(state.folder, [state.summary.uid], flagged ? [] : [FLAGGED], flagged ? [FLAGGED] : [])
     const fresh = (await listMessages(db, state.folder.id)).find((message) => message.uid === state.summary.uid)
     if (fresh) this.store.showScreen({ ...state, summary: fresh })
+  }
+
+  /** Puts the message into the archive of its account, or says that there is none. */
+  async archive(state: MessageState): Promise<void> {
+    await this.moveToRole(state, '\\Archive', 'Für dieses Konto ist kein Archivordner vorhanden')
+  }
+
+  /** Puts the message into the spam folder of its account, or says that there is none. */
+  async markAsJunk(state: MessageState): Promise<void> {
+    await this.moveToRole(state, '\\Junk', 'Für dieses Konto ist kein Spam-Ordner vorhanden')
+  }
+
+  private async moveToRole(state: MessageState, role: string, missing: string): Promise<void> {
+    const target = await getFolderBySpecialUse(this.services.db, state.account.id, role)
+    if (!target) {
+      this.showNotice(state, missing)
+      return
+    }
+    await this.move(this.asMove(state), target)
+  }
+
+  /** What a move needs of a message that is open, without the choice of a folder having been shown. */
+  private asMove(state: MessageState): MoveState {
+    const { account, folder, summary, origin } = state
+    return { name: 'move', account, folder, summary, origin, targets: [], returnTo: state }
   }
 
   /** Shows the folders the message can go to. */

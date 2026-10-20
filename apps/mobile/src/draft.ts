@@ -88,6 +88,56 @@ export function replyDraft(message: ReadableMessage): Draft {
   }
 }
 
+/** An address as it is typed into a field: the name in quotes when it holds anything that would split it. */
+function written(address: EmailAddress): string {
+  if (!address.name) return address.address
+  const name = /[",;<>@()[\]:\\]/.test(address.name) ? `"${address.name.replace(/(["\\])/g, '\\$1')}"` : address.name
+  return `${name} <${address.address}>`
+}
+
+/** The addresses of lists, in order, each once whatever case it is written in, and none of those left out. */
+function distinct(lists: string[], leaveOut: string[]): EmailAddress[] {
+  const seen = new Set(leaveOut.map((address) => address.toLowerCase()))
+  const found: EmailAddress[] = []
+  for (const address of lists.flatMap(parseAddressList)) {
+    const key = address.address.toLowerCase()
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    found.push(address)
+  }
+  return found
+}
+
+/**
+ * An answer to everybody the message went to: the sender, or the Reply-To address that stands in for the
+ * sender, and the others it was sent to, with the copies kept as copies. The address the answer is written
+ * from is left out, so that it does not write to itself, and nobody is named twice.
+ */
+export function replyAllDraft(message: ReadableMessage, ownAddress: string): Draft {
+  const own = ownAddress ? [ownAddress] : []
+  const to = distinct([message.replyTo || message.from, message.to], own)
+  const cc = distinct([message.cc], [...own, ...to.map((address) => address.address)])
+  return { ...replyDraft(message), to: to.map(written).join(', '), cc: cc.map(written).join(', ') }
+}
+
+/**
+ * A message to be passed on: no recipient yet, "Fwd:" once in front of the subject, and the message under a
+ * line that says what it is, with who wrote it and when. It is not part of the thread it came from. Its
+ * attachments are not passed on yet.
+ */
+export function forwardDraft(message: ReadableMessage): Draft {
+  const subject = /^\s*(fwd?|wg):/i.test(message.subject) ? message.subject.trim() : `Fwd: ${message.subject.trim()}`.trim()
+  const text = message.text.replace(/\r\n/g, '\n').replace(/\n+$/, '')
+  const body =
+    '\n\n---------- Weitergeleitete Nachricht ----------\n' +
+    `Von: ${message.from}\n` +
+    `Datum: ${message.date}\n` +
+    `Betreff: ${message.subject}\n` +
+    `An: ${message.to}\n\n` +
+    `${text}\n`
+  return { to: '', cc: '', subject, body, attachments: [] }
+}
+
 /** The input of the queue and of sending, from what was typed. */
 export function toComposeInput(accountId: string, draft: Draft): ComposeInput {
   return {

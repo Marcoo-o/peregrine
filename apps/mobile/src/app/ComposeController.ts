@@ -1,5 +1,5 @@
 import type { Account } from '../accounts'
-import { emptyDraft, replyDraft, toComposeInput, type Draft } from '../draft'
+import { emptyDraft, forwardDraft, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
 import { explainError } from '../errors'
 import { smtpSettingsOf } from '../send'
 import type { Navigator } from './Navigator'
@@ -31,6 +31,18 @@ export class ComposeController {
   startReply(state: MessageState): void {
     if (!state.message) return
     this.show({ account: state.account, returnTo: state, draft: replyDraft(state.message) })
+  }
+
+  /** An answer to everybody the open message went to. */
+  startReplyAll(state: MessageState): void {
+    if (!state.message) return
+    this.show({ account: state.account, returnTo: state, draft: replyAllDraft(state.message, state.account.emailAddress) })
+  }
+
+  /** The open message, to be passed on to somebody. */
+  startForward(state: MessageState): void {
+    if (!state.message) return
+    this.show({ account: state.account, returnTo: state, draft: forwardDraft(state.message) })
   }
 
   /**

@@ -5,6 +5,8 @@ import {
   emptyDraft,
   hasRecipient,
   parseAddressList,
+  forwardDraft,
+  replyAllDraft,
   replyDraft,
   replySubject,
   splitAddressList,
@@ -13,17 +15,10 @@ import {
 } from './draft'
 import type { FileAccess, PickedFile } from './files'
 import type { ReadableMessage } from './messageText'
+import { readable } from './testing/readable'
 
-const original = (over: Partial<ReadableMessage> = {}): ReadableMessage => ({
-  subject: 'Lunch',
-  from: 'Anna <anna@example.net>',
-  date: 'Mon, 19 Oct 2026 10:00:00 +0200',
-  text: 'Shall we?\r\nAt noon.\r\n',
-  messageId: '<two@example.net>',
-  references: '<one@example.net>',
-  replyTo: '',
-  ...over
-})
+const original = (over: Partial<ReadableMessage> = {}): ReadableMessage =>
+  readable({ text: 'Shall we?\r\nAt noon.\r\n', messageId: '<two@example.net>', references: '<one@example.net>', ...over })
 
 describe('a list of addresses as it is typed', () => {
   it('is split at commas and semicolons, but not inside a name in quotes or an address in brackets', () => {
@@ -161,5 +156,72 @@ describe('attaching files', () => {
   it('goes into the input of sending with its name, path and type, and not its size', () => {
     const input = toComposeInput('acct', { ...emptyDraft, to: 'a@example.net', attachments: [attached('a.pdf', 10)] })
     expect(input.attachments).toEqual([{ filename: 'a.pdf', path: '/store/a.pdf', contentType: 'application/pdf' }])
+  })
+})
+
+describe('an answer to everybody', () => {
+  const everybody = (over: Partial<ReadableMessage> = {}) =>
+    original({
+      to: 'Alex <alex@example.org>, Bob <bob@example.net>',
+      cc: 'Cara <cara@example.net>, alex@example.org',
+      ...over
+    })
+
+  it('goes to the sender and to the others it was sent to, and the copies stay copies, none of it to oneself', () => {
+    const draft = replyAllDraft(everybody(), 'alex@example.org')
+    expect(draft.to).toBe('Anna <anna@example.net>, Bob <bob@example.net>')
+    expect(draft.cc).toBe('Cara <cara@example.net>')
+  })
+
+  it('goes to the Reply-To address instead of the sender, when there is one', () => {
+    const draft = replyAllDraft(everybody({ replyTo: 'Lists <list@example.net>' }), 'alex@example.org')
+    expect(draft.to).toBe('Lists <list@example.net>, Bob <bob@example.net>')
+  })
+
+  it('names nobody twice, whatever case the addresses are written in', () => {
+    const draft = replyAllDraft(everybody({ to: 'ANNA@example.net, bob@example.net, Bob <BOB@example.net>', cc: 'bob@EXAMPLE.net' }), 'alex@example.org')
+    expect(draft.to).toBe('Anna <anna@example.net>, bob@example.net')
+    expect(draft.cc).toBe('')
+  })
+
+  it('keeps what an answer has: the subject, the quote and the thread', () => {
+    const draft = replyAllDraft(everybody(), 'alex@example.org')
+    expect(draft).toMatchObject({ subject: 'Re: Lunch', inReplyTo: '<two@example.net>', references: '<one@example.net> <two@example.net>' })
+    expect(draft.body).toContain('> Shall we?')
+  })
+
+  it('works without an address of its own to leave out', () => {
+    expect(replyAllDraft(everybody(), '').to).toContain('alex@example.org')
+  })
+})
+
+describe('a message passed on', () => {
+  it('has no recipient, a subject that says so once, and the message under a line that says what it is', () => {
+    const draft = forwardDraft(original({ to: 'Alex <alex@example.org>' }))
+    expect(draft).toMatchObject({ to: '', cc: '', subject: 'Fwd: Lunch', attachments: [] })
+    expect(draft.body).toBe(
+      '\n\n---------- Weitergeleitete Nachricht ----------\n' +
+        'Von: Anna <anna@example.net>\n' +
+        'Datum: Mon, 19 Oct 2026 10:00:00 +0200\n' +
+        'Betreff: Lunch\n' +
+        'An: Alex <alex@example.org>\n\n' +
+        'Shall we?\nAt noon.\n'
+    )
+  })
+
+  it('is not part of the thread it came from', () => {
+    const draft = forwardDraft(original())
+    expect(draft.inReplyTo).toBeUndefined()
+    expect(draft.references).toBeUndefined()
+  })
+
+  it('does not put "Fwd:" in front of one that has it, in either of the usual spellings', () => {
+    expect(forwardDraft(original({ subject: 'Fwd: Lunch' })).subject).toBe('Fwd: Lunch')
+    expect(forwardDraft(original({ subject: 'WG: Lunch' })).subject).toBe('WG: Lunch')
+    expect(forwardDraft(original({ subject: 'FW: Lunch' })).subject).toBe('FW: Lunch')
+  })
+
+  it('has a subject for a message that had none', () => {
+    expect(forwardDraft(original({ subject: '' })).subject).toBe('Fwd:')
   })
 })

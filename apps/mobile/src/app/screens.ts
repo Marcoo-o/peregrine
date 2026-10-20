@@ -3,6 +3,7 @@ import type { AttachmentInfo } from '../attachments'
 import type { Draft } from '../draft'
 import type { NotificationSettings } from '../settings'
 import type { Folder } from '../folders'
+import type { MessageAssessment } from '../reading/assessment'
 import type { StoredMessage } from '../messages'
 import type { ReadableMessage } from '../messageText'
 import type { RefreshResult, UnifiedMessage } from '../unified'
@@ -73,6 +74,10 @@ export interface MessageState extends OpenMessage {
   /** The source of the message and the attachments found in it, for saving and opening them. */
   source?: Uint8Array
   attachments?: AttachmentInfo[]
+  /** What is known of the message from its headers: what the server made of it and who it says it is from. */
+  assessment?: MessageAssessment
+  /** The domains of the user's addresses, which a sender or a link is measured against for looking like one. */
+  knownDomains?: string[]
   /** What was said about the last thing done with an attachment. */
   notice?: string
   error?: string
