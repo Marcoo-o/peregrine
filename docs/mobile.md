@@ -269,6 +269,8 @@ Between 6 and 7 the screens were given the look of the desktop application, made
 that is, and what it left out, is under "What the design found".
 After that, reading a message was brought closer to the desktop: HTML mail, what is known of the sender and
 the links, and the actions of a message. That is under "What reading like the desktop found".
+Then the lists: choosing several messages, folders as a tree, and a search. That is under "What the list and the
+navigation found".
 
 Stages 1 to 3 improve the desktop whether or not a phone ever appears. That is the test of
 whether this plan is honest rather than hopeful: if the first half only pays off when the second
@@ -673,6 +675,41 @@ table wider than the screen is cut and does not scroll, as the view does not scr
 and archiving are covered by tests and were not run on the emulator. The policy comes in a meta element of the
 page, which the system's WebView has to honour; it does on the emulator's, and on an old phone that has not updated
 its WebView it is the first thing to check.
+
+## What the list and the navigation found
+
+Three things the desktop has that the phone's lists did not: several messages chosen at once, folders as a tree, and
+a search. All three are plain TypeScript with tests first, and the screens only show them.
+
+- *Choosing several messages.* A long press chooses the first, a tap then chooses or unchooses more, and the top of
+  the list says how many, lets the choice be left and chooses all. At the bottom, where the thumb is: read, unread,
+  star, archive, spam and delete. The back button ends the choice before it does anything else. What is chosen is
+  grouped by folder and goes through the actions of the queue, as for one message, so the unified list works across
+  accounts. Starring a mixed choice stars the rest and does not take stars off, so that a tap does one thing. An
+  account with no archive or spam folder is left alone and named in what is said.
+- *Folders as a tree.* Folders sit under the ones they are in and can be closed and opened, in the order they are
+  used: the inbox, drafts, sent, archive, spam, trash, and then the rest by name. A closed folder shows the unread
+  messages of everything under it. Migration 5 keeps where a folder sits, as the server lists it. The delimiter is
+  not stored and is read from what is between a folder and its parent in its path, so it works with a slash and with
+  a dot. A parent that cannot be chosen, which some servers have only as a place for others, is made up as a name,
+  as many levels as are missing.
+- *Searching.* The desktop's syntax, from the core: words, `von:`, `betreff:`, `hat:anhang`, `ist:ungelesen`,
+  `ist:markiert`, `vor:` and `nach:`. Every word has to be in the subject or in who wrote. It is a search of the
+  headers that are on the phone, in every folder of every account, newest first, and each result says its account
+  and folder. The phone keeps neither the recipients nor the text of a message, so `an:` is refused with a line that
+  says so and the search is made without it, and the text of a message is not searched. What is typed is searched
+  for after a pause and the newest search wins, and leaving a message that a search found goes back to the search.
+
+Shown on the Android 16 emulator: two messages chosen and marked read, one archived, each of which the server then
+had as it should be; a tree on a server that separates with a dot, with a made up level, closed and opened, with the
+count of each folder and the sum when closed; and a search with four results in four folders, opened and left again.
+
+Not done, and not looked at: swiping a message, which wants a gesture library and so a native module, and a preview
+of the text in the list, which wants the start of every message fetched and stored. The text of messages is not
+searched for the same reason, and there are no saved searches. The folders of all accounts are not folded into one
+tree of standard folders as the desktop does. A search cannot be narrowed by account, and its results cannot be
+chosen several at a time. Choosing across accounts, starring, spam and delete were run in tests and not on the
+emulator, and none of these screens was looked at in the dark.
 
 ## What stage 4 found
 
