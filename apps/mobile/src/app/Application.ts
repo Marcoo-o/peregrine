@@ -5,6 +5,7 @@ import { ComposeController } from './ComposeController'
 import { MessageController } from './MessageController'
 import { Navigator } from './Navigator'
 import { discardFailedActions, refreshQueueStatus } from './queueStatus'
+import { SelectionController } from './SelectionController'
 import { createServices, type Platform, type Services } from './services'
 import { SettingsController } from './SettingsController'
 import type { AppStore } from './store'
@@ -19,6 +20,7 @@ export class Application {
   readonly compose: ComposeController
   readonly accounts: AccountSetup
   readonly settings: SettingsController
+  readonly selection: SelectionController
 
   constructor(
     readonly services: Services,
@@ -29,6 +31,7 @@ export class Application {
     this.compose = new ComposeController(services, store, this.navigator)
     this.accounts = new AccountSetup(services, store, this.navigator)
     this.settings = new SettingsController(services, store, this.navigator)
+    this.selection = new SelectionController(services, store, this.navigator)
   }
 
   /**

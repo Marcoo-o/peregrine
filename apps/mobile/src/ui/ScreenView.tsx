@@ -14,7 +14,7 @@ import { UnifiedScreen } from './UnifiedScreen'
 
 /** The screen for what the application is showing, with what each of its buttons does handed to it. */
 export function ScreenView(props: { application: Application; screen: Screen }): ReactElement {
-  const { navigator, messages, compose, accounts, settings, services } = props.application
+  const { navigator, messages, compose, accounts, settings, selection, services } = props.application
   const { screen } = props
 
   switch (screen.name) {
@@ -43,6 +43,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
       return (
         <UnifiedScreen
           state={screen}
+          actions={selection}
           onAccounts={() => navigator.showAccounts()}
           onRefresh={() => navigator.showUnified({ refresh: true })}
           onOpen={(message) => messages.openFromUnified(message)}
@@ -63,6 +64,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
       return (
         <MessagesScreen
           state={screen}
+          actions={selection}
           onBack={() => navigator.showStoredFolders(screen.account)}
           onOpen={(message) => messages.open(screen.account, screen.folder, message, 'folder')}
         />

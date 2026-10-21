@@ -20,14 +20,30 @@ export function MessageRow(props: {
   accountColor?: string
   /** What is said about a move that waits for a connection, or nothing. */
   pendingNote?: string
+  /** Whether the list is one that messages are being chosen in, and whether this one is. */
+  choosing?: boolean
+  chosen?: boolean
   onPress: () => void
+  /** What a long press does, which is to choose this message and begin choosing. */
+  onLongPress?: () => void
 }) {
   const styles = useStyles()
   const { message } = props
   const unread = !message.flags.includes(SEEN)
   const marks = `${message.flags.includes(FLAGGED) ? '★ ' : ''}${message.hasAttachment ? '📎 ' : ''}`
   return (
-    <Pressable style={[styles.item, styles.messageRow]} onPress={props.onPress}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: props.chosen }}
+      style={[styles.item, styles.messageRow, props.chosen && styles.messageRowChosen]}
+      onPress={props.onPress}
+      onLongPress={props.onLongPress}
+    >
+      {props.choosing ? (
+        <View style={[styles.check, props.chosen && styles.checkOn]}>
+          {props.chosen ? <Text style={styles.checkMark}>✓</Text> : null}
+        </View>
+      ) : null}
       {props.accountColor ? <View style={[styles.stripe, { backgroundColor: props.accountColor }]} /> : null}
       <View style={styles.fill}>
         <View style={styles.messageHead}>

@@ -157,6 +157,21 @@ function createStyles({ colors }: Theme) {
     sheetText: { fontSize: 16, color: colors.text },
     sheetTextDanger: { fontSize: 16, color: colors.danger },
     mailView: { borderRadius: SIZE.radius, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+    // A list while messages are chosen, and a message that is.
+    selectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+    selectionCount: { fontSize: 18, fontWeight: '700', color: colors.text, flex: 1, textAlign: 'center' },
+    messageRowChosen: { backgroundColor: colors.accentSoft },
+    check: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    checkOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+    checkMark: { color: colors.onAccent, fontSize: 14, fontWeight: '700' },
     // What can be done to a message, within reach of the thumb, and in place while the message scrolls.
     actionBar: {
       borderTopWidth: StyleSheet.hairlineWidth,
