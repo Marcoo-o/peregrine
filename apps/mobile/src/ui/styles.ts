@@ -96,6 +96,8 @@ function createStyles({ colors }: Theme) {
     // A line that leads somewhere: the colour of an account, the name, a count and an arrow.
     listRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     dot: { width: 10, height: 10, borderRadius: 5 },
+    expander: { width: 28, height: 32, alignItems: 'center', justifyContent: 'center' },
+    expanderText: { fontSize: 16, color: colors.muted },
     count: {
       minWidth: 24,
       textAlign: 'center',

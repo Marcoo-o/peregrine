@@ -111,6 +111,19 @@ describe('accounts', () => {
 })
 
 describe('folders', () => {
+  it('keeps where each folder sits, and takes what the server says on listing them again', async () => {
+    const { db } = await migratedDatabase()
+    const account = await addAccount(db, input())
+    await syncFolders(db, account.id, [entry('Projects'), entry('Projects/Phone', { name: 'Phone', parentPath: 'Projects' })])
+    expect((await listFolders(db, account.id)).map((folder) => [folder.imapPath, folder.parentPath]).sort()).toEqual([
+      ['Projects', null],
+      ['Projects/Phone', 'Projects']
+    ])
+
+    await syncFolders(db, account.id, [entry('Projects'), entry('Projects/Phone', { name: 'Phone', parentPath: null })])
+    expect((await listFolders(db, account.id)).find((folder) => folder.imapPath === 'Projects/Phone')?.parentPath).toBeNull()
+  })
+
   it('stores the folders the server lists, each with an id, the inbox first, then those with a role', async () => {
     const { db } = await migratedDatabase()
     const account = await addAccount(db, input())

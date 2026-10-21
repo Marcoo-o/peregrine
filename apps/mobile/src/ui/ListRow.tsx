@@ -10,11 +10,33 @@ export function ListRow(props: {
   meta?: string
   color?: string
   count?: number
+  /** How deep it sits in a tree, which is how far it is moved in. */
+  depth?: number
+  /** Whether it is open: a button to close or open it, or null for a place with nothing under it. Left out, no room is made. */
+  expanded?: boolean | null
+  onToggle?: () => void
   onPress: () => void
 }) {
   const styles = useStyles()
   return (
-    <Pressable accessibilityRole="button" style={[styles.item, styles.listRow]} onPress={props.onPress}>
+    <Pressable
+      accessibilityRole="button"
+      style={[styles.item, styles.listRow, { paddingLeft: (props.depth ?? 0) * 20 }]}
+      onPress={props.onPress}
+    >
+      {props.expanded !== undefined ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={props.expanded ? 'Zuklappen' : 'Aufklappen'}
+          accessibilityState={{ expanded: props.expanded ?? undefined }}
+          disabled={props.expanded === null}
+          hitSlop={8}
+          style={styles.expander}
+          onPress={props.onToggle}
+        >
+          <Text style={styles.expanderText}>{props.expanded === null ? '' : props.expanded ? '▾' : '▸'}</Text>
+        </Pressable>
+      ) : null}
       {props.color ? <View style={[styles.dot, { backgroundColor: props.color }]} /> : null}
       <View style={styles.fill}>
         <Text style={styles.itemTitle}>{props.title}</Text>

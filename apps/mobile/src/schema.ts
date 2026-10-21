@@ -108,7 +108,11 @@ const MIGRATIONS: string[][] = [
      ) % 6
        WHEN 0 THEN '#2f5d9f' WHEN 1 THEN '#16736b' WHEN 2 THEN '#6341b8'
        WHEN 3 THEN '#a2650c' WHEN 4 THEN '#b03a5b' ELSE '#4a5568' END`
-  ]
+  ],
+  // 5. Where a folder sits, which is what the folder tree is made from. The path of the folder it is in, as
+  // the server spells it, or null at the top. A folder that is there already has none until the account's
+  // folders are listed again, which they are when the account is opened, so the tree is flat until then.
+  ['ALTER TABLE folders ADD COLUMN parent_path TEXT']
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */
