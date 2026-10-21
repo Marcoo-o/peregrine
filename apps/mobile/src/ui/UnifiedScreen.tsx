@@ -1,35 +1,48 @@
+import { useMemo, useState } from 'react'
 import { FlatList, Text, View } from 'react-native'
 import type { UnifiedState } from '../app/screens'
+import { filterMessages, NO_FILTER } from '../listFilter'
 import type { UnifiedMessage } from '../unified'
-import { Header } from './Header'
+import { Fab } from './controls'
+import { roleLabel } from './folderLabel'
+import { ListHead } from './ListHead'
 import { MessageRow } from './MessageRow'
 import { SelectionBar, SelectionHeader } from './SelectionBar'
+import { TopBar } from './TopBar'
 import { useSelection, type SelectionActions } from './useSelection'
 import { useStyles } from './useStyles'
 
-/** The inboxes of all accounts in one list, newest first, each message marked with its account. */
+/** The folders of one role of all accounts in one list, newest first, each message marked with its account. */
 export function UnifiedScreen(props: {
   state: UnifiedState
   actions: SelectionActions
-  onAccounts: () => void
   onRefresh: () => void
   onSearch: () => void
+  onSettings: () => void
+  onCompose: () => void
   onOpen: (message: UnifiedMessage) => void
 }) {
   const styles = useStyles()
-  const { messages, busy, problems } = props.state
-  const selection = useSelection(messages, props.actions)
+  const { role, messages, busy, problems } = props.state
+  const [filter, setFilter] = useState(NO_FILTER)
+  const shown = useMemo(() => filterMessages(messages, filter), [messages, filter])
+  const selection = useSelection(shown, props.actions)
 
   return (
     <View style={styles.fill}>
       {selection.selecting ? (
-        <SelectionHeader selection={selection} total={messages.length} />
+        <SelectionHeader selection={selection} total={shown.length} />
       ) : (
-        <Header
-          title="Alle Posteingänge"
-          back={{ label: 'Konten', onPress: props.onAccounts }}
-          action={{ label: 'Suchen', onPress: props.onSearch }}
-        />
+        <>
+          <TopBar onSearch={props.onSearch} onRefresh={props.onRefresh} onSettings={props.onSettings} />
+          <ListHead
+            title={`Vereinheitlicht · ${roleLabel(role)}`}
+            total={messages.length}
+            shown={shown.length}
+            filter={filter}
+            onFilter={setFilter}
+          />
+        </>
       )}
       {problems.map((problem) => (
         <Text key={problem.accountId} style={styles.error}>
@@ -38,8 +51,9 @@ export function UnifiedScreen(props: {
       ))}
       {selection.notice ? <Text style={styles.error}>{selection.notice}</Text> : null}
       <FlatList
-        data={messages}
+        data={shown}
         extraData={selection.picked}
+        contentContainerStyle={styles.listBottom}
         keyExtractor={(message) => `${message.folderId}:${message.uid}`}
         refreshing={busy}
         onRefresh={props.onRefresh}
@@ -58,7 +72,7 @@ export function UnifiedScreen(props: {
           />
         )}
       />
-      {selection.selecting ? <SelectionBar selection={selection} /> : null}
+      {selection.selecting ? <SelectionBar selection={selection} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
     </View>
   )
 }

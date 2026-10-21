@@ -1,9 +1,12 @@
 import { Pressable, Text, View } from 'react-native'
+import { Icon } from './Icon'
 import { useStyles } from './useStyles'
+import { useTheme } from './useTheme'
 
 /** The way back to the screen before, which every screen but the first has. What it leads to is its label. */
 export function BackBar(props: { label: string; onPress: () => void }) {
   const styles = useStyles()
+  const { colors } = useTheme()
   return (
     <Pressable
       accessibilityRole="button"
@@ -11,7 +14,8 @@ export function BackBar(props: { label: string; onPress: () => void }) {
       style={styles.back}
       onPress={props.onPress}
     >
-      <Text style={styles.backText}>‹ {props.label}</Text>
+      <Icon name="back" size={20} color={colors.accent} />
+      <Text style={styles.backText}>{props.label}</Text>
     </Pressable>
   )
 }

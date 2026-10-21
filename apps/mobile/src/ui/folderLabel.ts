@@ -1,4 +1,5 @@
 import type { Folder } from '../folders'
+import type { UnifiedRole } from '../unified'
 
 /** What servers name the folders that have a job, by the role they say they have, and what they are called here. */
 const ROLE_LABELS: Record<string, string> = {
@@ -22,3 +23,15 @@ export function folderLabel(folder: Pick<Folder, 'imapPath' | 'displayName' | 's
   if (folder.imapPath.toUpperCase() === 'INBOX') return ROLE_LABELS['\\Inbox']
   return folder.displayName
 }
+
+const ROLE_NAMES: Record<UnifiedRole, string> = {
+  inbox: 'Posteingang',
+  drafts: 'Entwürfe',
+  sent: 'Gesendet',
+  archive: 'Archiv',
+  junk: 'Spam',
+  trash: 'Papierkorb'
+}
+
+/** What the folders of a role of all accounts are called, as the folder of one account with that role is. */
+export const roleLabel = (role: UnifiedRole): string => ROLE_NAMES[role]

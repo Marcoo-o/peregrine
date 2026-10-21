@@ -1,5 +1,5 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
-import { AppState, StatusBar } from 'react-native'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { AppState, DrawerLayoutAndroid, StatusBar } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { Application, createApplication } from './src/app/Application'
 import { isOnline } from './src/app/queueStatus'
@@ -8,8 +8,11 @@ import { AppStore } from './src/app/store'
 import { openDatabase } from './src/database'
 import { describeError } from './src/errors'
 import { createPlatform } from './src/platform'
+import type { SidebarData } from './src/sidebar'
+import { DrawerContext, locationOf, showsDrawer } from './src/ui/drawer'
 import { LoadingScreen } from './src/ui/LoadingScreen'
 import { ScreenView } from './src/ui/ScreenView'
+import { Sidebar } from './src/ui/Sidebar'
 import { StatusLine } from './src/ui/StatusLine'
 import { useStyles } from './src/ui/useStyles'
 import { useTheme } from './src/ui/useTheme'
@@ -26,7 +29,10 @@ export default function App() {
   const [application, setApplication] = useState<Application | null>(null)
   const state = useSyncExternalStore(store.subscribe, () => store.state)
   const styles = useStyles()
-  const { scheme } = useTheme()
+  const { scheme, colors } = useTheme()
+  const drawer = useRef<InstanceType<typeof DrawerLayoutAndroid>>(null)
+  const [sidebar, setSidebar] = useState<SidebarData | null>(null)
+  const drawerControl = useMemo(() => ({ open: () => drawer.current?.openDrawer() }), [])
 
   useEffect(() => {
     let cancelled = false
@@ -53,19 +59,57 @@ export default function App() {
     }
   }, [store])
 
+  /** Reads the sidebar again, which is done whenever it is opened so that its counts are those of now. */
+  const reloadSidebar = () => {
+    if (application) application.navigator.sidebar().then(setSidebar, () => undefined)
+  }
+  /** Goes where a row of the sidebar leads, and puts the sidebar away. */
+  const go = (action: () => unknown) => {
+    drawer.current?.closeDrawer()
+    void action()
+  }
+
   return (
     <SafeAreaProvider>
       <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
-      <SafeAreaView style={styles.page}>
-        {application && showsQueueStatus(state.screen) ? (
-          <StatusLine
-            online={isOnline(state)}
-            waiting={state.waiting}
-            onDiscard={() => application.discardFailedActions()}
-          />
-        ) : null}
-        {application ? <ScreenView application={application} screen={state.screen} /> : <LoadingScreen />}
-      </SafeAreaView>
+      <DrawerLayoutAndroid
+        ref={drawer}
+        drawerWidth={300}
+        drawerPosition="left"
+        drawerBackgroundColor={colors.sunken}
+        // The sidebar is for the lists and the places that lead to them, and not for a message that is being read.
+        drawerLockMode={application && showsDrawer(state.screen.name) ? 'unlocked' : 'locked-closed'}
+        onDrawerOpen={reloadSidebar}
+        renderNavigationView={() => (
+          <SafeAreaView style={{ flex: 1, backgroundColor: colors.sunken }}>
+            {application ? (
+              <Sidebar
+                data={sidebar}
+                location={locationOf(state.screen)}
+                connected={state.connected}
+                onUnified={(role) => go(() => application.navigator.showUnified({ refresh: true, role }))}
+                onFolder={(account, folder) => go(() => application.navigator.openFolder(account, folder))}
+                onAccounts={() => go(() => application.navigator.showAccounts())}
+                onAddAccount={() => go(() => application.navigator.showLogin())}
+                onSettings={() => go(() => application.settings.show())}
+              />
+            ) : null}
+          </SafeAreaView>
+        )}
+      >
+        <DrawerContext.Provider value={drawerControl}>
+          <SafeAreaView style={styles.page}>
+            {application && showsQueueStatus(state.screen) ? (
+              <StatusLine
+                online={isOnline(state)}
+                waiting={state.waiting}
+                onDiscard={() => application.discardFailedActions()}
+              />
+            ) : null}
+            {application ? <ScreenView application={application} screen={state.screen} /> : <LoadingScreen />}
+          </SafeAreaView>
+        </DrawerContext.Provider>
+      </DrawerLayoutAndroid>
     </SafeAreaProvider>
   )
 }

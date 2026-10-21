@@ -2,8 +2,10 @@ import { Pressable, Text, View } from 'react-native'
 import { FLAGGED, SEEN } from '../flags'
 import type { StoredMessage } from '../messages'
 import { senderName } from '../senderName'
+import { Icon } from './Icon'
 import { shortDate } from './shortDate'
 import { useStyles } from './useStyles'
+import { useTheme } from './useTheme'
 
 /**
  * One message in a list, as the desktop shows one: who it is from and when, its subject, both bold while it
@@ -28,9 +30,10 @@ export function MessageRow(props: {
   onLongPress?: () => void
 }) {
   const styles = useStyles()
+  const { colors } = useTheme()
   const { message } = props
   const unread = !message.flags.includes(SEEN)
-  const marks = `${message.flags.includes(FLAGGED) ? '★ ' : ''}${message.hasAttachment ? '📎 ' : ''}`
+  const starred = message.flags.includes(FLAGGED)
   return (
     <Pressable
       accessibilityRole="button"
@@ -52,10 +55,13 @@ export function MessageRow(props: {
           </Text>
           {message.dateMs ? <Text style={styles.date}>{shortDate(message.dateMs, new Date())}</Text> : null}
         </View>
-        <Text style={[styles.subject, unread && styles.unread]} numberOfLines={1}>
-          {marks}
-          {message.subject || '(ohne Betreff)'}
-        </Text>
+        <View style={styles.markRow}>
+          {starred ? <Icon name="star" size={14} color={colors.warning} fill={colors.warning} /> : null}
+          {message.hasAttachment ? <Icon name="attachment" size={14} color={colors.muted} /> : null}
+          <Text style={[styles.subject, styles.fill, unread && styles.unread]} numberOfLines={1}>
+            {message.subject || '(ohne Betreff)'}
+          </Text>
+        </View>
         {props.account ? <Text style={styles.itemMeta}>{props.account}</Text> : null}
         {props.pendingNote ? <Text style={styles.pending}>{props.pendingNote}</Text> : null}
       </View>

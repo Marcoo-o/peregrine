@@ -1,12 +1,14 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { FlatList, Text, View } from 'react-native'
 import type { MessagesState } from '../app/screens'
+import { filterMessages, NO_FILTER } from '../listFilter'
 import type { StoredMessage } from '../messages'
-import { Spinner } from './controls'
+import { Fab, Spinner } from './controls'
 import { folderLabel } from './folderLabel'
-import { Header } from './Header'
+import { ListHead } from './ListHead'
 import { MessageRow } from './MessageRow'
 import { SelectionBar, SelectionHeader } from './SelectionBar'
+import { TopBar } from './TopBar'
 import { useSelection, type SelectionActions } from './useSelection'
 import { useStyles } from './useStyles'
 
@@ -19,15 +21,20 @@ function pendingNote(message: StoredMessage, folderNames: Record<string, string>
 export function MessagesScreen(props: {
   state: MessagesState
   actions: SelectionActions
-  onBack: () => void
+  onRefresh: () => void
+  onSearch: () => void
+  onSettings: () => void
+  onCompose: () => void
   onOpen: (message: StoredMessage) => void
 }) {
   const styles = useStyles()
   const { account, folder, messages, folderNames, busy, error } = props.state
+  const [filter, setFilter] = useState(NO_FILTER)
   // What the choice needs of a message: where it is, which the list of one folder does not say of each of them.
   const rows = useMemo(
-    () => messages.map((message) => ({ message, accountId: account.id, folderId: folder.id, uid: message.uid })),
-    [messages, account.id, folder.id]
+    () =>
+      filterMessages(messages, filter).map((message) => ({ message, accountId: account.id, folderId: folder.id, uid: message.uid })),
+    [messages, filter, account.id, folder.id]
   )
   const selection = useSelection(rows, props.actions)
 
@@ -36,7 +43,16 @@ export function MessagesScreen(props: {
       {selection.selecting ? (
         <SelectionHeader selection={selection} total={rows.length} />
       ) : (
-        <Header title={folderLabel(folder)} back={{ label: 'Ordner', onPress: props.onBack }} />
+        <>
+          <TopBar onSearch={props.onSearch} onRefresh={props.onRefresh} onSettings={props.onSettings} />
+          <ListHead
+            title={`${account.displayName} · ${folderLabel(folder)}`}
+            total={messages.length}
+            shown={rows.length}
+            filter={filter}
+            onFilter={setFilter}
+          />
+        </>
       )}
       {busy ? <Spinner /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -44,7 +60,10 @@ export function MessagesScreen(props: {
       <FlatList
         data={rows}
         extraData={selection.picked}
+        contentContainerStyle={styles.listBottom}
         keyExtractor={(row) => String(row.uid)}
+        refreshing={busy}
+        onRefresh={props.onRefresh}
         ListEmptyComponent={busy ? undefined : <Text style={styles.hint}>Keine Nachrichten.</Text>}
         renderItem={({ item }) => (
           <MessageRow
@@ -58,7 +77,7 @@ export function MessagesScreen(props: {
           />
         )}
       />
-      {selection.selecting ? <SelectionBar selection={selection} /> : null}
+      {selection.selecting ? <SelectionBar selection={selection} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
     </View>
   )
 }

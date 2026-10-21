@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native'
-import { SIZE, type Theme } from './theme'
+import { SIZE, withAlpha, type Theme } from './theme'
 
 /**
  * The look of the screens, made from the tokens of a theme. The same shapes as the desktop's: a page, what
@@ -37,7 +37,7 @@ function createStyles({ colors }: Theme) {
     actions: { flexDirection: 'row', flexWrap: 'wrap', gap: SIZE.gap, marginVertical: SIZE.gap },
 
     // The top of a screen: the way back, and what the screen is.
-    back: { minHeight: SIZE.target, justifyContent: 'center', alignSelf: 'flex-start' },
+    back: { minHeight: SIZE.target, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
     headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     backText: { color: colors.accent, fontSize: 16, fontWeight: '500' },
     title: { fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 8 },
@@ -98,7 +98,7 @@ function createStyles({ colors }: Theme) {
     listRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     dot: { width: 10, height: 10, borderRadius: 5 },
     expander: { width: 28, height: 32, alignItems: 'center', justifyContent: 'center' },
-    expanderText: { fontSize: 16, color: colors.muted },
+    rowIcon: { width: 24, alignItems: 'center' },
     count: {
       minWidth: 24,
       textAlign: 'center',
@@ -111,7 +111,6 @@ function createStyles({ colors }: Theme) {
       paddingHorizontal: 8,
       paddingVertical: 2
     },
-    chevron: { fontSize: 22, color: colors.muted },
     // A message in a list: a stripe for the account, and two lines.
     messageRow: { flexDirection: 'row', gap: 10 },
     stripe: { width: 4, borderRadius: 2, alignSelf: 'stretch' },
@@ -119,7 +118,7 @@ function createStyles({ colors }: Theme) {
     sender: { flex: 1, fontSize: 15, color: colors.muted },
     from: { fontSize: 15, color: colors.text },
     date: { fontSize: 12, color: colors.muted },
-    subject: { fontSize: 15, color: colors.muted, marginTop: 2 },
+    subject: { fontSize: 15, color: colors.muted },
     // What has not been read is in the colour of the text, and the rest is muted.
     unread: { fontWeight: '700', color: colors.text },
     itemMeta: { fontSize: 13, color: colors.muted, marginTop: 2 },
@@ -128,14 +127,17 @@ function createStyles({ colors }: Theme) {
 
     // What a message has to say for itself, above its text.
     notice: { borderRadius: SIZE.radius, borderWidth: 1, padding: 12, marginBottom: SIZE.gap },
+    noticeHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     noticeInfo: { backgroundColor: colors.accentSoft, borderColor: 'transparent' },
-    noticeWarning: { backgroundColor: colors.surface, borderColor: colors.warning },
+    // What is worth knowing is in the colour of a warning, as a tint with a thin edge, as on the desktop.
+    noticeWarning: { backgroundColor: withAlpha(colors.warning, 0.12), borderColor: withAlpha(colors.warning, 0.5) },
     noticeDanger: { backgroundColor: colors.dangerSoft, borderColor: 'transparent' },
-    noticeTitle: { fontSize: 14, fontWeight: '600', color: colors.text },
+    noticeTitle: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
     noticeDetail: { fontSize: 13, lineHeight: 18, marginTop: 4, color: colors.text },
     noticeAction: { color: colors.accent, fontSize: 14, fontWeight: '600', marginTop: 8 },
 
     // Who a message is from.
+    markRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
     senderRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: SIZE.gap },
     avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
     avatarText: { color: '#ffffff', fontSize: 18, fontWeight: '700' },
@@ -160,6 +162,61 @@ function createStyles({ colors }: Theme) {
     sheetText: { fontSize: 16, color: colors.text },
     sheetTextDanger: { fontSize: 16, color: colors.danger },
     mailView: { borderRadius: SIZE.radius, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+    // The top of a list, as the desktop's window has it: the way to the sidebar, the search, and what is done to all.
+    topBar: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: SIZE.gap },
+    iconButton: { width: SIZE.target, height: SIZE.target, alignItems: 'center', justifyContent: 'center', borderRadius: 24 },
+    searchPill: {
+      flex: 1,
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 14,
+      borderRadius: 999,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    searchPillText: { flex: 1, fontSize: 15, color: colors.muted },
+    // The line over a list: what it is, how many, and the filters.
+    listTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
+    listTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
+    listCount: { fontSize: 13, color: colors.muted },
+    filters: { flexDirection: 'row', gap: SIZE.gap, marginVertical: SIZE.gap },
+    chipContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    // The button that writes a message, over the list, at the corner where the thumb is.
+    fab: {
+      position: 'absolute',
+      right: 0,
+      bottom: SIZE.gap,
+      minHeight: 52,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 18,
+      borderRadius: 16,
+      backgroundColor: colors.accent,
+      elevation: 6,
+      shadowColor: '#000000',
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 }
+    },
+    fabText: { color: colors.onAccent, fontSize: 15, fontWeight: '600' },
+    listBottom: { paddingBottom: 88 },
+
+    // The sidebar: the same rows as the desktop's, with a picture, a name, a count and what opens them.
+    sidebar: { flex: 1, backgroundColor: colors.sunken },
+    sidebarRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 12, borderRadius: SIZE.radius, marginHorizontal: 8 },
+    sidebarRowChosen: { backgroundColor: colors.accentSoft },
+    sidebarLabel: { flex: 1, fontSize: 15, color: colors.text },
+    sidebarLabelChosen: { color: colors.accent, fontWeight: '600' },
+    sidebarAccount: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, marginTop: SIZE.gap },
+    sidebarAccountName: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.text },
+    accountSquare: { width: 10, height: 10, borderRadius: 2 },
+    statusDot: { width: 8, height: 8, borderRadius: 4 },
+    sidebarDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: SIZE.gap, marginHorizontal: 16 },
+
     // A list while messages are chosen, and a message that is.
     selectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
     selectionCount: { fontSize: 18, fontWeight: '700', color: colors.text, flex: 1, textAlign: 'center' },

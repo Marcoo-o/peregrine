@@ -4,6 +4,7 @@ import type { FoldersState } from '../app/screens'
 import { buildFolderTree, visibleRows } from '../folderTree'
 import type { Folder } from '../folders'
 import { Button } from './controls'
+import { folderIconName } from './folderIcon'
 import { folderLabel } from './folderLabel'
 import { Header } from './Header'
 import { ListRow } from './ListRow'
@@ -48,6 +49,7 @@ export function FoldersScreen(props: {
           return (
             <ListRow
               title={node.folder ? folderLabel(node.folder) : node.label}
+              icon={node.folder ? folderIconName(node.folder) : 'folder'}
               count={item.count}
               depth={item.depth}
               // Room for the button is made for every row when any has one, so that the names line up.

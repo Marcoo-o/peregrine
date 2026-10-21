@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, Text } from 'react-native'
+import { ActivityIndicator, Pressable, Text, View } from 'react-native'
+import { Icon, type IconName } from './Icon'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
 
@@ -23,8 +24,9 @@ export function Button(props: { label: string; onPress: () => void; disabled?: b
 }
 
 /** A small thing to do, or one of several to choose from, which is tinted when it is the one chosen. */
-export function Chip(props: { label: string; active: boolean; onPress: () => void; disabled?: boolean }) {
+export function Chip(props: { label: string; active: boolean; onPress: () => void; disabled?: boolean; icon?: IconName }) {
   const styles = useStyles()
+  const { colors } = useTheme()
   return (
     <Pressable
       accessibilityRole="button"
@@ -35,7 +37,38 @@ export function Chip(props: { label: string; active: boolean; onPress: () => voi
       disabled={props.disabled}
       onPress={props.onPress}
     >
-      <Text style={props.active ? styles.chipTextActive : styles.chipText}>{props.label}</Text>
+      <View style={styles.chipContent}>
+        {props.icon ? <Icon name={props.icon} size={16} color={props.active ? colors.accent : colors.text} /> : null}
+        <Text style={props.active ? styles.chipTextActive : styles.chipText}>{props.label}</Text>
+      </View>
+    </Pressable>
+  )
+}
+
+/** A button that is only a picture, as small as a thumb can still hit: what the top of the desktop's window has. */
+export function IconButton(props: { name: IconName; label: string; onPress: () => void; color?: string; disabled?: boolean }) {
+  const styles = useStyles()
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={props.label}
+      disabled={props.disabled}
+      style={[styles.iconButton, props.disabled && styles.buttonDisabled]}
+      onPress={props.onPress}
+    >
+      <Icon name={props.name} size={22} color={props.color} />
+    </Pressable>
+  )
+}
+
+/** The way to write a message, which is always within reach: filled with the accent, as the desktop's first button is. */
+export function Fab(props: { label: string; onPress: () => void }) {
+  const styles = useStyles()
+  const { colors } = useTheme()
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={props.label} style={styles.fab} onPress={props.onPress}>
+      <Icon name="compose" size={22} color={colors.onAccent} />
+      <Text style={styles.fabText}>{props.label}</Text>
     </Pressable>
   )
 }

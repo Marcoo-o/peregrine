@@ -1,6 +1,7 @@
 import { FlatList, View } from 'react-native'
 import type { MoveState } from '../app/screens'
 import type { Folder } from '../folders'
+import { folderIconName } from './folderIcon'
 import { folderLabel } from './folderLabel'
 import { Header } from './Header'
 import { ListRow } from './ListRow'
@@ -15,7 +16,7 @@ export function MoveScreen(props: { state: MoveState; onChoose: (target: Folder)
       <FlatList
         data={props.state.targets}
         keyExtractor={(folder) => folder.id}
-        renderItem={({ item }) => <ListRow title={folderLabel(item)} onPress={() => props.onChoose(item)} />}
+        renderItem={({ item }) => <ListRow title={folderLabel(item)} icon={folderIconName(item)} onPress={() => props.onChoose(item)} />}
       />
     </View>
   )

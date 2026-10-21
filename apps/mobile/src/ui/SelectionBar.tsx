@@ -1,16 +1,20 @@
 import { Pressable, ScrollView, Text, View } from 'react-native'
 import { Chip } from './controls'
+import { Icon } from './Icon'
 import type { Selection } from './useSelection'
 import { useStyles } from './useStyles'
+import { useTheme } from './useTheme'
 
 /** The top of a list while messages are chosen: how many, and the way out of the choice, and choosing all. */
 export function SelectionHeader(props: { selection: Selection; total: number }) {
   const styles = useStyles()
+  const { colors } = useTheme()
   const { selection } = props
   return (
     <View style={styles.selectionHeader}>
       <Pressable accessibilityRole="button" style={styles.back} onPress={selection.clear}>
-        <Text style={styles.backText}>✕ Abbrechen</Text>
+        <Icon name="close" size={20} color={colors.accent} />
+        <Text style={styles.backText}>Abbrechen</Text>
       </Pressable>
       <Text accessibilityRole="header" style={styles.selectionCount}>
         {selection.picked.length} ausgewählt

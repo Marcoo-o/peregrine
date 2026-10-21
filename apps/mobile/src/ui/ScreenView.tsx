@@ -44,11 +44,14 @@ export function ScreenView(props: { application: Application; screen: Screen }):
     case 'unified':
       return (
         <UnifiedScreen
+          // Another role is another list, which has not been filtered by what the last one was filtered by.
+          key={screen.role}
           state={screen}
           actions={selection}
-          onAccounts={() => navigator.showAccounts()}
           onRefresh={() => navigator.showUnified({ refresh: true })}
           onSearch={() => navigator.showSearch('')}
+          onSettings={() => settings.show()}
+          onCompose={() => compose.startNewFromAnyAccount(screen)}
           onOpen={(message) => messages.openFromUnified(message)}
         />
       )
@@ -75,9 +78,13 @@ export function ScreenView(props: { application: Application; screen: Screen }):
     case 'messages':
       return (
         <MessagesScreen
+          key={screen.folder.id}
           state={screen}
           actions={selection}
-          onBack={() => navigator.showStoredFolders(screen.account)}
+          onRefresh={() => navigator.showMessages(screen.account, screen.folder, { sync: true })}
+          onSearch={() => navigator.showSearch('')}
+          onSettings={() => settings.show()}
+          onCompose={() => compose.startNew(screen.account, screen)}
           onOpen={(message) => messages.open(screen.account, screen.folder, message, 'folder')}
         />
       )
