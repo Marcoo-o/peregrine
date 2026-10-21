@@ -3,6 +3,7 @@ import { listAccounts, type Account } from '../accounts'
 import { explainError } from '../errors'
 import { listFolders, syncFolders, type Folder } from '../folders'
 import { listMessages, unreadCounts } from '../messages'
+import { searchMessages } from '../search'
 import { syncFolder } from '../sync'
 import { listUnified, refreshInboxes, type RefreshResult } from '../unified'
 import { refreshQueueStatus } from './queueStatus'
@@ -116,6 +117,22 @@ export class Navigator {
     const messages = await listUnified(this.services.db)
     if (reason === 'updating' && this.store.screen.name !== 'unified') return
     this.store.showScreen({ name: 'unified', messages, busy, problems })
+  }
+
+  /** How many searches there have been, so that the newest is the one that is shown whichever finishes last. */
+  private searches = 0
+
+  /**
+   * The messages that a search finds, from the database. `opening` is the search screen being entered, and
+   * `typing` is the result for what has been typed since, which is shown only if it is the newest search and
+   * the user is still on the screen for it.
+   */
+  async showSearch(query: string, reason: 'opening' | 'typing' = 'opening'): Promise<void> {
+    const mine = ++this.searches
+    const { messages, unsupported } = await searchMessages(this.services.db, query)
+    if (mine !== this.searches) return
+    if (reason === 'typing' && this.store.screen.name !== 'search') return
+    this.store.showScreen({ name: 'search', query, messages, unsupported })
   }
 
   /** The messages of a folder from the database, and a sync with the server when asked to and there is one. */

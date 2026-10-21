@@ -246,3 +246,42 @@ describe('the status of the queue', () => {
     expect((await listAccounts(t.db)).length).toBe(1)
   })
 })
+
+describe('searching', () => {
+  it('shows what the search finds, from all accounts, with the words that were typed', async () => {
+    const t = await twoAccounts()
+    await t.app.navigator.showSearch('dinner')
+    expect(t.store.screen).toMatchObject({ name: 'search', query: 'dinner', unsupported: [] })
+    const screen = t.store.screen
+    if (screen.name !== 'search') throw new Error('not the search')
+    expect(screen.messages.map((message) => message.subject)).toEqual(['Dinner'])
+  })
+
+  it('shows an empty search with nothing found, and not everything', async () => {
+    const t = await twoAccounts()
+    await t.app.navigator.showSearch('')
+    expect(t.store.screen).toEqual({ name: 'search', query: '', messages: [], unsupported: [] })
+  })
+
+  it('says what part of a search the phone cannot do', async () => {
+    const t = await twoAccounts()
+    await t.app.navigator.showSearch('an:alex dinner')
+    expect(t.store.screen).toMatchObject({ name: 'search', unsupported: ['to'] })
+  })
+
+  it('shows the result of the last thing that was typed, whichever search is slower', async () => {
+    const t = await twoAccounts()
+    await t.app.navigator.showSearch('')
+    await Promise.all([t.app.navigator.showSearch('budget', 'typing'), t.app.navigator.showSearch('dinner', 'typing')])
+    expect(t.store.screen).toMatchObject({ name: 'search', query: 'dinner' })
+  })
+
+  it('does not take a screen back that the user has gone from while it was searching', async () => {
+    const t = await twoAccounts()
+    await t.app.navigator.showSearch('')
+    const searching = t.app.navigator.showSearch('dinner', 'typing')
+    await t.app.navigator.showAccounts()
+    await searching
+    expect(t.store.screen.name).toBe('accounts')
+  })
+})

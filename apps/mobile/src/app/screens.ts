@@ -6,6 +6,7 @@ import type { Folder } from '../folders'
 import type { MessageAssessment } from '../reading/assessment'
 import type { StoredMessage } from '../messages'
 import type { ReadableMessage } from '../messageText'
+import type { SearchHit, SearchResult } from '../search'
 import type { RefreshResult, UnifiedMessage } from '../unified'
 
 /**
@@ -14,7 +15,7 @@ import type { RefreshResult, UnifiedMessage } from '../unified'
  */
 
 /** Where a message was opened from, and so where leaving it goes back to. */
-export type MessageOrigin = 'folder' | 'unified'
+export type MessageOrigin = 'folder' | 'unified' | 'search'
 
 export interface LoadingState {
   name: 'loading'
@@ -37,6 +38,15 @@ export interface UnifiedState {
   busy: boolean
   /** The accounts that could not be brought up to date, each with its reason. */
   problems: RefreshResult[]
+}
+
+export interface SearchState {
+  name: 'search'
+  /** What was typed. */
+  query: string
+  messages: SearchHit[]
+  /** The parts of the search that the phone cannot do, which it was made without. */
+  unsupported: SearchResult['unsupported']
 }
 
 export interface FoldersState {
@@ -66,6 +76,8 @@ interface OpenMessage {
   folder: Folder
   summary: StoredMessage
   origin: MessageOrigin
+  /** The search the message was found by, which leaving it goes back to. */
+  searchQuery?: string
 }
 
 export interface MessageState extends OpenMessage {
@@ -116,6 +128,7 @@ export type Screen =
   | AccountsState
   | LoginState
   | UnifiedState
+  | SearchState
   | FoldersState
   | MessagesState
   | MessageState
@@ -127,6 +140,7 @@ export type Screen =
 export function showsQueueStatus(screen: Screen): boolean {
   return (
     screen.name === 'unified' ||
+    screen.name === 'search' ||
     screen.name === 'folders' ||
     screen.name === 'messages' ||
     screen.name === 'message' ||

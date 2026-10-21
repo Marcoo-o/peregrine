@@ -377,3 +377,34 @@ describe('putting a message away', () => {
     expect(t.store.screen).toMatchObject({ name: 'message', notice: 'Für dieses Konto ist kein Spam-Ordner vorhanden' })
   })
 })
+
+describe('a message that a search found', () => {
+  it('is opened from the account and folder it is in, and leaving it goes back to the same search', async () => {
+    const t = await connectedInbox()
+    await t.app.navigator.showSearch('contract')
+    const found = t.store.screen
+    if (found.name !== 'search') throw new Error('not the search')
+
+    await t.app.messages.openFromSearch(found.messages[0], 'contract')
+    expect(t.store.screen).toMatchObject({ name: 'message', origin: 'search', searchQuery: 'contract' })
+
+    const message = t.store.screen
+    if (message.name !== 'message') throw new Error('not the message')
+    await t.app.messages.leave(message)
+    expect(t.store.screen).toMatchObject({ name: 'search', query: 'contract' })
+  })
+
+  it('goes back to the search after being moved, where the message is no longer in its place', async () => {
+    const t = await connectedInbox()
+    await t.app.navigator.showSearch('contract')
+    const found = t.store.screen
+    if (found.name !== 'search') throw new Error('not the search')
+    await t.app.messages.openFromSearch(found.messages[0], 'contract')
+    const message = t.store.screen
+    if (message.name !== 'message') throw new Error('not the message')
+
+    await t.app.messages.delete(message)
+
+    expect(t.store.screen).toMatchObject({ name: 'search', query: 'contract' })
+  })
+})

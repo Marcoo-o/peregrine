@@ -38,6 +38,7 @@ function createStyles({ colors }: Theme) {
 
     // The top of a screen: the way back, and what the screen is.
     back: { minHeight: SIZE.target, justifyContent: 'center', alignSelf: 'flex-start' },
+    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     backText: { color: colors.accent, fontSize: 16, fontWeight: '500' },
     title: { fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 8 },
     subtitle: { fontSize: 14, color: colors.muted, marginBottom: 8 },

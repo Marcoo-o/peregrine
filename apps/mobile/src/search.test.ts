@@ -1,0 +1,143 @@
+import { describe, expect, it } from 'vitest'
+import type { FetchedMessage, MailboxEntry } from '@peregrine/core/imapSession'
+import { addAccount, type NewAccount } from './accounts'
+import { syncFolders } from './folders'
+import { saveMessages } from './messages'
+import { searchMessages } from './search'
+import { migratedDatabase } from './testing/testDb'
+
+const input = (over: Partial<NewAccount> = {}): NewAccount => ({
+  displayName: 'Work',
+  emailAddress: 'work@example.org',
+  imapHost: 'imap.example.org',
+  imapPort: 993,
+  imapSecure: 'tls',
+  imapUsername: 'work',
+  smtpHost: null,
+  smtpPort: null,
+  smtpSecure: null,
+  smtpUsername: null,
+  password: 'secret',
+  smtpPassword: null,
+  ...over
+})
+
+const entry = (path: string, specialUse: string | null = null): MailboxEntry => ({
+  path,
+  name: path,
+  parentPath: null,
+  flags: [],
+  specialUse
+})
+
+const day = (n: number) => new Date(2026, 9, n, 12, 0)
+
+const message = (
+  uid: number,
+  subject: string,
+  from: { name?: string; address: string },
+  over: { date?: Date; flags?: string[]; attachment?: boolean } = {}
+): FetchedMessage => ({
+  uid,
+  flags: over.flags ?? [],
+  size: 100,
+  hasAttachment: over.attachment ?? false,
+  envelope: { subject, date: over.date ?? day(1), from: [from] }
+})
+
+/** Two accounts with an inbox each and a sent folder for the first, with messages that tell the searches apart. */
+async function mailboxes() {
+  const { db } = await migratedDatabase()
+  const work = await addAccount(db, input(), { now: 1 })
+  const home = await addAccount(db, input({ displayName: 'Home', emailAddress: 'home@example.org', imapUsername: 'home' }), { now: 2 })
+  const [workInbox, workSent] = await syncFolders(db, work.id, [entry('INBOX'), entry('Sent', '\\Sent')])
+  const [homeInbox] = await syncFolders(db, home.id, [entry('INBOX')])
+  await saveMessages(db, workInbox, [
+    message(1, 'Budget for next quarter', { name: 'Anna Berger', address: 'anna@sender.test' }, { date: day(12) }),
+    message(2, 'Meeting moved to Friday', { name: 'Ben', address: 'ben@sender.test' }, { date: day(14), flags: ['\\Seen'] }),
+    message(3, 'Your invoice', { name: 'Billing', address: 'billing@shop.test' }, { date: day(18), attachment: true, flags: ['\\Flagged'] })
+  ])
+  await saveMessages(db, workSent, [message(1, 'Re: Budget for next quarter', { name: 'Work', address: 'work@example.org' }, { date: day(13) })])
+  await saveMessages(db, homeInbox, [message(1, 'Dinner on Saturday?', { name: 'Dana', address: 'dana@sender.test' }, { date: day(10) })])
+  return { db, work, home }
+}
+
+const subjects = async (db: Awaited<ReturnType<typeof mailboxes>>['db'], query: string) =>
+  (await searchMessages(db, query)).messages.map((found) => found.subject)
+
+describe('searching the messages that are on the phone', () => {
+  it('finds a word in the subject or in who wrote, in any case, newest first, in every folder of every account', async () => {
+    const { db } = await mailboxes()
+    expect(await subjects(db, 'budget')).toEqual(['Re: Budget for next quarter', 'Budget for next quarter'])
+  })
+
+  it('wants every word, in the subject or in the sender, wherever each of them is', async () => {
+    const { db } = await mailboxes()
+    expect(await subjects(db, 'anna budget')).toEqual(['Budget for next quarter'])
+    expect(await subjects(db, 'anna invoice')).toEqual([])
+  })
+
+  it('finds by who wrote, in the name or in the address', async () => {
+    const { db } = await mailboxes()
+    expect(await subjects(db, 'von:berger')).toEqual(['Budget for next quarter'])
+    expect(await subjects(db, 'from:shop.test')).toEqual(['Your invoice'])
+  })
+
+  it('finds by the subject alone', async () => {
+    const { db } = await mailboxes()
+    expect(await subjects(db, 'betreff:friday')).toEqual(['Meeting moved to Friday'])
+    expect(await subjects(db, 'subject:"next quarter"')).toEqual(['Re: Budget for next quarter', 'Budget for next quarter'])
+  })
+
+  it('finds what has an attachment, what is not read and what is starred', async () => {
+    const { db } = await mailboxes()
+    expect(await subjects(db, 'hat:anhang')).toEqual(['Your invoice'])
+    expect(await subjects(db, 'has:attachment')).toEqual(['Your invoice'])
+    expect(await subjects(db, 'ist:markiert')).toEqual(['Your invoice'])
+    expect(await subjects(db, 'is:unread')).toEqual(['Your invoice', 'Re: Budget for next quarter', 'Budget for next quarter', 'Dinner on Saturday?'])
+  })
+
+  it('finds by date, from the first day on and up to the day before the last', async () => {
+    const { db } = await mailboxes()
+    expect(await subjects(db, 'nach:2026-10-14')).toEqual(['Your invoice', 'Meeting moved to Friday'])
+    expect(await subjects(db, 'vor:14.10.2026')).toEqual(['Re: Budget for next quarter', 'Budget for next quarter', 'Dinner on Saturday?'])
+  })
+
+  it('takes % and _ in what is looked for as what they are', async () => {
+    const { db } = await mailboxes()
+    expect(await subjects(db, '%')).toEqual([])
+    expect(await subjects(db, 'b_dget')).toEqual([])
+  })
+
+  it('puts the operators together with each other and with words', async () => {
+    const { db } = await mailboxes()
+    expect(await subjects(db, 'von:sender.test ist:ungelesen budget')).toEqual(['Budget for next quarter'])
+  })
+
+  it('says which part of the search it cannot do, and does the rest', async () => {
+    const { db } = await mailboxes()
+    const found = await searchMessages(db, 'an:alex budget')
+    expect(found.unsupported).toEqual(['to'])
+    expect(found.messages.map((m) => m.subject)).toContain('Budget for next quarter')
+  })
+
+  it('has nothing to look for in an empty search, and finds nothing', async () => {
+    const { db } = await mailboxes()
+    expect(await searchMessages(db, '')).toEqual({ messages: [], unsupported: [] })
+    expect(await searchMessages(db, '   ')).toEqual({ messages: [], unsupported: [] })
+  })
+
+  it('has the account, its colour and the folder with each message it finds', async () => {
+    const { db } = await mailboxes()
+    const [found] = (await searchMessages(db, 'dinner')).messages
+    expect(found).toMatchObject({ accountName: 'Home', uid: 1, folder: { imapPath: 'INBOX' } })
+    expect(found.accountColor).toMatch(/^#/)
+    const [sent] = (await searchMessages(db, 'Re:')).messages
+    expect(sent.folder).toMatchObject({ imapPath: 'Sent', specialUse: '\\Sent' })
+  })
+
+  it('does not find more than it is asked for', async () => {
+    const { db } = await mailboxes()
+    expect((await searchMessages(db, 'sender.test', 2)).messages).toHaveLength(2)
+  })
+})

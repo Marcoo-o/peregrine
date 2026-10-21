@@ -24,27 +24,42 @@ export function isInbox(folder: Pick<Folder, 'specialUse' | 'imapPath'>): boolea
   return folder.specialUse === '\\Inbox' || folder.imapPath.toUpperCase() === 'INBOX'
 }
 
+/** What is read for a message of a list that holds those of several accounts, besides the message itself. */
+export const UNIFIED_COLUMNS = `m.uid, m.subject, m.sender, m.date_ms, m.flags, m.size, m.has_attachment, m.pending_move_to,
+            m.account_id, m.folder_id, a.display_name AS account_name, a.color AS account_color`
+
+export interface UnifiedRow {
+  uid: number
+  subject: string
+  sender: string
+  date_ms: number | null
+  flags: string
+  size: number
+  has_attachment: number
+  pending_move_to: string | null
+  account_id: string
+  folder_id: string
+  account_name: string
+  account_color: string
+}
+
+export function toUnifiedMessage(row: UnifiedRow): UnifiedMessage {
+  return {
+    ...toStoredMessage(row),
+    accountId: row.account_id,
+    folderId: row.folder_id,
+    accountName: row.account_name,
+    accountColor: row.account_color
+  }
+}
+
 /**
  * The newest messages of every account's inbox, merged by date, newest first. A message without a
  * date comes last, and two with the same one keep the order of their UIDs.
  */
 export async function listUnified(db: SqlDb, limit: number = UNIFIED_LIMIT): Promise<UnifiedMessage[]> {
-  const rows = await db.all<{
-    uid: number
-    subject: string
-    sender: string
-    date_ms: number | null
-    flags: string
-    size: number
-    has_attachment: number
-    pending_move_to: string | null
-    account_id: string
-    folder_id: string
-    account_name: string
-    account_color: string
-  }>(
-    `SELECT m.uid, m.subject, m.sender, m.date_ms, m.flags, m.size, m.has_attachment, m.pending_move_to,
-            m.account_id, m.folder_id, a.display_name AS account_name, a.color AS account_color
+  const rows = await db.all<UnifiedRow>(
+    `SELECT ${UNIFIED_COLUMNS}
      FROM messages m
      JOIN folders f ON f.id = m.folder_id
      JOIN accounts a ON a.id = m.account_id
@@ -53,13 +68,7 @@ export async function listUnified(db: SqlDb, limit: number = UNIFIED_LIMIT): Pro
      LIMIT ?`,
     limit
   )
-  return rows.map((row) => ({
-    ...toStoredMessage(row),
-    accountId: row.account_id,
-    folderId: row.folder_id,
-    accountName: row.account_name,
-    accountColor: row.account_color
-  }))
+  return rows.map(toUnifiedMessage)
 }
 
 /** What happened to one account when the list was brought up to date. */

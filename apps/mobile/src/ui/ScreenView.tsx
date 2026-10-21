@@ -9,6 +9,7 @@ import { LoginScreen } from './LoginScreen'
 import { MessageScreen } from './MessageScreen'
 import { MessagesScreen } from './MessagesScreen'
 import { MoveScreen } from './MoveScreen'
+import { SearchScreen } from './SearchScreen'
 import { SettingsScreen } from './SettingsScreen'
 import { UnifiedScreen } from './UnifiedScreen'
 
@@ -27,6 +28,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onOpen={(account) => navigator.openAccount(account)}
           onAdd={() => navigator.showLogin()}
           onUnified={() => navigator.showUnified({ refresh: true })}
+          onSearch={() => navigator.showSearch('')}
           onSettings={() => settings.show()}
         />
       )
@@ -46,7 +48,17 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           actions={selection}
           onAccounts={() => navigator.showAccounts()}
           onRefresh={() => navigator.showUnified({ refresh: true })}
+          onSearch={() => navigator.showSearch('')}
           onOpen={(message) => messages.openFromUnified(message)}
+        />
+      )
+    case 'search':
+      return (
+        <SearchScreen
+          state={screen}
+          onSearch={(query) => navigator.showSearch(query, 'typing')}
+          onOpen={(message) => messages.openFromSearch(message, screen.query)}
+          onBack={() => navigator.showAccounts()}
         />
       )
     case 'folders':

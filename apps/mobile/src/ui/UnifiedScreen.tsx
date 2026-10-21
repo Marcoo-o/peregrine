@@ -13,6 +13,7 @@ export function UnifiedScreen(props: {
   actions: SelectionActions
   onAccounts: () => void
   onRefresh: () => void
+  onSearch: () => void
   onOpen: (message: UnifiedMessage) => void
 }) {
   const styles = useStyles()
@@ -24,7 +25,11 @@ export function UnifiedScreen(props: {
       {selection.selecting ? (
         <SelectionHeader selection={selection} total={messages.length} />
       ) : (
-        <Header title="Alle Posteingänge" back={{ label: 'Konten', onPress: props.onAccounts }} />
+        <Header
+          title="Alle Posteingänge"
+          back={{ label: 'Konten', onPress: props.onAccounts }}
+          action={{ label: 'Suchen', onPress: props.onSearch }}
+        />
       )}
       {problems.map((problem) => (
         <Text key={problem.accountId} style={styles.error}>

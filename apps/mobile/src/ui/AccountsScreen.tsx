@@ -11,6 +11,7 @@ export function AccountsScreen(props: {
   onOpen: (account: Account) => void
   onAdd: () => void
   onUnified: () => void
+  onSearch: () => void
   onSettings: () => void
 }) {
   const styles = useStyles()
@@ -32,6 +33,7 @@ export function AccountsScreen(props: {
           />
         )}
       />
+      <Button label="Suchen" variant="secondary" onPress={props.onSearch} />
       <Button label="Konto hinzufügen" variant="secondary" onPress={props.onAdd} />
       <Button label="Einstellungen" variant="secondary" onPress={props.onSettings} />
     </View>

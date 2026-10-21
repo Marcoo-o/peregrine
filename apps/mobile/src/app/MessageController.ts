@@ -11,6 +11,7 @@ import type { MailActions } from '../mailActions'
 import { listMessages, type StoredMessage } from '../messages'
 import { readMessage } from '../messageText'
 import { assessMessage, knownDomainsOf } from '../reading/assessment'
+import type { SearchHit } from '../search'
 import type { UnifiedMessage } from '../unified'
 import type { MessageTarget } from '../background/notifications'
 import type { Navigator } from './Navigator'
@@ -41,6 +42,14 @@ export class MessageController {
     if (account && folder) await this.open(account, folder, message, 'unified')
   }
 
+  /** Opens a message that a search found, and remembers the search, which leaving the message goes back to. */
+  async openFromSearch(message: SearchHit, query: string): Promise<void> {
+    const { db } = this.services
+    const account = await getAccount(db, message.accountId)
+    const folder = await getFolder(db, message.folderId)
+    if (account && folder) await this.open(account, folder, message, 'search', query)
+  }
+
   /** Opens the message a notification was tapped for, if the application still has it. */
   async openTarget(target: MessageTarget): Promise<void> {
     const { db } = this.services
@@ -55,8 +64,14 @@ export class MessageController {
    * Opens a message: marks it read, which is made here at once and told to the server through the
    * queue, and fetches its text, which needs the server and says why when it cannot have it.
    */
-  async open(account: Account, folder: Folder, summary: StoredMessage, origin: MessageOrigin): Promise<void> {
-    const opened = { account, folder, summary, origin }
+  async open(
+    account: Account,
+    folder: Folder,
+    summary: StoredMessage,
+    origin: MessageOrigin,
+    searchQuery?: string
+  ): Promise<void> {
+    const opened = { account, folder, summary, origin, searchQuery }
     this.store.showScreen({ name: 'message', ...opened })
     if (!summary.flags.includes(SEEN)) this.markRead(folder, summary)
     try {
@@ -96,6 +111,7 @@ export class MessageController {
   /** Back to the list the message was opened from, which shows what was done to it. */
   async leave(from: OnOpenMessage): Promise<void> {
     if (from.origin === 'unified') await this.navigator.showUnified({ refresh: false })
+    else if (from.origin === 'search') await this.navigator.showSearch(from.searchQuery ?? '')
     else await this.navigator.showMessages(from.account, from.folder, { sync: false })
   }
 
@@ -137,16 +153,16 @@ export class MessageController {
 
   /** What a move needs of a message that is open, without the choice of a folder having been shown. */
   private asMove(state: MessageState): MoveState {
-    const { account, folder, summary, origin } = state
-    return { name: 'move', account, folder, summary, origin, targets: [], returnTo: state }
+    const { account, folder, summary, origin, searchQuery } = state
+    return { name: 'move', account, folder, summary, origin, searchQuery, targets: [], returnTo: state }
   }
 
   /** Shows the folders the message can go to. */
   async startMove(state: MessageState): Promise<void> {
     const folders = await listFolders(this.services.db, state.account.id)
     const targets = folders.filter((folder) => folder.id !== state.folder.id)
-    const { account, folder, summary, origin } = state
-    this.store.showScreen({ name: 'move', account, folder, summary, origin, targets, returnTo: state })
+    const { account, folder, summary, origin, searchQuery } = state
+    this.store.showScreen({ name: 'move', account, folder, summary, origin, searchQuery, targets, returnTo: state })
   }
 
   async move(state: MoveState, target: Folder): Promise<void> {
