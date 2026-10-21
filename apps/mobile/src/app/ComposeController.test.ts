@@ -41,6 +41,21 @@ describe('starting a message', () => {
     expect(t.state).toEqual({ name: 'compose', account: t.work, returnTo, draft: emptyDraft, busy: false })
   })
 
+  it('starts an empty one from the first account where there is no account to start it from', async () => {
+    const t = await appHarness()
+    const first = await t.givenAccount('work', {})
+    await t.givenAccount('home', {})
+    await t.app.compose.startNewFromAnyAccount(returnTo)
+    expect(t.store.screen).toMatchObject({ name: 'compose', account: { id: first.id }, returnTo })
+  })
+
+  it('starts nothing when there is no account at all', async () => {
+    const t = await appHarness()
+    const before = t.store.screen
+    await t.app.compose.startNewFromAnyAccount(returnTo)
+    expect(t.store.screen).toBe(before)
+  })
+
   it('starts an answer that quotes the message, and goes back to the message', async () => {
     const t = await composing()
     const message: MessageState = {

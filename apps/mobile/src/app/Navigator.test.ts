@@ -285,3 +285,95 @@ describe('searching', () => {
     expect(t.store.screen.name).toBe('accounts')
   })
 })
+
+describe('the lists of all accounts by role', () => {
+  async function withSent() {
+    const t = await appHarness()
+    const work = await t.givenAccount('work', {
+      INBOX: [{ uid: 1, subject: 'in work', date: day(1) }],
+      Sent: [{ uid: 1, subject: 'sent from work', date: day(3) }],
+      Trash: []
+    })
+    const home = await t.givenAccount('home', {
+      INBOX: [{ uid: 1, subject: 'in home', date: day(2) }],
+      Sent: [{ uid: 1, subject: 'sent from home', date: day(4) }],
+      Trash: []
+    })
+    return { ...t, work, home }
+  }
+
+  it('shows the folders of the role that is asked for, from every account, and says which role it is', async () => {
+    const t = await withSent()
+    await t.app.navigator.showUnified({ refresh: false, role: 'sent' })
+    const screen = t.store.screen
+    if (screen.name !== 'unified') throw new Error('not the list')
+    expect(screen.role).toBe('sent')
+    expect(screen.messages.map((m) => m.subject)).toEqual(['sent from home', 'sent from work'])
+  })
+
+  it('is the inbox when no role has been asked for', async () => {
+    const t = await withSent()
+    await t.app.navigator.showUnified({ refresh: false })
+    expect(t.store.screen).toMatchObject({ name: 'unified', role: 'inbox' })
+  })
+
+  it('is the role that was shown last when none is asked for, which is where leaving a message goes back to', async () => {
+    const t = await withSent()
+    await t.app.navigator.showUnified({ refresh: false, role: 'sent' })
+    await t.app.navigator.showUnified({ refresh: false })
+    expect(t.store.screen).toMatchObject({ name: 'unified', role: 'sent' })
+  })
+
+  it('brings the folders of that role up to date from the servers when it is asked to', async () => {
+    const t = await withSent()
+    t.server.mailboxes.get('work')?.Sent.push({ uid: 2, subject: 'newly sent', date: day(9) })
+    await t.app.navigator.showUnified({ refresh: true, role: 'sent' })
+    const screen = t.store.screen
+    if (screen.name !== 'unified') throw new Error('not the list')
+    expect(screen.messages.map((m) => m.subject)).toContain('newly sent')
+  })
+})
+
+describe('opening a folder from the sidebar', () => {
+  it('connects the account when it is not connected, and shows the folder as the server has it', async () => {
+    const t = await twoAccounts()
+    const [folder] = (await listFolders(t.db, t.work.id)).filter((f) => f.imapPath === 'INBOX')
+    t.server.mailboxes.get('work')?.INBOX.push({ uid: 2, subject: 'new at work', date: day(5) })
+
+    await t.app.navigator.openFolder(t.work, folder)
+
+    const screen = t.store.screen
+    if (screen.name !== 'messages') throw new Error('not the folder')
+    expect(screen.messages.map((m) => m.subject)).toContain('new at work')
+    expect(t.store.state.connected).toContain(t.work.id)
+    expect(t.store.state.statusAccountId).toBe(t.work.id)
+  })
+
+  it('shows the folder as it was stored, and says why, when the server cannot be reached', async () => {
+    const t = await twoAccounts()
+    const [folder] = (await listFolders(t.db, t.work.id)).filter((f) => f.imapPath === 'INBOX')
+    t.app.services.connections.drop(t.work.id)
+    t.server.unreachable.add('work')
+
+    await t.app.navigator.openFolder(t.work, folder)
+
+    expect(t.store.screen).toMatchObject({
+      name: 'messages',
+      messages: [{ subject: 'Budget' }],
+      error: 'Der Server ist nicht erreichbar. (work: connection refused)'
+    })
+  })
+
+  it('replays what waited in the queue for the account before it shows the folder', async () => {
+    const t = await twoAccounts()
+    const [folder] = (await listFolders(t.db, t.work.id)).filter((f) => f.imapPath === 'INBOX')
+    t.server.unreachable.add('work')
+    await t.app.services.mail.setFlags(folder, [1], ['\\Seen'], [])
+    t.server.unreachable.delete('work')
+    t.server.calls.length = 0
+
+    await t.app.navigator.openFolder(t.work, folder)
+
+    expect(t.server.calls).toContain('add INBOX 1 \\Seen')
+  })
+})

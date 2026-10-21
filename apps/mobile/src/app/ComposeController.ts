@@ -1,4 +1,4 @@
-import type { Account } from '../accounts'
+import { listAccounts, type Account } from '../accounts'
 import { emptyDraft, forwardDraft, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
 import { explainError } from '../errors'
 import { smtpSettingsOf } from '../send'
@@ -25,6 +25,15 @@ export class ComposeController {
   /** An empty message from an account, and the screen to show again when it is done with. */
   startNew(account: Account, returnTo: Screen): void {
     this.show({ account, returnTo, draft: emptyDraft })
+  }
+
+  /**
+   * An empty message from the first account, for the places that are not an account's: the list of all inboxes, a
+   * search. The account it is written from can be another one that the user has, and is told on the screen.
+   */
+  async startNewFromAnyAccount(returnTo: Screen): Promise<void> {
+    const [first] = await listAccounts(this.services.db)
+    if (first) this.startNew(first, returnTo)
   }
 
   /** An answer to the open message, once its text is there to quote. */

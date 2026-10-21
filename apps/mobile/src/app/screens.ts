@@ -7,7 +7,7 @@ import type { MessageAssessment } from '../reading/assessment'
 import type { StoredMessage } from '../messages'
 import type { ReadableMessage } from '../messageText'
 import type { SearchHit, SearchResult } from '../search'
-import type { RefreshResult, UnifiedMessage } from '../unified'
+import type { RefreshResult, UnifiedMessage, UnifiedRole } from '../unified'
 
 /**
  * What the application can be showing. One of these is the whole of what a screen needs, so that a
@@ -34,6 +34,8 @@ export interface LoginState {
 
 export interface UnifiedState {
   name: 'unified'
+  /** Which folders of the accounts the list holds: the inboxes, the sent folders, and so on. */
+  role: UnifiedRole
   messages: UnifiedMessage[]
   busy: boolean
   /** The accounts that could not be brought up to date, each with its reason. */
