@@ -271,6 +271,8 @@ After that, reading a message was brought closer to the desktop: HTML mail, what
 the links, and the actions of a message. That is under "What reading like the desktop found".
 Then the lists: choosing several messages, folders as a tree, and a search. That is under "What the list and the
 navigation found".
+Last, the phone was set next to the desktop's window, and the frame was brought closer: pictures, a sidebar, a top
+bar. That is under "What looking at the desktop's window found".
 
 Stages 1 to 3 improve the desktop whether or not a phone ever appears. That is the test of
 whether this plan is honest rather than hopeful: if the first half only pays off when the second
@@ -710,6 +712,33 @@ searched for the same reason, and there are no saved searches. The folders of al
 tree of standard folders as the desktop does. A search cannot be narrowed by account, and its results cannot be
 chosen several at a time. Choosing across accounts, starring, spam and delete were run in tests and not on the
 emulator, and none of these screens was looked at in the dark.
+
+## What looking at the desktop's window found
+
+The first design worked from the desktop's style sheet and got the colours right. It was still far from the
+desktop, which only showed once the desktop was run next to the phone, with the same accounts. What was different
+was not the palette but the frame: the desktop has pictures for everything, a sidebar that holds every folder of
+every account, a top bar, and a line over the list with filters. The phone had text and glyphs, and three lists
+to go through, accounts, folders and messages.
+
+- *Pictures.* The desktop draws its icons with Lucide, so the phone does too, `react-native-svg` underneath, and a
+  folder, a role or an action looks the same on both. Each icon is imported by itself: the library has thousands.
+- *The sidebar as the way through.* A drawer, which React Native has, from the left edge or from the button of the top
+  bar. It has the desktop's content: the folders that are one for all accounts, and every account with its colour,
+  whether it is connected, and its folders as a tree with their pictures and counts, where the user is marked.
+  The lists of all accounts take a role for this, so inbox, drafts, sent, archive, spam and trash each have a list.
+- *The top of a list.* The button for the sidebar, a field for the search, bringing the list up to date and the
+  settings; over the list what it is, how many messages it has, and the filters for what is not read, starred or
+  has a file. Writing a message is a button over the corner of the list.
+
+Shown on the emulator, light: a folder opened from the sidebar, the top bar and the filters, the drawer with the
+accounts and the tree, and the list of sent messages of all accounts from the drawer.
+
+Not done: the actions of an open message are still words in a bar and not the desktop's row of pictures, and the
+hint for a first message from an address, which the desktop shows, is not there. The lists of accounts and of
+folders are still there and are reached from the sidebar, and are not styled like it. Nothing here was looked at in
+the dark theme. The list says that it has no messages in its top and in its body, which is once too often.
+Swiping, a preview of the text, tags, snoozing and the filter rules of the desktop do not exist on the phone.
 
 ## What stage 4 found
 
