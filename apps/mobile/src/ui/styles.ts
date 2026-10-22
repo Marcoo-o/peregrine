@@ -205,6 +205,17 @@ function createStyles({ colors }: Theme) {
     fabText: { color: colors.onAccent, fontSize: 15, fontWeight: '600' },
     listBottom: { paddingBottom: 88 },
     accountTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SIZE.gap },
+    // The people suggested under an address field, as one block that belongs to the field above it.
+    suggestions: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: SIZE.radius,
+      marginTop: -4,
+      marginBottom: SIZE.gap,
+      overflow: 'hidden'
+    },
+    suggestion: { minHeight: SIZE.target, justifyContent: 'center', paddingHorizontal: 14, paddingVertical: 6 },
     removeRow: { minHeight: SIZE.target, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: SIZE.padding, paddingHorizontal: 4 },
     removeText: { fontSize: 15, color: colors.danger },
 

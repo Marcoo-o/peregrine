@@ -1,4 +1,5 @@
 import { listAccounts, type Account } from '../accounts'
+import { suggestContacts, type Contact } from '../contacts'
 import { editableDraft, emptyDraft, forwardDraft, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
 import { saveDraft } from '../drafts'
 import { explainError } from '../errors'
@@ -35,6 +36,12 @@ export class ComposeController {
   async startNewFromAnyAccount(returnTo: Screen): Promise<void> {
     const [first] = await listAccounts(this.services.db)
     if (first) this.startNew(first, returnTo)
+  }
+
+  /** The people to suggest for an address that is being typed: those the phone has mail from, without the user's own. */
+  async suggest(typed: string): Promise<Contact[]> {
+    const accounts = await listAccounts(this.services.db)
+    return suggestContacts(this.services.db, typed, accounts.map((account) => account.emailAddress))
   }
 
   /** An answer to the open message, once its text is there to quote. */

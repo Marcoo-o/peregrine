@@ -123,6 +123,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           state={screen}
           files={services.files}
           onSend={(draft) => compose.send(screen, draft)}
+          suggest={(typed) => compose.suggest(typed)}
           onSaveDraft={(draft) => compose.saveDraft(screen, draft)}
           onCancel={(draft) => compose.cancel(screen, draft)}
         />
