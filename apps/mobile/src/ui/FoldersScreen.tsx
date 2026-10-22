@@ -1,25 +1,29 @@
 import { useMemo, useState } from 'react'
-import { FlatList, Text, View } from 'react-native'
+import { FlatList, Pressable, Text, View } from 'react-native'
 import type { FoldersState } from '../app/screens'
 import { buildFolderTree, visibleRows } from '../folderTree'
 import type { Folder } from '../folders'
-import { Button } from './controls'
+import { Button, Fab } from './controls'
 import { ConfirmDialog } from './ConfirmDialog'
 import { folderIconName } from './folderIcon'
 import { folderLabel } from './folderLabel'
-import { Header } from './Header'
+import { Icon } from './Icon'
 import { ListRow } from './ListRow'
+import { TopBar } from './TopBar'
 import { useStyles } from './useStyles'
+import { useTheme } from './useTheme'
 
 export function FoldersScreen(props: {
   state: FoldersState
   onOpen: (folder: Folder) => void
-  onBack: () => void
+  onSearch: () => void
+  onSettings: () => void
   onRemove: () => void
   onConnect: () => void
   onCompose: () => void
 }) {
   const styles = useStyles()
+  const { colors } = useTheme()
   const { account, folders, unread, offline } = props.state
   // The paths of the folders that are closed. Folders start open, so that nothing is hidden that has not been closed.
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set())
@@ -36,7 +40,13 @@ export function FoldersScreen(props: {
 
   return (
     <View style={styles.fill}>
-      <Header title={account.displayName} back={{ label: 'Konten', onPress: props.onBack }} />
+      <TopBar onSearch={props.onSearch} onSettings={props.onSettings} />
+      <View style={styles.accountTitleRow}>
+        <View style={[styles.accountSquare, { backgroundColor: account.color }]} />
+        <Text accessibilityRole="header" style={styles.listTitle} numberOfLines={1}>
+          {account.displayName}
+        </Text>
+      </View>
       {offline ? (
         <View>
           <Text style={styles.error}>{offline}</Text>
@@ -45,6 +55,7 @@ export function FoldersScreen(props: {
       ) : null}
       <FlatList
         data={rows}
+        contentContainerStyle={styles.listBottom}
         keyExtractor={(row) => row.node.path}
         renderItem={({ item }) => {
           const { node } = item
@@ -62,9 +73,15 @@ export function FoldersScreen(props: {
             />
           )
         }}
+        // What cannot be taken back is at the end of the list, away from what is opened and written every day.
+        ListFooterComponent={
+          <Pressable accessibilityRole="button" style={styles.removeRow} onPress={() => setConfirmingRemove(true)}>
+            <Icon name="trash" size={18} color={colors.danger} />
+            <Text style={styles.removeText}>Konto entfernen</Text>
+          </Pressable>
+        }
       />
-      <Button label="Neue Nachricht" onPress={props.onCompose} />
-      <Button label="Konto entfernen" variant="danger" onPress={() => setConfirmingRemove(true)} />
+      <Fab label="Neue Nachricht" onPress={props.onCompose} />
       <ConfirmDialog
         visible={confirmingRemove}
         title={`${account.displayName} entfernen?`}

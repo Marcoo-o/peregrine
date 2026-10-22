@@ -204,6 +204,9 @@ function createStyles({ colors }: Theme) {
     },
     fabText: { color: colors.onAccent, fontSize: 15, fontWeight: '600' },
     listBottom: { paddingBottom: 88 },
+    accountTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SIZE.gap },
+    removeRow: { minHeight: SIZE.target, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: SIZE.padding, paddingHorizontal: 4 },
+    removeText: { fontSize: 15, color: colors.danger },
 
     // The sidebar: the same rows as the desktop's, with a picture, a name, a count and what opens them.
     sidebar: { flex: 1, backgroundColor: colors.sunken },

@@ -763,12 +763,15 @@ Two things the emulator showed that had nothing to do with looks, both fixed:
   of the screen does now (`app/backAction.ts`): the sidebar is put away first, an open message goes back to its list,
   and the lists where the application starts leave it, as the key does everywhere. The form for the first account has
   no way back, so the key leaves from it. Writing a message asks before it throws away what was changed, whether
-  the button or the key was used, since the key is easier to hit by mistake than the button. These were tested, and the
-  dialog for removing an account was seen on the device; the back key on a message, and the question when writing,
-  were not seen there, because the emulator was closed before they could be.
+  the button or the key was used, since the key is easier to hit by mistake than the button. All of it was seen on the
+  emulator afterwards: the question for removing an account, the key on an open message going back to its list with the
+  application still there, a draft that was not touched being left at once, and one with a word in the subject asking.
 
-Not done: the list of folders of an account is still in the old style, with the account's buttons under it. Swiping, a
-preview of the text, tags, snoozing and the filter rules of the desktop do not exist on the phone.
+The list of folders of an account got the same frame as the others: the top bar, the account's colour and name as the
+title, the corner button for a new message, and "Konto entfernen" as a quiet red line at the end of the list, away from
+what is opened and written every day. Its way back is the sidebar and the key, so the link "Konten" is gone from it.
+
+Not done: swiping, a preview of the text, tags, snoozing and the filter rules of the desktop do not exist on the phone.
 
 ## What stage 4 found
 
