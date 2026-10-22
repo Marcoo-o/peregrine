@@ -14,6 +14,8 @@ export interface StoredMessage {
   pendingMoveTo: string | null
   /** The first of its text, flattened to a line or two, or empty while the text has not been fetched. */
   preview: string
+  /** When it comes back, if it was put aside, which is only a moment ahead for a message that is still away. */
+  snoozedUntil: number | null
 }
 
 /** How many numbers go into one statement. SQLite allows far more, and a short list is easier to read in a log. */
@@ -68,6 +70,7 @@ interface MessageRow {
   has_attachment: number
   pending_move_to: string | null
   preview_text: string | null
+  snoozed_until?: number | null
 }
 
 export function toStoredMessage(row: MessageRow): StoredMessage {
@@ -80,18 +83,46 @@ export function toStoredMessage(row: MessageRow): StoredMessage {
     size: row.size,
     hasAttachment: row.has_attachment === 1,
     pendingMoveTo: row.pending_move_to,
-    preview: row.preview_text ?? ''
+    preview: row.preview_text ?? '',
+    snoozedUntil: row.snoozed_until ?? null
   }
 }
 
-/** The newest messages of a folder first. */
-export async function listMessages(db: SqlDb, folderId: string): Promise<StoredMessage[]> {
+/** The columns of a message that a list of one folder reads. */
+const COLUMNS = 'uid, subject, sender, date_ms, flags, size, has_attachment, pending_move_to, preview_text, snoozed_until'
+
+/**
+ * The newest messages of a folder first, without those that are put aside: they are not in the folder until their
+ * moment, and a moment that has passed is no snooze at all, which is why nothing has to be cleared when it comes.
+ */
+export async function listMessages(db: SqlDb, folderId: string, now: number = Date.now()): Promise<StoredMessage[]> {
   const rows = await db.all<MessageRow>(
-    `SELECT uid, subject, sender, date_ms, flags, size, has_attachment, pending_move_to, preview_text FROM messages
-     WHERE folder_id = ? ORDER BY uid DESC`,
-    folderId
+    `SELECT ${COLUMNS} FROM messages
+     WHERE folder_id = ? AND (snoozed_until IS NULL OR snoozed_until <= ?) ORDER BY uid DESC`,
+    folderId,
+    now
   )
   return rows.map(toStoredMessage)
+}
+
+/** One message of a folder by its UID, whether it is put aside or not: what is done to a message that is open has to find it. */
+export async function getMessage(db: SqlDb, folderId: string, uid: number): Promise<StoredMessage | undefined> {
+  const row = await db.get<MessageRow>(`SELECT ${COLUMNS} FROM messages WHERE folder_id = ? AND uid = ?`, folderId, uid)
+  return row ? toStoredMessage(row) : undefined
+}
+
+/**
+ * Puts messages aside until a moment, or brings them back with null. Only the phone knows: nothing is written to the
+ * server, and the message stays where it is on the other devices, as it does with the desktop's.
+ */
+export async function snoozeMessages(
+  db: SqlDb,
+  refs: ReadonlyArray<{ folderId: string; uid: number }>,
+  until: number | null
+): Promise<void> {
+  for (const ref of refs) {
+    await db.run('UPDATE messages SET snoozed_until = ? WHERE folder_id = ? AND uid = ?', until, ref.folderId, ref.uid)
+  }
 }
 
 /** Marks messages as waiting to be moved to a folder, or takes the mark off with null. */
@@ -169,13 +200,14 @@ export async function applyFlags(
  * How many messages of each folder of an account have not been read, by the id of the folder. A folder with
  * none is not in the result. The flags are compared without regard to case, as IMAP does.
  */
-export async function unreadCounts(db: SqlDb, accountId: string): Promise<Record<string, number>> {
+export async function unreadCounts(db: SqlDb, accountId: string, now: number = Date.now()): Promise<Record<string, number>> {
   const rows = await db.all<{ folder_id: string; unread: number }>(
     `SELECT folder_id, COUNT(*) AS unread FROM messages
-     WHERE account_id = ?
+     WHERE account_id = ? AND (snoozed_until IS NULL OR snoozed_until <= ?)
        AND NOT EXISTS (SELECT 1 FROM json_each(messages.flags) WHERE lower(json_each.value) = lower(?))
      GROUP BY folder_id`,
     accountId,
+    now,
     SEEN
   )
   return Object.fromEntries(rows.map((row) => [row.folder_id, row.unread]))

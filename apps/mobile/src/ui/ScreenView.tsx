@@ -99,6 +99,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onBack={() => messages.leave(screen)}
           onEdit={() => compose.startFromDraft(screen)}
           onSetTag={(keyword, on) => messages.setTag(screen, keyword, on)}
+          onSnooze={(until) => messages.snooze(screen, until)}
+          onUnsnooze={() => messages.unsnooze(screen)}
           onCreateTag={(name, color) => tags.create(name, color)}
           onReply={() => compose.startReply(screen)}
           onReplyAll={() => compose.startReplyAll(screen)}

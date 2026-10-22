@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native'
 import { tagCoverage, type Tag } from '../tags'
 import { Chip } from './controls'
 import { Icon } from './Icon'
+import { SnoozeSheet } from './SnoozeSheet'
 import { TagSheet } from './TagSheet'
 import { useTags } from './tags'
 import type { Selection } from './useSelection'
@@ -37,14 +38,18 @@ export function SelectionBar(props: {
   selection: Selection
   /** The flags of each message that is chosen, which say which tags they have. */
   flagLists: string[][]
+  /** Whether the list is the one of the messages that are put aside, where they are brought back and not put aside. */
+  snoozedList?: boolean
   onCreateTag: (name: string, color: string) => Promise<Tag | undefined>
 }) {
   const styles = useStyles()
   const tags = useTags()
   const [tagging, setTagging] = useState(false)
+  const [snoozing, setSnoozing] = useState(false)
   const { selection } = props
   return (
     <View style={styles.actionBar}>
+      <SnoozeSheet visible={snoozing} onChoose={(until) => void selection.snooze(until)} onClose={() => setSnoozing(false)} />
       <TagSheet
         visible={tagging}
         tags={tags}
@@ -58,6 +63,11 @@ export function SelectionBar(props: {
         <Chip label="Ungelesen" active={false} onPress={() => void selection.markRead(false)} />
         <Chip label="★" active={false} onPress={() => void selection.toggleStar()} />
         <Chip label="Tags" active={false} onPress={() => setTagging(true)} />
+        {props.snoozedList ? (
+          <Chip label="Zurückholen" active={false} onPress={() => void selection.snooze(null)} />
+        ) : (
+          <Chip label="Später erinnern" active={false} onPress={() => setSnoozing(true)} />
+        )}
         <Chip label="Archivieren" active={false} onPress={() => void selection.archive()} />
         <Chip label="Spam" active={false} onPress={() => void selection.markAsJunk()} />
         <Chip label="Löschen" active={false} onPress={() => void selection.remove()} />

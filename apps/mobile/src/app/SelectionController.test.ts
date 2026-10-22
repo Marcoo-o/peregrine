@@ -59,6 +59,29 @@ describe('tagging several messages', () => {
   })
 })
 
+describe('putting several messages aside', () => {
+  it('takes them out of the list until the moment, in every folder of the choice, and brings them back', async () => {
+    const t = await twoAccounts()
+    await t.app.navigator.showMessages(t.work, t.workInbox, { sync: false })
+    const later = Date.now() + 3_600_000
+
+    await t.app.selection.snooze(t.pick(t.work, t.workInbox, 1, 3), later)
+    expect(t.store.screen).toMatchObject({ name: 'messages', messages: [{ uid: 2 }] })
+    expect(t.server.calls).toEqual([])
+
+    await t.app.selection.snooze(t.pick(t.work, t.workInbox, 1, 3), null)
+    expect((t.store.screen as { messages: { uid: number }[] }).messages.map((message) => message.uid)).toEqual([3, 2, 1])
+  })
+
+  it('is across the accounts of a choice in a list of all of them', async () => {
+    const t = await twoAccounts()
+    await t.app.navigator.showUnified({ refresh: false, role: 'inbox' })
+    await t.app.selection.snooze([...t.pick(t.work, t.workInbox, 1), ...t.pick(t.home, t.homeInbox, 1)], Date.now() + 3_600_000)
+    const shown = (t.store.screen as { messages: { subject: string }[] }).messages.map((message) => message.subject)
+    expect(new Set(shown)).toEqual(new Set(['two', 'three']))
+  })
+})
+
 describe('marking several messages read or unread', () => {
   it('adds the flag to each of them, through the queue, and shows the list as it is now', async () => {
     const t = await twoAccounts()

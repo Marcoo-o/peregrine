@@ -2,7 +2,7 @@ import { getAccount } from '../accounts'
 import { describeError } from '../errors'
 import { FLAGGED, SEEN } from '../flags'
 import { getFolder, getFolderBySpecialUse, type Folder } from '../folders'
-import { listMessages } from '../messages'
+import { getMessage, snoozeMessages } from '../messages'
 import type { Navigator } from './Navigator'
 import { groupByFolder, type Picked } from './selection'
 import type { Services } from './services'
@@ -45,6 +45,13 @@ export class SelectionController {
     )
   }
 
+  /** Puts the messages aside until a moment, which only this phone knows of, or brings them back when it is null. */
+  async snooze(picked: Picked[], until: number | null): Promise<void> {
+    await this.eachFolder(picked, (folder, uids) =>
+      snoozeMessages(this.services.db, uids.map((uid) => ({ folderId: folder.id, uid })), until)
+    )
+  }
+
   /** Puts the messages into the archive of their accounts. Returns what is to be said when an account has none. */
   archive(picked: Picked[]): Promise<string | undefined> {
     return this.moveToRole(picked, '\\Archive', 'Archivordner')
@@ -76,9 +83,8 @@ export class SelectionController {
 
   private async allStarred(picked: Picked[]): Promise<boolean> {
     for (const group of groupByFolder(picked)) {
-      const messages = await listMessages(this.services.db, group.folderId)
       for (const uid of group.uids) {
-        const message = messages.find((candidate) => candidate.uid === uid)
+        const message = await getMessage(this.services.db, group.folderId, uid)
         if (message && !message.flags.includes(FLAGGED)) return false
       }
     }

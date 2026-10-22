@@ -147,6 +147,25 @@ describe('working on a message', () => {
     expect(t.server.calls).toContain('remove INBOX 1 Work')
   })
 
+  it('puts it aside until a moment and goes back to the list, which does not have it any more, and does not ask the server', async () => {
+    const t = await connectedInbox()
+    await t.app.messages.snooze(await opened(t), Date.now() + 3_600_000)
+    expect(t.store.screen).toMatchObject({ name: 'messages', messages: [] })
+    // Reading it was told to the server, as always; putting it aside is not told, and moves nothing.
+    expect(t.server.calls.filter((call) => /^(move|delete|remove)/.test(call))).toEqual([])
+  })
+
+  it('brings a message that is put aside back now, staying on it', async () => {
+    const t = await connectedInbox()
+    const open = await opened(t)
+    await t.app.messages.snooze(open, Date.now() + 3_600_000)
+    t.store.showScreen(open)
+    await t.app.messages.unsnooze(open)
+    expect(t.store.screen).toMatchObject({ name: 'message', summary: { snoozedUntil: null } })
+    await t.app.navigator.showMessages(open.account, open.folder, { sync: false })
+    expect(t.store.screen).toMatchObject({ name: 'messages', messages: [{ uid: open.summary.uid }] })
+  })
+
   it('stars it and takes the star off, staying on the message', async () => {
     const t = await connectedInbox()
     await t.app.messages.toggleFlagged(await opened(t))

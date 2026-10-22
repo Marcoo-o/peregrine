@@ -10,6 +10,7 @@ import { roleLabel } from './folderLabel'
 import { ListHead } from './ListHead'
 import { MessageRow } from './MessageRow'
 import { SelectionBar, SelectionHeader } from './SelectionBar'
+import { backAtText } from './snoozeText'
 import { SwipeableRow } from './SwipeableRow'
 import { TopBar } from './TopBar'
 import { useSelection, type SelectionActions } from './useSelection'
@@ -74,7 +75,13 @@ export function UnifiedScreen(props: {
               showPreview={props.state.showPreview}
               account={item.accountName}
               accountColor={item.accountColor}
-              pendingNote={item.pendingMoveTo ? 'wird verschoben, sobald es geht' : undefined}
+              pendingNote={
+              item.pendingMoveTo
+                ? 'wird verschoben, sobald es geht'
+                : role === 'snoozed' && item.snoozedUntil !== null
+                  ? backAtText(item.snoozedUntil)
+                  : undefined
+            }
               choosing={selection.selecting}
               chosen={selection.isChosen(item)}
               onPress={() => (selection.selecting ? selection.toggle(item) : props.onOpen(item))}
@@ -83,7 +90,7 @@ export function UnifiedScreen(props: {
           </SwipeableRow>
         )}
       />
-      {selection.selecting ? <SelectionBar selection={selection} flagLists={selection.picked.map((message) => message.flags)} onCreateTag={props.onCreateTag} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
+      {selection.selecting ? <SelectionBar selection={selection} snoozedList={role === 'snoozed'} flagLists={selection.picked.map((message) => message.flags)} onCreateTag={props.onCreateTag} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
     </View>
   )
 }

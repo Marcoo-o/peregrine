@@ -10,7 +10,7 @@ import { describeError, explainError } from '../errors'
 import { FLAGGED, SEEN } from '../flags'
 import { getFolder, getFolderBySpecialUse, listFolders, type Folder } from '../folders'
 import type { MailActions } from '../mailActions'
-import { listMessages, type StoredMessage } from '../messages'
+import { getMessage, snoozeMessages, type StoredMessage } from '../messages'
 import { readMessage } from '../messageText'
 import { assessMessage, isOwnAddress, knownDomainsOf } from '../reading/assessment'
 import type { SearchHit } from '../search'
@@ -59,7 +59,7 @@ export class MessageController {
     const account = await getAccount(db, target.accountId)
     const folder = await getFolder(db, target.folderId)
     if (!account || !folder) return
-    const summary = (await listMessages(db, folder.id)).find((message) => message.uid === target.uid)
+    const summary = await getMessage(db, folder.id, target.uid)
     if (summary) await this.open(account, folder, summary, 'folder')
   }
 
@@ -139,7 +139,7 @@ export class MessageController {
     const { mail, db } = this.services
     const flagged = state.summary.flags.includes(FLAGGED)
     await mail.setFlags(state.folder, [state.summary.uid], flagged ? [] : [FLAGGED], flagged ? [FLAGGED] : [])
-    const fresh = (await listMessages(db, state.folder.id)).find((message) => message.uid === state.summary.uid)
+    const fresh = await getMessage(db, state.folder.id, state.summary.uid)
     if (fresh) this.store.showScreen({ ...state, summary: fresh })
   }
 
@@ -147,7 +147,21 @@ export class MessageController {
   async setTag(state: MessageState, keyword: string, on: boolean): Promise<void> {
     const { mail, db } = this.services
     await mail.setFlags(state.folder, [state.summary.uid], on ? [keyword] : [], on ? [] : [keyword])
-    const fresh = (await listMessages(db, state.folder.id)).find((message) => message.uid === state.summary.uid)
+    const fresh = await getMessage(db, state.folder.id, state.summary.uid)
+    if (fresh) this.store.showScreen({ ...state, summary: fresh })
+  }
+
+  /** Puts the open message aside until a moment, and goes back to the list it was opened from, which does not have it now. */
+  async snooze(state: MessageState, until: number): Promise<void> {
+    await snoozeMessages(this.services.db, [{ folderId: state.folder.id, uid: state.summary.uid }], until)
+    await this.leave(state)
+  }
+
+  /** Brings the open message back now, and stays on it. */
+  async unsnooze(state: MessageState): Promise<void> {
+    const { db } = this.services
+    await snoozeMessages(db, [{ folderId: state.folder.id, uid: state.summary.uid }], null)
+    const fresh = await getMessage(db, state.folder.id, state.summary.uid)
     if (fresh) this.store.showScreen({ ...state, summary: fresh })
   }
 
