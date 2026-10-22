@@ -52,7 +52,13 @@ export function useSelection<T extends Picked>(shown: readonly T[], actions: Sel
     toggleStar: () => act(() => actions.toggleStar(picked)),
     archive: () => act(() => actions.archive(picked)),
     markAsJunk: () => act(() => actions.markAsJunk(picked)),
-    remove: () => act(() => actions.remove(picked))
+    remove: () => act(() => actions.remove(picked)),
+    // One message that was swiped, which is not a choice and has nothing to do with the one that is being made.
+    archiveMessage: async (message: Picked) => setNotice((await actions.archive([message])) || undefined),
+    removeMessage: async (message: Picked) => {
+      await actions.remove([message])
+      setNotice(undefined)
+    }
   }
 }
 

@@ -9,6 +9,7 @@ import { folderLabel } from './folderLabel'
 import { ListHead } from './ListHead'
 import { MessageRow } from './MessageRow'
 import { SelectionBar, SelectionHeader } from './SelectionBar'
+import { SwipeableRow } from './SwipeableRow'
 import { TopBar } from './TopBar'
 import { useSelection, type SelectionActions } from './useSelection'
 import { useStyles } from './useStyles'
@@ -67,16 +68,22 @@ export function MessagesScreen(props: {
         onRefresh={props.onRefresh}
         ListEmptyComponent={<EmptyListNote busy={busy} total={messages.length} />}
         renderItem={({ item }) => (
-          <MessageRow
-            message={item.message}
-            sender={item.message.sender}
-            showPreview={showPreview}
-            pendingNote={pendingNote(item.message, folderNames)}
-            choosing={selection.selecting}
-            chosen={selection.isChosen(item)}
-            onPress={() => (selection.selecting ? selection.toggle(item) : props.onOpen(item.message))}
-            onLongPress={() => selection.toggle(item)}
-          />
+          <SwipeableRow
+            disabled={selection.selecting}
+            onArchive={() => selection.archiveMessage(item)}
+            onDelete={() => selection.removeMessage(item)}
+          >
+            <MessageRow
+              message={item.message}
+              sender={item.message.sender}
+              showPreview={showPreview}
+              pendingNote={pendingNote(item.message, folderNames)}
+              choosing={selection.selecting}
+              chosen={selection.isChosen(item)}
+              onPress={() => (selection.selecting ? selection.toggle(item) : props.onOpen(item.message))}
+              onLongPress={() => selection.toggle(item)}
+            />
+          </SwipeableRow>
         )}
       />
       {selection.selecting ? <SelectionBar selection={selection} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}

@@ -206,6 +206,11 @@ function createStyles({ colors }: Theme) {
     listBottom: { paddingBottom: 88 },
     accountTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SIZE.gap },
     // The people suggested under an address field, as one block that belongs to the field above it.
+    // A row that is swiped: the pictures that come out from under it, and the row itself, which has to cover them.
+    swipeUnder: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row' },
+    swipeSide: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, gap: 2 },
+    swipeLabel: { color: colors.onAccent, fontSize: 12, fontWeight: '600' },
+    swipeRow: { backgroundColor: colors.background },
     // The line of text under a subject in a list.
     preview: { fontSize: 14, lineHeight: 19, color: colors.muted, marginTop: 2 },
     suggestions: {
