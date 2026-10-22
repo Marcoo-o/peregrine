@@ -27,7 +27,8 @@ const ROLES: Record<string, string> = {
   Trash: '\\Trash',
   Archive: '\\Archive',
   Junk: '\\Junk',
-  Sent: '\\Sent'
+  Sent: '\\Sent',
+  Drafts: '\\Drafts'
 }
 
 /** One account's mail on the fake server: folders by path. */

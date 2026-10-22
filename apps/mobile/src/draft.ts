@@ -24,6 +24,34 @@ export interface Draft {
 
 export const emptyDraft: Draft = { to: '', cc: '', subject: '', body: '', attachments: [] }
 
+/**
+ * The draft of a message that was kept as one, to be written on, or the reason it cannot be: saving it again would
+ * leave out what the phone cannot show or write, and the server's copy would lose it. That is attached files, a
+ * formatted text (the phone writes plain text only) and recipients that are not shown (`Bcc`).
+ */
+export function editableDraft(message: ReadableMessage, attachmentCount: number): { draft: Draft } | { refusal: string } {
+  if (attachmentCount > 0) {
+    return { refusal: 'Dieser Entwurf hat Anhänge. Auf dem Handy lässt er sich noch nicht weiterschreiben, ohne sie zu verlieren.' }
+  }
+  if (message.html !== null) {
+    return { refusal: 'Dieser Entwurf hat eine Formatierung, die das Handy noch nicht bearbeiten kann, ohne sie zu verlieren.' }
+  }
+  if (message.headers['bcc']) {
+    return { refusal: 'Dieser Entwurf hat verdeckte Empfänger, die das Handy noch nicht zeigen kann.' }
+  }
+  return {
+    draft: {
+      to: message.to,
+      cc: message.cc,
+      subject: message.subject,
+      body: message.text,
+      attachments: [],
+      inReplyTo: message.headers['in-reply-to']?.trim() || undefined,
+      references: message.references || undefined
+    }
+  }
+}
+
 /** Whether the user has changed a draft from the one it started as, so that leaving it would lose something. */
 export function isChanged(start: Draft, now: Draft): boolean {
   const files = (draft: Draft) => draft.attachments.map((file) => file.path).join('|')
