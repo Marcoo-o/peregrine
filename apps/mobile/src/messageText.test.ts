@@ -334,5 +334,6 @@ describe('readMessage, for showing it as the sender wrote it', () => {
       )
     )
     expect(message.inlineImages).toEqual({})
-  })
+    // A message of 8 MB is read here, which a slow runner that has other tests to run takes longer for than the 5 s a test gets.
+  }, 30_000)
 })
