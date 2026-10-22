@@ -240,6 +240,8 @@ function createStyles({ colors }: Theme) {
       marginHorizontal: -SIZE.padding
     },
     actionBarContent: { flexDirection: 'row', gap: SIZE.gap, paddingHorizontal: SIZE.padding },
+    // The pictures share the width, so that all of them are in view whatever the width of the phone is.
+    actionIcons: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 4 },
 
     body: { fontSize: 16, lineHeight: 24, color: colors.text, paddingBottom: 24 },
     section: {

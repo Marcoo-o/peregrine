@@ -4,6 +4,7 @@ import type { MessagesState } from '../app/screens'
 import { filterMessages, NO_FILTER } from '../listFilter'
 import type { StoredMessage } from '../messages'
 import { Fab, Spinner } from './controls'
+import { EmptyListNote } from './EmptyListNote'
 import { folderLabel } from './folderLabel'
 import { ListHead } from './ListHead'
 import { MessageRow } from './MessageRow'
@@ -64,7 +65,7 @@ export function MessagesScreen(props: {
         keyExtractor={(row) => String(row.uid)}
         refreshing={busy}
         onRefresh={props.onRefresh}
-        ListEmptyComponent={busy ? undefined : <Text style={styles.hint}>Keine Nachrichten.</Text>}
+        ListEmptyComponent={<EmptyListNote busy={busy} total={messages.length} />}
         renderItem={({ item }) => (
           <MessageRow
             message={item.message}

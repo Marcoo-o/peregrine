@@ -734,11 +734,15 @@ to go through, accounts, folders and messages.
 Shown on the emulator, light: a folder opened from the sidebar, the top bar and the filters, the drawer with the
 accounts and the tree, and the list of sent messages of all accounts from the drawer.
 
-Not done: the actions of an open message are still words in a bar and not the desktop's row of pictures, and the
-hint for a first message from an address, which the desktop shows, is not there. The lists of accounts and of
-folders are still there and are reached from the sidebar, and are not styled like it. Nothing here was looked at in
-the dark theme. The list says that it has no messages in its top and in its body, which is once too often.
-Swiping, a preview of the text, tags, snoozing and the filter rules of the desktop do not exist on the phone.
+Afterwards, the actions of an open message became the desktop's row of pictures: reply, reply to all, forward,
+archive, star, delete and a menu for what is done less often. Seven fit the width of the narrowest phones when they
+share it, which is why moving, marking as unread and as spam are behind the last. The list no longer says twice that
+it has no messages: the line over it says so, and the list only speaks when the filters have taken away all there are.
+
+Not done: the hint for a first message from an address, which the desktop shows, is not there. The lists of accounts
+and of folders are still there and are reached from the sidebar, and are not styled like it. Nothing here was looked
+at in the dark theme, and the row of pictures was not looked at on the device. Swiping, a preview of the text, tags,
+snoozing and the filter rules of the desktop do not exist on the phone.
 
 ## What stage 4 found
 

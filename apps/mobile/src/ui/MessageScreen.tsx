@@ -9,10 +9,11 @@ import { hintsFor } from '../reading/hints'
 import { decideLink } from '../reading/linkGuard'
 import { ActionSheet } from './ActionSheet'
 import { AttachmentList } from './AttachmentList'
-import { Chip, Spinner } from './controls'
+import { Spinner } from './controls'
 import { BackBar, Title } from './Header'
 import { LinkConfirm } from './LinkConfirm'
 import { MailView } from './MailView'
+import { MessageActions } from './MessageActions'
 import { Notices } from './Notice'
 import { SenderBlock } from './SenderBlock'
 import { useStyles } from './useStyles'
@@ -96,26 +97,25 @@ export function MessageScreen(props: {
         )}
       </ScrollView>
 
-      <View style={styles.actionBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionBarContent}>
-          <Chip label="Antworten" active={false} onPress={props.onReply} disabled={!message} />
-          <Chip label="Allen antworten" active={false} onPress={props.onReplyAll} disabled={!message} />
-          <Chip label="Weiterleiten" active={false} onPress={props.onForward} disabled={!message} />
-          <Chip label={flagged ? '★' : '☆'} active={flagged} onPress={props.onToggleFlag} />
-          <Chip label="Mehr …" active={false} onPress={() => setMenuOpen(true)} />
-        </ScrollView>
-      </View>
+      <MessageActions
+        ready={Boolean(message)}
+        flagged={flagged}
+        onReply={props.onReply}
+        onReplyAll={props.onReplyAll}
+        onForward={props.onForward}
+        onArchive={props.onArchive}
+        onToggleFlag={props.onToggleFlag}
+        onDelete={props.onDelete}
+        onMore={() => setMenuOpen(true)}
+      />
 
       <ActionSheet
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}
         actions={[
           { label: 'Als ungelesen markieren', onPress: props.onToggleSeen },
-          { label: flagged ? 'Markierung entfernen' : 'Markieren', onPress: props.onToggleFlag },
           { label: 'Verschieben …', onPress: props.onMove },
-          { label: 'Archivieren', onPress: props.onArchive },
-          { label: 'Als Spam markieren', onPress: props.onJunk },
-          { label: 'Löschen', onPress: props.onDelete, danger: true }
+          { label: 'Als Spam markieren', onPress: props.onJunk }
         ]}
       />
       <LinkConfirm

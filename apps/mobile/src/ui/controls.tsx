@@ -46,7 +46,15 @@ export function Chip(props: { label: string; active: boolean; onPress: () => voi
 }
 
 /** A button that is only a picture, as small as a thumb can still hit: what the top of the desktop's window has. */
-export function IconButton(props: { name: IconName; label: string; onPress: () => void; color?: string; disabled?: boolean }) {
+export function IconButton(props: {
+  name: IconName
+  label: string
+  onPress: () => void
+  color?: string
+  /** Whether the picture is filled in, which is how a star that is set differs from one that is not. */
+  filled?: boolean
+  disabled?: boolean
+}) {
   const styles = useStyles()
   return (
     <Pressable
@@ -56,7 +64,7 @@ export function IconButton(props: { name: IconName; label: string; onPress: () =
       style={[styles.iconButton, props.disabled && styles.buttonDisabled]}
       onPress={props.onPress}
     >
-      <Icon name={props.name} size={22} color={props.color} />
+      <Icon name={props.name} size={22} color={props.color} fill={props.filled ? props.color : undefined} />
     </Pressable>
   )
 }

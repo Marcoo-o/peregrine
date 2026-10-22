@@ -4,6 +4,7 @@ import type { UnifiedState } from '../app/screens'
 import { filterMessages, NO_FILTER } from '../listFilter'
 import type { UnifiedMessage } from '../unified'
 import { Fab } from './controls'
+import { EmptyListNote } from './EmptyListNote'
 import { roleLabel } from './folderLabel'
 import { ListHead } from './ListHead'
 import { MessageRow } from './MessageRow'
@@ -57,7 +58,7 @@ export function UnifiedScreen(props: {
         keyExtractor={(message) => `${message.folderId}:${message.uid}`}
         refreshing={busy}
         onRefresh={props.onRefresh}
-        ListEmptyComponent={busy ? undefined : <Text style={styles.hint}>Keine Nachrichten.</Text>}
+        ListEmptyComponent={<EmptyListNote busy={busy} total={messages.length} />}
         renderItem={({ item }) => (
           <MessageRow
             message={item}
