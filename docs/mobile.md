@@ -770,6 +770,39 @@ Two things the emulator showed that had nothing to do with looks, both fixed:
 Not done: the list of folders of an account is still in the old style, with the account's buttons under it. Swiping, a
 preview of the text, tags, snoozing and the filter rules of the desktop do not exist on the phone.
 
+## What drafts found
+
+Giving up a written message used to lose it. The desktop keeps drafts on the server, in the Drafts folder, marked
+`\Draft`, and replaces the old revision with the new one on each save. The phone does the same, so a draft started on
+one is there on the other.
+
+- *Leaving a changed message asks three things:* write on, keep it as a draft, or throw it away. Write on is the filled
+  button, because it is the one that does no harm to a tap meant for something else. An unchanged message is left at
+  once, as before.
+- *Saving goes to the server at once and not through the queue.* Everything else that changes mail waits in the queue so
+  that decisions reach the server in the order they were made. A new message in the Drafts folder does not compete
+  with any of them, and the queue's kinds are shared with the desktop, so a new kind would have changed the desktop.
+  The price is that saving needs a connection. Without one the screen stays, says why, and the message is still
+  there to send or to give up: a draft that is only half kept is worse than one that was not kept.
+- *A revision replaces the one before it the way the desktop does it:* the new one is appended first and the old one is
+  deleted after, and the deletion goes through the queue, which already knows how to delete for good. A failure in
+  between leaves two drafts and not none.
+- *Sending a draft deletes the draft;* giving up a draft that was opened leaves it as it was on the server, and goes
+  to the Drafts folder.
+- *Which drafts can be written on.* A draft is opened only when saving it again would keep all of it. One with attached
+  files is not (the phone would write a new copy without them), nor one with a formatted text (it writes plain text), nor one
+  with recipients in `Bcc` (it has no such field). The reason is said on the message. Saving a new message with
+  attached files is fine: they go to the server with it.
+- *Own messages are no first contact.* The hint "Erste Nachricht von dieser Adresse" showed on a draft because
+  nothing else is from the sender, who is the user. It is left out for any of the user's own addresses.
+
+Seen on the emulator: a new message saved as a draft (flags `\Draft` and `\Seen`, the headers and the text as
+written), the draft opened from the Drafts folder, written on and saved again, with exactly one draft left on the server.
+Sending a draft and the failure without a connection are covered by tests and were not tried on the device.
+
+Not done: drafts while offline, saving as the user writes, a `Bcc` field, formatted and encrypted drafts, and writing
+on a draft with attached files.
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was

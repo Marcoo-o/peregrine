@@ -47,6 +47,7 @@ export function ComposeScreen(props: {
           { label: 'Weiter schreiben', onPress: () => setDiscarding(false) },
           {
             label: 'Als Entwurf speichern',
+            variant: 'secondary',
             onPress: () => {
               setDiscarding(false)
               props.onSaveDraft(draft)
