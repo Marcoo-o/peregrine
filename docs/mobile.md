@@ -745,9 +745,14 @@ it: a message is a first one when it is the only one from its address, itself in
 than the desktop's, which has seen all the mail that ever came, so the phone's words say "among the messages on this
 device" and not "never before". It is shown as information, below the links and the counting pixels, not as a warning.
 
+Looked at on the emulator, in light and in dark: the open message with its hints and the row of pictures (all seven in
+view, the star filled in the warning colour once set), the list of a folder with its filters and the corner button, the
+sidebar, and the list of folders of an account. The dark theme held up in all of them; the page of a message stays
+white in both, as the sender made it.
+
 Not done: the lists of accounts and of folders are still there and are reached from the sidebar, and are not styled
-like it. Nothing here was looked at in the dark theme, and the row of pictures was not looked at on the device. Swiping, a preview of the text, tags,
-snoozing and the filter rules of the desktop do not exist on the phone.
+like it. A large system font was not tried on the forms. Swiping, a preview of the text, tags, snoozing and the filter
+rules of the desktop do not exist on the phone.
 
 ## What stage 4 found
 
