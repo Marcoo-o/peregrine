@@ -3,12 +3,14 @@ import { FlatList, Text, View } from 'react-native'
 import type { MessagesState } from '../app/screens'
 import { filterMessages, NO_FILTER } from '../listFilter'
 import type { StoredMessage } from '../messages'
+import type { Tag } from '../tags'
 import { Fab, Spinner } from './controls'
 import { EmptyListNote } from './EmptyListNote'
 import { folderLabel } from './folderLabel'
 import { ListHead } from './ListHead'
 import { MessageRow } from './MessageRow'
 import { SelectionBar, SelectionHeader } from './SelectionBar'
+import { SwipeableRow } from './SwipeableRow'
 import { TopBar } from './TopBar'
 import { useSelection, type SelectionActions } from './useSelection'
 import { useStyles } from './useStyles'
@@ -26,6 +28,7 @@ export function MessagesScreen(props: {
   onSearch: () => void
   onSettings: () => void
   onCompose: () => void
+  onCreateTag: (name: string, color: string) => Promise<Tag | undefined>
   onOpen: (message: StoredMessage) => void
 }) {
   const styles = useStyles()
@@ -67,19 +70,25 @@ export function MessagesScreen(props: {
         onRefresh={props.onRefresh}
         ListEmptyComponent={<EmptyListNote busy={busy} total={messages.length} />}
         renderItem={({ item }) => (
-          <MessageRow
-            message={item.message}
-            sender={item.message.sender}
-            showPreview={showPreview}
-            pendingNote={pendingNote(item.message, folderNames)}
-            choosing={selection.selecting}
-            chosen={selection.isChosen(item)}
-            onPress={() => (selection.selecting ? selection.toggle(item) : props.onOpen(item.message))}
-            onLongPress={() => selection.toggle(item)}
-          />
+          <SwipeableRow
+            disabled={selection.selecting}
+            onArchive={() => selection.archiveMessage(item)}
+            onDelete={() => selection.removeMessage(item)}
+          >
+            <MessageRow
+              message={item.message}
+              sender={item.message.sender}
+              showPreview={showPreview}
+              pendingNote={pendingNote(item.message, folderNames)}
+              choosing={selection.selecting}
+              chosen={selection.isChosen(item)}
+              onPress={() => (selection.selecting ? selection.toggle(item) : props.onOpen(item.message))}
+              onLongPress={() => selection.toggle(item)}
+            />
+          </SwipeableRow>
         )}
       />
-      {selection.selecting ? <SelectionBar selection={selection} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
+      {selection.selecting ? <SelectionBar selection={selection} flagLists={selection.picked.map((row) => row.message.flags)} onCreateTag={props.onCreateTag} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
     </View>
   )
 }

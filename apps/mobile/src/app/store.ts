@@ -1,4 +1,5 @@
 import type { PendingSummary } from '@peregrine/core/pendingActions'
+import type { Tag } from '../tags'
 import type { Screen } from './screens'
 
 /** What waits in the queue, and why the first action that failed did. */
@@ -14,6 +15,8 @@ export interface AppState {
   waiting: QueueStatus | null
   /** The account the status line speaks of, or null when it speaks of all of them. */
   statusAccountId: string | null
+  /** The tags the user has made, which every list shows on its messages. */
+  tags: Tag[]
 }
 
 type Listener = () => void
@@ -26,7 +29,7 @@ type Listener = () => void
  * changed in place, which is what lets a screen tell that it changed.
  */
 export class AppStore {
-  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null }
+  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null, tags: [] }
   private readonly listeners = new Set<Listener>()
 
   get state(): AppState {
@@ -51,6 +54,10 @@ export class AppStore {
 
   setStatusAccount(statusAccountId: string | null): void {
     this.update({ statusAccountId })
+  }
+
+  setTags(tags: Tag[]): void {
+    this.update({ tags })
   }
 
   /** Calls the listener after every change, and returns the way to stop. */

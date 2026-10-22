@@ -9,7 +9,8 @@ describe('the store', () => {
       screen: { name: 'loading' },
       connected: [],
       waiting: null,
-      statusAccountId: null
+      statusAccountId: null,
+      tags: []
     })
   })
 
@@ -21,6 +22,13 @@ describe('the store', () => {
     store.setWaiting({ summary: emptySummary(), problem: null })
     expect(store.state).toMatchObject({ screen: { name: 'login' }, connected: ['a'], statusAccountId: 'a' })
     expect(store.state.waiting?.problem).toBeNull()
+  })
+
+  it('holds the tags that were made', () => {
+    const store = new AppStore()
+    const tag = { id: 't', name: 'Work', keyword: 'Work', color: '#2f5d9f', sortOrder: 0 }
+    store.setTags([tag])
+    expect(store.state.tags).toEqual([tag])
   })
 
   it('replaces the state and does not change it, so that a screen can tell that it changed', () => {

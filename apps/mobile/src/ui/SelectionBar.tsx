@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
+import { tagCoverage, type Tag } from '../tags'
 import { Chip } from './controls'
 import { Icon } from './Icon'
+import { TagSheet } from './TagSheet'
+import { useTags } from './tags'
 import type { Selection } from './useSelection'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
@@ -29,15 +33,31 @@ export function SelectionHeader(props: { selection: Selection; total: number }) 
 }
 
 /** What can be done to the messages that are chosen, at the bottom, where the thumb is. */
-export function SelectionBar(props: { selection: Selection }) {
+export function SelectionBar(props: {
+  selection: Selection
+  /** The flags of each message that is chosen, which say which tags they have. */
+  flagLists: string[][]
+  onCreateTag: (name: string, color: string) => Promise<Tag | undefined>
+}) {
   const styles = useStyles()
+  const tags = useTags()
+  const [tagging, setTagging] = useState(false)
   const { selection } = props
   return (
     <View style={styles.actionBar}>
+      <TagSheet
+        visible={tagging}
+        tags={tags}
+        coverage={(keyword) => tagCoverage(props.flagLists, keyword)}
+        onSet={(keyword, on) => void selection.setTag(keyword, on)}
+        onCreate={props.onCreateTag}
+        onClose={() => setTagging(false)}
+      />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionBarContent}>
         <Chip label="Gelesen" active={false} onPress={() => void selection.markRead(true)} />
         <Chip label="Ungelesen" active={false} onPress={() => void selection.markRead(false)} />
         <Chip label="★" active={false} onPress={() => void selection.toggleStar()} />
+        <Chip label="Tags" active={false} onPress={() => setTagging(true)} />
         <Chip label="Archivieren" active={false} onPress={() => void selection.archive()} />
         <Chip label="Spam" active={false} onPress={() => void selection.markAsJunk()} />
         <Chip label="Löschen" active={false} onPress={() => void selection.remove()} />

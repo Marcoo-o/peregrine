@@ -15,7 +15,7 @@ import { UnifiedScreen } from './UnifiedScreen'
 
 /** The screen for what the application is showing, with what each of its buttons does handed to it. */
 export function ScreenView(props: { application: Application; screen: Screen }): ReactElement {
-  const { navigator, messages, compose, accounts, settings, selection, services } = props.application
+  const { navigator, messages, compose, accounts, settings, selection, tags, services } = props.application
   const { screen } = props
 
   switch (screen.name) {
@@ -51,6 +51,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSearch={() => navigator.showSearch('')}
           onSettings={() => settings.show()}
           onCompose={() => compose.startNewFromAnyAccount(screen)}
+          onCreateTag={(name, color) => tags.create(name, color)}
           onOpen={(message) => messages.openFromUnified(message)}
         />
       )
@@ -85,6 +86,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSearch={() => navigator.showSearch('')}
           onSettings={() => settings.show()}
           onCompose={() => compose.startNew(screen.account, screen)}
+          onCreateTag={(name, color) => tags.create(name, color)}
           onOpen={(message) => messages.open(screen.account, screen.folder, message, 'folder')}
         />
       )
@@ -96,6 +98,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           state={screen}
           onBack={() => messages.leave(screen)}
           onEdit={() => compose.startFromDraft(screen)}
+          onSetTag={(keyword, on) => messages.setTag(screen, keyword, on)}
+          onCreateTag={(name, color) => tags.create(name, color)}
           onReply={() => compose.startReply(screen)}
           onReplyAll={() => compose.startReplyAll(screen)}
           onForward={() => compose.startForward(screen)}

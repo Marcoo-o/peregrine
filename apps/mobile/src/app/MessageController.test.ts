@@ -136,6 +136,17 @@ describe('working on a message', () => {
     expect(t.store.screen.name).toBe('messages')
   })
 
+  it('sets a tag on it and takes it off, through the queue, staying on the message', async () => {
+    const t = await connectedInbox()
+    await t.app.messages.setTag(await opened(t), 'Work', true)
+    expect(t.store.screen).toMatchObject({ name: 'message', summary: { flags: expect.arrayContaining(['Work']) } })
+    expect(t.server.calls).toContain('add INBOX 1 Work')
+
+    await t.app.messages.setTag(t.store.screen as MessageState, 'Work', false)
+    expect((t.store.screen as MessageState).summary.flags).not.toContain('Work')
+    expect(t.server.calls).toContain('remove INBOX 1 Work')
+  })
+
   it('stars it and takes the star off, staying on the message', async () => {
     const t = await connectedInbox()
     await t.app.messages.toggleFlagged(await opened(t))

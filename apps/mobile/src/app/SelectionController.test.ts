@@ -37,6 +37,28 @@ type Both = Awaited<ReturnType<typeof twoAccounts>>
 const flagsOf = async (t: Both, folderId: string) =>
   Object.fromEntries((await listMessages(t.db, folderId)).map((message) => [message.uid, message.flags]))
 
+describe('tagging several messages', () => {
+  it('sets a tag on each of them in each folder, through the queue, and takes it off again', async () => {
+    const t = await twoAccounts()
+    await t.app.navigator.showMessages(t.work, t.workInbox, { sync: false })
+
+    await t.app.selection.setTag(t.pick(t.work, t.workInbox, 1, 3), 'Work', true)
+    expect(await flagsOf(t, t.workInbox.id)).toMatchObject({ 1: ['Work'], 2: [SEEN], 3: ['Work'] })
+    expect(t.server.calls).toEqual(expect.arrayContaining(['add INBOX 1 Work', 'add INBOX 3 Work']))
+
+    await t.app.selection.setTag(t.pick(t.work, t.workInbox, 1), 'Work', false)
+    expect((await flagsOf(t, t.workInbox.id))[1]).toEqual([])
+    expect(t.server.calls).toContain('remove INBOX 1 Work')
+  })
+
+  it('sets it across the accounts of a choice that is in a list of all of them', async () => {
+    const t = await twoAccounts()
+    await t.app.selection.setTag([...t.pick(t.work, t.workInbox, 1), ...t.pick(t.home, t.homeInbox, 1)], 'Trip', true)
+    expect((await flagsOf(t, t.workInbox.id))[1]).toEqual(['Trip'])
+    expect((await flagsOf(t, t.homeInbox.id))[1]).toEqual(['Trip'])
+  })
+})
+
 describe('marking several messages read or unread', () => {
   it('adds the flag to each of them, through the queue, and shows the list as it is now', async () => {
     const t = await twoAccounts()

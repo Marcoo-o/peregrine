@@ -38,6 +38,13 @@ export class SelectionController {
     )
   }
 
+  /** Sets a tag on the messages, or takes it off them: a tag is a keyword like any other flag, and goes the way flags go. */
+  async setTag(picked: Picked[], keyword: string, on: boolean): Promise<void> {
+    await this.eachFolder(picked, (folder, uids) =>
+      this.services.mail.setFlags(folder, uids, on ? [keyword] : [], on ? [] : [keyword])
+    )
+  }
+
   /** Puts the messages into the archive of their accounts. Returns what is to be said when an account has none. */
   archive(picked: Picked[]): Promise<string | undefined> {
     return this.moveToRole(picked, '\\Archive', 'Archivordner')

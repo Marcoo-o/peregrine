@@ -6,6 +6,7 @@ import type { AttachmentInfo } from '../attachments'
 import { FLAGGED } from '../flags'
 import { assessPage, linksInText, type PageFacts } from '../reading/assessment'
 import { hintsFor } from '../reading/hints'
+import { tagCoverage, type Tag } from '../tags'
 import { roleOf } from '../unified'
 import { decideLink } from '../reading/linkGuard'
 import { ActionSheet } from './ActionSheet'
@@ -17,6 +18,9 @@ import { MailView } from './MailView'
 import { MessageActions } from './MessageActions'
 import { Notices } from './Notice'
 import { SenderBlock } from './SenderBlock'
+import { TagChips } from './TagChips'
+import { TagSheet } from './TagSheet'
+import { useTags } from './tags'
 import { useStyles } from './useStyles'
 
 /** When a message was written, for the line under who it is from. */
@@ -29,6 +33,8 @@ export function MessageScreen(props: {
   state: MessageState
   onBack: () => void
   onEdit: () => void
+  onSetTag: (keyword: string, on: boolean) => void
+  onCreateTag: (name: string, color: string) => Promise<Tag | undefined>
   onReply: () => void
   onReplyAll: () => void
   onForward: () => void
@@ -50,6 +56,8 @@ export function MessageScreen(props: {
   const [facts, setFacts] = useState<PageFacts | null>(null)
   const [pendingLink, setPendingLink] = useState<LinkAnalysis | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [tagging, setTagging] = useState(false)
+  const tags = useTags()
 
   // A message with a page reports its own links; one without has the addresses that are in its text.
   const page = useMemo(
@@ -77,6 +85,7 @@ export function MessageScreen(props: {
           color={account.color}
         />
         <Text style={styles.itemMeta}>{writtenAt(summary.dateMs)}</Text>
+        <TagChips flags={summary.flags} all />
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {!message && !error ? <Spinner /> : null}
 
@@ -118,9 +127,18 @@ export function MessageScreen(props: {
         onClose={() => setMenuOpen(false)}
         actions={[
           { label: 'Als ungelesen markieren', onPress: props.onToggleSeen },
+          { label: 'Tags …', onPress: () => setTagging(true) },
           { label: 'Verschieben …', onPress: props.onMove },
           { label: 'Als Spam markieren', onPress: props.onJunk }
         ]}
+      />
+      <TagSheet
+        visible={tagging}
+        tags={tags}
+        coverage={(keyword) => tagCoverage([summary.flags], keyword)}
+        onSet={props.onSetTag}
+        onCreate={props.onCreateTag}
+        onClose={() => setTagging(false)}
       />
       <LinkConfirm
         analysis={pendingLink}
