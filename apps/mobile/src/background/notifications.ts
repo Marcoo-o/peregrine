@@ -35,18 +35,31 @@ export function countText(count: number): string {
   return count === 1 ? '1 neue Nachricht' : `${count} neue Nachrichten`
 }
 
+/** The same for messages that were put aside and are back, as the desktop says it. */
+export function backCountText(count: number): string {
+  return count === 1 ? 'Nachricht ist wieder da' : `${count} Nachrichten sind wieder da`
+}
+
+/** What the notifications are for: mail that arrived, or messages that were put aside whose moment has come. */
+export type NotificationKind = 'new' | 'back'
+
+/** What the notification of a single message says under it: the account, and for a message that is back, that it is. */
+const subtitleFor = (kind: NotificationKind, accountName: string): string => (kind === 'back' ? `Wiedervorlage · ${accountName}` : accountName)
+
 /**
  * The notifications for new mail, one for each account that is to be told, as the desktop makes them.
  *
  * A single message with the preview on says who wrote and what about, with the account beneath. More
  * than one, or no preview, says only for which account and how many: what a stranger looking at the
  * screen would learn from anything else is not for them. A tap opens the newest of the messages. Muted
- * accounts, quiet hours and a switch that is off give none, by the rule the desktop uses.
+ * accounts, quiet hours and a switch that is off give none, by the rule the desktop uses. Messages that are back
+ * from being put aside are told the same way, only as being back and not as being new.
  */
 export function buildNotifications(
   newMessages: NewMessage[],
   settings: NotificationSettings,
-  now: Date
+  now: Date,
+  kind: NotificationKind = 'new'
 ): MailNotification[] {
   const policy = policyOf(settings)
   const byAccount = new Map<string, NewMessage[]>()
@@ -66,12 +79,13 @@ export function buildNotifications(
         accountId,
         title: senderName(newest.sender) || accountName,
         body: newest.subject || NEW_MESSAGE,
-        subtitle: accountName,
+        subtitle: subtitleFor(kind, accountName),
         count: 1,
         target
       })
     } else {
-      notifications.push({ accountId, title: accountName, body: countText(messages.length), count: messages.length, target })
+      const body = kind === 'back' ? backCountText(messages.length) : countText(messages.length)
+      notifications.push({ accountId, title: accountName, body, count: messages.length, target })
     }
   }
   return notifications

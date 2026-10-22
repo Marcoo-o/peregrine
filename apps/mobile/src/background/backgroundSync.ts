@@ -4,7 +4,7 @@ import { describeError } from '../errors'
 import type { Log, Services } from '../app/services'
 import { loadNotificationSettings, policyOf } from '../settings'
 import { refreshInboxes } from '../unified'
-import { inboxBaselines, newMessagesSince } from './newMail'
+import { clearSnoozed, dueSnoozed, inboxBaselines, newMessagesSince } from './newMail'
 import { buildNotifications, type MailNotification, type Notifier } from './notifications'
 
 export interface BackgroundSyncDeps {
@@ -38,7 +38,9 @@ const NOTHING = { synced: 0, failed: 0, notified: 0 }
  * spent for nothing, and opening the application brings the rest up to date anyway.
  *
  * What is new is what has a higher UID than the inbox had before, and is not read. So a message that the
- * user saw in the application is not announced afterwards, and one is announced once.
+ * user saw in the application is not announced afterwards, and one is announced once. The messages that were
+ * put aside are announced when their moment has come, which with the platform's scheduler is at the next run
+ * after it: not to the minute, by up to the interval the user chose.
  */
 export async function runBackgroundSync(deps: BackgroundSyncDeps): Promise<BackgroundSyncResult> {
   const { services, notifier, log } = deps
@@ -60,6 +62,14 @@ export async function runBackgroundSync(deps: BackgroundSyncDeps): Promise<Backg
     const notifications = buildNotifications(await newMessagesSince(services.db, baselines), settings, now)
     let notified = 0
     for (const notification of notifications) if (await show(notifier, notification, log)) notified += 1
+
+    // What was put aside and has come back is told once, and the moment is taken off what was told so that it is not told again.
+    const returned = await dueSnoozed(services.db, now.getTime())
+    for (const notification of buildNotifications(returned, settings, now, 'back')) {
+      if (!(await show(notifier, notification, log))) continue
+      notified += 1
+      await clearSnoozed(services.db, returned.filter((message) => message.accountId === notification.accountId))
+    }
     return { synced: results.length - failed.length, failed: failed.length, notified }
   } finally {
     // The connections were made for this run. Nothing is waiting to use them, and the platform stops

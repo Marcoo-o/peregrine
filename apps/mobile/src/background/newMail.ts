@@ -63,3 +63,41 @@ export async function newMessagesSince(db: SqlDb, baselines: Map<string, number>
       subject: row.subject
     }))
 }
+
+/**
+ * The messages that were put aside and whose moment has come, which nobody has been told of yet: a moment that has passed
+ * and has not been taken off. A message that came back while the application was open is among them, and is announced all
+ * the same, since the moment is what is looked at and not who saw the message.
+ */
+export async function dueSnoozed(db: SqlDb, now: number): Promise<NewMessage[]> {
+  const rows = await db.all<{
+    uid: number
+    subject: string
+    sender: string
+    account_id: string
+    folder_id: string
+    account_name: string
+  }>(
+    `SELECT m.uid, m.subject, m.sender, m.account_id, m.folder_id, a.display_name AS account_name
+     FROM messages m
+     JOIN accounts a ON a.id = m.account_id
+     WHERE m.snoozed_until IS NOT NULL AND m.snoozed_until <= ?
+     ORDER BY a.created_at, a.id, m.folder_id, m.uid`,
+    now
+  )
+  return rows.map((row) => ({
+    accountId: row.account_id,
+    accountName: row.account_name,
+    folderId: row.folder_id,
+    uid: row.uid,
+    sender: row.sender,
+    subject: row.subject
+  }))
+}
+
+/** Takes the moment off messages that were announced, which is what keeps them from being announced again. */
+export async function clearSnoozed(db: SqlDb, messages: readonly NewMessage[]): Promise<void> {
+  for (const message of messages) {
+    await db.run('UPDATE messages SET snoozed_until = NULL WHERE folder_id = ? AND uid = ?', message.folderId, message.uid)
+  }
+}
