@@ -127,7 +127,11 @@ const MIGRATIONS: string[][] = [
        color TEXT NOT NULL,
        sort_order INTEGER NOT NULL
      )`
-  ]
+  ],
+  // 8. When a message that was put aside comes back, as the desktop keeps it: the moment, in epoch milliseconds, or null
+  // for a message that is not. It is the phone's own, and is not written to the server: a message put aside here stays
+  // where it is on the other devices. A moment that has passed is no snooze at all, so nothing has to clear it.
+  ['ALTER TABLE messages ADD COLUMN snoozed_until INTEGER']
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */

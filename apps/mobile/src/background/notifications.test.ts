@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_NOTIFICATION_SETTINGS, type NotificationSettings } from '../settings'
 import type { NewMessage } from './newMail'
-import { buildNotifications, countText } from './notifications'
+import { backCountText, buildNotifications, countText } from './notifications'
 
 const settings = (over: Partial<NotificationSettings> = {}): NotificationSettings => ({
   ...DEFAULT_NOTIFICATION_SETTINGS,
@@ -99,5 +99,37 @@ describe('the notifications for new mail', () => {
   it('are none when the switch is off, and none for no new mail', () => {
     expect(buildNotifications([message()], settings({ enabled: false }), noon)).toEqual([])
     expect(buildNotifications([], settings(), noon)).toEqual([])
+  })
+})
+
+describe('the notifications for messages that are back', () => {
+  it('say how many are back, in the singular and the plural', () => {
+    expect(backCountText(1)).toBe('Nachricht ist wieder da')
+    expect(backCountText(3)).toBe('3 Nachrichten sind wieder da')
+  })
+
+  it('say who wrote and what about for one message, with where it is back from, and open it', () => {
+    expect(buildNotifications([message()], settings(), noon, 'back')).toEqual([
+      {
+        accountId: 'work',
+        title: 'Anna',
+        body: 'Budget',
+        subtitle: 'Wiedervorlage · Work',
+        count: 1,
+        target: { accountId: 'work', folderId: 'f-work', uid: 1 }
+      }
+    ])
+  })
+
+  it('say only how many for several, or for a preview that is off', () => {
+    const [several] = buildNotifications([message(), message({ uid: 2 })], settings(), noon, 'back')
+    expect(several).toMatchObject({ title: 'Work', body: '2 Nachrichten sind wieder da', count: 2, target: { uid: 2 } })
+    const [hidden] = buildNotifications([message()], settings({ preview: false }), noon, 'back')
+    expect(hidden).toMatchObject({ title: 'Work', body: 'Nachricht ist wieder da' })
+  })
+
+  it('are none for an account that is muted or in the quiet hours, as for new mail', () => {
+    expect(buildNotifications([message()], settings({ mutedAccountIds: ['work'] }), noon, 'back')).toEqual([])
+    expect(buildNotifications([message()], settings({ quietFrom: '22:00', quietTo: '07:00' }), night, 'back')).toEqual([])
   })
 })

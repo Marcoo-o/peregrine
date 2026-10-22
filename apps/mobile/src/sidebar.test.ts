@@ -34,7 +34,7 @@ describe('what the sidebar shows', () => {
   it('is nothing for no accounts', async () => {
     const { db } = await migratedDatabase()
     expect(await loadSidebar(db)).toEqual({
-      unified: { inbox: 0, drafts: 0, sent: 0, archive: 0, junk: 0, trash: 0 },
+      unified: { inbox: 0, snoozed: 0, drafts: 0, sent: 0, archive: 0, junk: 0, trash: 0 },
       accounts: []
     })
   })
@@ -65,6 +65,6 @@ describe('what the sidebar shows', () => {
     const [homeInbox] = await syncFolders(db, home.id, [entry('INBOX')])
     await saveMessages(db, workInbox, [message(1), message(2)])
     await saveMessages(db, homeInbox, [message(1)])
-    expect((await loadSidebar(db)).unified).toEqual({ inbox: 3, drafts: 0, sent: 0, archive: 0, junk: 0, trash: 0 })
+    expect((await loadSidebar(db)).unified).toEqual({ inbox: 3, snoozed: 0, drafts: 0, sent: 0, archive: 0, junk: 0, trash: 0 })
   })
 })

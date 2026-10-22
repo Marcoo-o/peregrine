@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Animated, PanResponder, Text, View } from 'react-native'
 import { Icon } from './Icon'
-import { isSwipe, swipeResult } from './swipe'
+import { COMMIT_FRACTION, isSwipe, swipeResult } from './swipe'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
 
@@ -27,6 +27,15 @@ export function SwipeableRow(props: {
   current.current = { width, disabled: props.disabled, onArchive: props.onArchive, onDelete: props.onDelete }
 
   useEffect(() => () => x.stopAnimation(), [x])
+
+  // How far the row is from where it rests, whichever way, as what the pictures under it are made of: the box that
+  // comes out grows with it, and its picture shows after a first bit and grows once it is far enough to count.
+  const reachedRight = x.interpolate({ inputRange: [0, 10_000], outputRange: [0, 10_000], extrapolateLeft: 'clamp' })
+  const reachedLeft = x.interpolate({ inputRange: [-10_000, 0], outputRange: [10_000, 0], extrapolateRight: 'clamp' })
+  const distance = x.interpolate({ inputRange: [-10_000, 0, 10_000], outputRange: [10_000, 0, 10_000] })
+  const needed = Math.max(width * COMMIT_FRACTION, 1)
+  const shown = distance.interpolate({ inputRange: [0, 24, 64], outputRange: [0, 0, 1], extrapolate: 'clamp' })
+  const grown = distance.interpolate({ inputRange: [0, needed, needed + 1], outputRange: [0.8, 1.15, 1.15], extrapolate: 'clamp' })
 
   const responder = useMemo(() => {
     const back = () => Animated.spring(x, { toValue: 0, useNativeDriver: false, bounciness: 0 }).start()
@@ -60,16 +69,25 @@ export function SwipeableRow(props: {
       ]}
       onAccessibilityAction={(event) => (event.nativeEvent.actionName === 'archive' ? props.onArchive() : props.onDelete())}
     >
-      <View style={styles.swipeUnder} pointerEvents="none">
-        <View style={[styles.swipeSide, { backgroundColor: colors.success, alignItems: 'flex-start' }]}>
+      {/* Each side is as wide as the row has been moved to it, so nothing is behind a row that is at rest. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.swipeSide, styles.swipeSideLeft, { backgroundColor: colors.success, width: reachedRight }]}
+      >
+        <Animated.View style={[styles.swipeContent, { opacity: shown, transform: [{ scale: grown }] }]}>
           <Icon name="archive" size={22} color={colors.onAccent} />
-          <Text style={styles.swipeLabel}>Archivieren</Text>
-        </View>
-        <View style={[styles.swipeSide, { backgroundColor: colors.danger, alignItems: 'flex-end' }]}>
+          <Text style={styles.swipeLabel} numberOfLines={1}>Archivieren</Text>
+        </Animated.View>
+      </Animated.View>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.swipeSide, styles.swipeSideRight, { backgroundColor: colors.danger, width: reachedLeft }]}
+      >
+        <Animated.View style={[styles.swipeContent, { opacity: shown, transform: [{ scale: grown }] }]}>
           <Icon name="trash" size={22} color={colors.onAccent} />
-          <Text style={styles.swipeLabel}>Löschen</Text>
-        </View>
-      </View>
+          <Text style={styles.swipeLabel} numberOfLines={1}>Löschen</Text>
+        </Animated.View>
+      </Animated.View>
       <Animated.View style={[styles.swipeRow, { transform: [{ translateX: x }] }]} {...responder.panHandlers}>
         {props.children}
       </Animated.View>

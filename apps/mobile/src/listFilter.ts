@@ -5,9 +5,11 @@ export interface ListFilter {
   unread: boolean
   starred: boolean
   attachments: boolean
+  /** The keyword of one tag, which narrows the list to the messages that have it, or null. One at a time, not several. */
+  tag: string | null
 }
 
-export const NO_FILTER: ListFilter = { unread: false, starred: false, attachments: false }
+export const NO_FILTER: ListFilter = { unread: false, starred: false, attachments: false, tag: null }
 
 const hasFlag = (flags: string[], flag: string): boolean => flags.some((candidate) => candidate.toLowerCase() === flag.toLowerCase())
 
@@ -17,7 +19,8 @@ export function filterMessages<T extends { flags: string[]; hasAttachment: boole
     (message) =>
       (!filter.unread || !hasFlag(message.flags, SEEN)) &&
       (!filter.starred || hasFlag(message.flags, FLAGGED)) &&
-      (!filter.attachments || message.hasAttachment)
+      (!filter.attachments || message.hasAttachment) &&
+      (filter.tag === null || hasFlag(message.flags, filter.tag))
   )
 }
 

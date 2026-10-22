@@ -233,7 +233,7 @@ describe('the unread messages of each role', () => {
     await saveMessages(made.db, bInbox, [fetched(1, day(1))])
     await saveMessages(made.db, aTrash, [fetched(1, day(1))])
 
-    expect(await unifiedUnread(made.db)).toEqual({ inbox: 3, drafts: 0, sent: 0, archive: 0, junk: 0, trash: 1 })
+    expect(await unifiedUnread(made.db)).toEqual({ inbox: 3, snoozed: 0, drafts: 0, sent: 0, archive: 0, junk: 0, trash: 1 })
   })
 })
 

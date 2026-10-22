@@ -10,6 +10,7 @@ export interface SelectionActions {
   markAsJunk(picked: Picked[]): Promise<string | undefined>
   remove(picked: Picked[]): Promise<void>
   setTag(picked: Picked[], keyword: string, on: boolean): Promise<void>
+  snooze(picked: Picked[], until: number | null): Promise<void>
 }
 
 /**
@@ -56,6 +57,8 @@ export function useSelection<T extends Picked>(shown: readonly T[], actions: Sel
     remove: () => act(() => actions.remove(picked)),
     // A tag is set on the choice without ending it, so that more can be set on the same messages.
     setTag: (keyword: string, on: boolean) => actions.setTag(picked, keyword, on),
+    // Putting aside and bringing back end the choice: the messages are gone from the list, or from the one they were in.
+    snooze: (until: number | null) => act(() => actions.snooze(picked, until)),
     // One message that was swiped, which is not a choice and has nothing to do with the one that is being made.
     archiveMessage: async (message: Picked) => setNotice((await actions.archive([message])) || undefined),
     removeMessage: async (message: Picked) => {

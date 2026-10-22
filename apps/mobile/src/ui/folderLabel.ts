@@ -26,6 +26,8 @@ export function folderLabel(folder: Pick<Folder, 'imapPath' | 'displayName' | 's
 
 const ROLE_NAMES: Record<UnifiedRole, string> = {
   inbox: 'Posteingang',
+  // What the desktop calls the folder of the messages that are put aside.
+  snoozed: 'Wiedervorlage',
   drafts: 'Entwürfe',
   sent: 'Gesendet',
   archive: 'Archiv',

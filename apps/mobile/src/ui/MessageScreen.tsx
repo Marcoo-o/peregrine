@@ -18,6 +18,7 @@ import { MailView } from './MailView'
 import { MessageActions } from './MessageActions'
 import { Notices } from './Notice'
 import { SenderBlock } from './SenderBlock'
+import { SnoozeSheet } from './SnoozeSheet'
 import { TagChips } from './TagChips'
 import { TagSheet } from './TagSheet'
 import { useTags } from './tags'
@@ -34,6 +35,8 @@ export function MessageScreen(props: {
   onBack: () => void
   onEdit: () => void
   onSetTag: (keyword: string, on: boolean) => void
+  onSnooze: (until: number) => void
+  onUnsnooze: () => void
   onCreateTag: (name: string, color: string) => Promise<Tag | undefined>
   onReply: () => void
   onReplyAll: () => void
@@ -57,6 +60,7 @@ export function MessageScreen(props: {
   const [pendingLink, setPendingLink] = useState<LinkAnalysis | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [tagging, setTagging] = useState(false)
+  const [snoozing, setSnoozing] = useState(false)
   const tags = useTags()
 
   // A message with a page reports its own links; one without has the addresses that are in its text.
@@ -128,10 +132,14 @@ export function MessageScreen(props: {
         actions={[
           { label: 'Als ungelesen markieren', onPress: props.onToggleSeen },
           { label: 'Tags …', onPress: () => setTagging(true) },
+          summary.snoozedUntil !== null && summary.snoozedUntil > Date.now()
+            ? { label: 'Jetzt zurückholen', onPress: props.onUnsnooze }
+            : { label: 'Später erinnern …', onPress: () => setSnoozing(true) },
           { label: 'Verschieben …', onPress: props.onMove },
           { label: 'Als Spam markieren', onPress: props.onJunk }
         ]}
       />
+      <SnoozeSheet visible={snoozing} onChoose={props.onSnooze} onClose={() => setSnoozing(false)} />
       <TagSheet
         visible={tagging}
         tags={tags}

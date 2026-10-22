@@ -918,6 +918,50 @@ of all accounts, and what a keyword made by another client looks like, are cover
 Not done: renaming, recolouring and deleting tags, filtering a list by a tag (the search has no `tag:` yet, nor does the
 core's parser), tags in the sidebar, snoozing, and an undo for a swipe.
 
+## What putting aside and filtering found
+
+Three things, of which the first came from looking at the swipe on the emulator.
+
+**The boxes of a swipe grow with it.** They were two halves that stood behind every row all the time, and a row that
+was moved showed one of them fixed in place. Now each side is as wide as the row has been moved to it, so there is nothing
+behind a row at rest; its picture comes in after the first 24 dp and grows when the swipe is far enough to count.
+The word under the picture keeps its own width, so a box that has only just come out is cut and does not squeeze it.
+Seen by holding the touch part of the way with `input motionevent`, to both sides.
+
+**Filtering by a tag.** The chips under the title of a list are scrollable now, and after "Ungelesen", "Markiert" and
+"Anhänge" there is one for each tag, with its colour. One tag at a time: a second tap on the same one lets it go, a tap on
+another replaces it. It narrows the list like the other filters. There is no `tag:` in the search, because the core's
+parser has none.
+
+**Putting messages aside,** as the desktop's "Später erinnern…": a message is gone from the lists until its moment and is
+back after it.
+
+- It is the phone's own, as on the desktop (`snoozed_until`, migration 8, written nowhere else), and says so under the
+  choice: "Gilt nur hier: auf anderen Geräten bleibt die Nachricht im Posteingang". Nothing is told to the server, so it
+  does not go through the queue.
+- A moment that has passed is no snooze at all, so no list needs anything cleared when it comes: the lists compare it
+  with the clock. A folder's list, the lists of all accounts and the unread counts leave the messages that are away out.
+  What is done to a message that is open finds it all the same (`getMessage`).
+- The presets are the core's (`snoozeChoices`): later today, this evening, tomorrow morning, the weekend, next week,
+  only those that are worth offering at this hour, in the order of their time, with the time they come to. Their
+  names are the desktop's. A time of one's own is not offered: it needs a picker for the date and the time.
+- *Where:* "Mehr" of an open message (and "Jetzt zurückholen" for one that is away), and the bar of several chosen
+  messages. A list of its own, "Wiedervorlage", is in the sidebar with the others, with how many are away, and each
+  message in it says "Zurück am Fr., 23. Okt., 08:00"; in that list the bar brings messages back instead.
+- *The reminder.* The periodic look for mail (see stage 6) also looks at what has come due, and tells it as "Nachricht
+  ist wieder da" or "N Nachrichten sind wieder da" for an account, with who wrote and what about for one, under the
+  heading "Wiedervorlage · account". Each is told once: the moment is taken off what was told. It goes by the same rules
+  as new mail (switched on, account not muted, not in the quiet hours), and it comes at the next run after the moment,
+  which is up to the interval the user chose later: the platform has no exact alarm to give here. While the application is
+  open the message is simply in the list again.
+
+Seen on the emulator: a message put aside until tomorrow morning from "Mehr", gone from the inbox, in "Wiedervorlage" with
+its line and its tag, and the tag filter in that list. The reminder, the lists of several accounts and the unread counts
+are covered by tests only.
+
+Not done: a time of one's own, bringing a message that comes back to the top, filtering by a tag in the search, and tags of
+other clients as filters (only the tags the user made are offered).
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was

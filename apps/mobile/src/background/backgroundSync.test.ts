@@ -183,3 +183,70 @@ describe('looking for new mail in the background', () => {
     expect(result).toMatchObject({ skipped: 'nothing to do' })
   })
 })
+
+describe('messages that were put aside, in the background', () => {
+  const away = (t: Awaited<ReturnType<typeof twoAccounts>>, user: string, until: number) =>
+    t.db.run(
+      'UPDATE messages SET snoozed_until = ? WHERE account_id = ?',
+      until,
+      user === 'work' ? t.work.id : t.home.id
+    )
+
+  it('are announced as being back once their moment has come, with who wrote and what about', async () => {
+    const t = await twoAccounts()
+    await away(t, 'work', noon.getTime() - 60_000)
+
+    const result = await t.run()
+
+    expect(result.notified).toBe(1)
+    expect(t.notifier.shown[0]).toMatchObject({
+      accountId: t.work.id,
+      title: 'sender@example.net',
+      body: 'Old at work',
+      subtitle: 'Wiedervorlage · work',
+      target: { accountId: t.work.id, uid: 1 }
+    })
+  })
+
+  it('are announced once, and the moment is taken off them', async () => {
+    const t = await twoAccounts()
+    await away(t, 'work', noon.getTime() - 60_000)
+    await t.run()
+    expect(await t.db.get('SELECT snoozed_until FROM messages WHERE account_id = ?', t.work.id)).toEqual({ snoozed_until: null })
+    expect((await t.run()).notified).toBe(0)
+    expect(t.notifier.shown).toHaveLength(1)
+  })
+
+  it('are not announced before their moment', async () => {
+    const t = await twoAccounts()
+    await away(t, 'work', noon.getTime() + 60_000)
+    expect((await t.run()).notified).toBe(0)
+    expect(await t.db.get('SELECT snoozed_until FROM messages WHERE account_id = ?', t.work.id)).toEqual({
+      snoozed_until: noon.getTime() + 60_000
+    })
+  })
+
+  it('are told as a number when there are several, and one notification for each account', async () => {
+    const t = await twoAccounts()
+    t.server.mailboxes.get('work')!.INBOX.push({ uid: 2, subject: 'Second at work' })
+    await t.run()
+    await t.db.run('UPDATE messages SET snoozed_until = ?', noon.getTime() - 1000)
+    t.notifier.shown.length = 0
+    await t.run()
+    const bodies = t.notifier.shown.map((notification) => notification.body).sort()
+    expect(bodies).toEqual(['2 Nachrichten sind wieder da', 'Old at home'].sort())
+  })
+
+  it('are not announced for an account that is muted, and the notification that fails does not keep the moment from the others', async () => {
+    const t = await twoAccounts({ enabled: true, mutedAccountIds: [] })
+    await away(t, 'work', noon.getTime() - 1000)
+    await away(t, 'home', noon.getTime() - 1000)
+    t.notifier.failFor = t.work.id
+    await t.run()
+    expect(t.notifier.shown.map((notification) => notification.accountId)).toEqual([t.home.id])
+    expect(await t.db.get('SELECT snoozed_until FROM messages WHERE account_id = ?', t.home.id)).toEqual({ snoozed_until: null })
+    expect(await t.db.get('SELECT snoozed_until FROM messages WHERE account_id = ?', t.work.id)).toEqual({
+      snoozed_until: noon.getTime() - 1000
+    })
+  })
+})
