@@ -95,6 +95,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           key={`${screen.folder.id}:${screen.summary.uid}`}
           state={screen}
           onBack={() => messages.leave(screen)}
+          onEdit={() => compose.startFromDraft(screen)}
           onReply={() => compose.startReply(screen)}
           onReplyAll={() => compose.startReplyAll(screen)}
           onForward={() => compose.startForward(screen)}
@@ -122,6 +123,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           state={screen}
           files={services.files}
           onSend={(draft) => compose.send(screen, draft)}
+          onSaveDraft={(draft) => compose.saveDraft(screen, draft)}
           onCancel={(draft) => compose.cancel(screen, draft)}
         />
       )

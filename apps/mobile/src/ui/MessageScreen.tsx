@@ -6,6 +6,7 @@ import type { AttachmentInfo } from '../attachments'
 import { FLAGGED } from '../flags'
 import { assessPage, linksInText, type PageFacts } from '../reading/assessment'
 import { hintsFor } from '../reading/hints'
+import { roleOf } from '../unified'
 import { decideLink } from '../reading/linkGuard'
 import { ActionSheet } from './ActionSheet'
 import { AttachmentList } from './AttachmentList'
@@ -27,6 +28,7 @@ function writtenAt(dateMs: number | null | undefined): string {
 export function MessageScreen(props: {
   state: MessageState
   onBack: () => void
+  onEdit: () => void
   onReply: () => void
   onReplyAll: () => void
   onForward: () => void
@@ -99,6 +101,8 @@ export function MessageScreen(props: {
 
       <MessageActions
         ready={Boolean(message)}
+        draft={roleOf(props.state.folder) === 'drafts'}
+        onEdit={props.onEdit}
         flagged={flagged}
         onReply={props.onReply}
         onReplyAll={props.onReplyAll}

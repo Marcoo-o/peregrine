@@ -1,5 +1,6 @@
 import { listAccounts, type Account } from '../accounts'
-import { emptyDraft, forwardDraft, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
+import { editableDraft, emptyDraft, forwardDraft, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
+import { saveDraft } from '../drafts'
 import { explainError } from '../errors'
 import { smtpSettingsOf } from '../send'
 import type { Navigator } from './Navigator'
@@ -55,6 +56,25 @@ export class ComposeController {
   }
 
   /**
+   * A message kept as a draft, to be written on. Opened only when saving it again would keep all of it: the reason
+   * it cannot be is said on the message, where the user asked for it.
+   */
+  startFromDraft(state: MessageState): void {
+    if (!state.message) return
+    const found = editableDraft(state.message, state.attachments?.length ?? 0)
+    if ('refusal' in found) {
+      this.store.showScreen({ ...state, notice: found.refusal })
+      return
+    }
+    this.show({
+      account: state.account,
+      returnTo: state,
+      draft: found.draft,
+      saved: { folder: state.folder, uid: state.summary.uid }
+    })
+  }
+
+  /**
    * Puts the message into the queue, which sends it now when there is a connection and when there is one
    * again when there is not. An account that cannot send is told so before anything is queued: a message
    * that would fail five times in the queue has nobody looking at it.
@@ -68,8 +88,28 @@ export class ComposeController {
     this.store.showScreen({ ...state, draft, busy: true, error: undefined })
     try {
       await this.services.mail.send(toComposeInput(state.account.id, draft))
-      this.store.showScreen(state.returnTo)
+      await this.dropSavedRevision(state)
+      await this.leave(state)
       this.navigator.refreshStatus()
+    } catch (error) {
+      this.store.showScreen({ ...state, draft, busy: false, error: explainError(error) })
+    }
+  }
+
+  /**
+   * Keeps the message as a draft on the server, in place of the revision it was opened from, and leaves. It needs a
+   * connection, which it does not wait for: a draft that is only half kept is worse than one that was not, so the
+   * screen stays, with the reason, and the message is still there to send or to give up.
+   */
+  async saveDraft(state: ComposeState, draft: Draft): Promise<void> {
+    this.store.showScreen({ ...state, draft, busy: true, error: undefined })
+    try {
+      const imap = await this.services.connections.ensure(state.account)
+      const input = toComposeInput(state.account.id, draft)
+      await saveDraft(this.services.db, this.services.files, imap, input)
+      await this.dropSavedRevision(state)
+      await this.services.files.remove(draft.attachments.map((attached) => attached.path)).catch(() => undefined)
+      await this.leave(state)
     } catch (error) {
       this.store.showScreen({ ...state, draft, busy: false, error: explainError(error) })
     }
@@ -79,10 +119,21 @@ export class ComposeController {
   async cancel(state: ComposeState, draft: Draft): Promise<void> {
     const copies = draft.attachments.map((attached) => attached.path)
     await this.services.files.remove(copies).catch(() => undefined)
-    this.store.showScreen(state.returnTo)
+    await this.leave(state)
   }
 
-  private show(start: { account: Account; returnTo: Screen; draft: Draft }): void {
+  /** The earlier revision of a draft is for good once the new one is kept or sent, as the desktop does it. */
+  private async dropSavedRevision(state: ComposeState): Promise<void> {
+    if (state.saved) await this.services.mail.remove(state.saved.folder, [state.saved.uid], { permanent: true })
+  }
+
+  /** Back to where the message was started, or to the drafts when it came from one, which show what was done to it. */
+  private async leave(state: ComposeState): Promise<void> {
+    if (state.saved) await this.navigator.showMessages(state.account, state.saved.folder, { sync: true })
+    else this.store.showScreen(state.returnTo)
+  }
+
+  private show(start: { account: Account; returnTo: Screen; draft: Draft; saved?: ComposeState['saved'] }): void {
     this.store.showScreen({ name: 'compose', ...start, busy: false })
   }
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { listPendingActions } from '@peregrine/core/pendingActionsStore'
 import { getAccount } from '../accounts'
+import { listFolders } from '../folders'
+import type { StoredMessage } from '../messages'
 import { emptyDraft, type Draft } from '../draft'
 import { appHarness, eventually } from '../testing/appHarness'
 import { readable } from '../testing/readable'
@@ -11,7 +13,7 @@ const returnTo: Screen = { name: 'login' }
 
 async function composing() {
   const t = await appHarness()
-  const work = await t.givenAccount('work', { INBOX: [], Trash: [], Sent: [] })
+  const work = await t.givenAccount('work', { INBOX: [], Trash: [], Sent: [], Drafts: [] })
   t.smtp.credentials = { user: 'work', pass: 'secret' }
   t.app.compose.startNew(work, returnTo)
   const state = t.store.screen as ComposeState
@@ -200,5 +202,138 @@ describe('giving a message up', () => {
       attachments: [{ filename: 'a.txt', path: '/store/a', contentType: 'text/plain', size: 1 }]
     })
     expect(t.store.screen).toBe(returnTo)
+  })
+})
+
+describe('drafts', () => {
+  const crlf = (lines: string[]): string => lines.join('\r\n')
+  const DRAFT = crlf(['From: work@example.org', 'To: Anna <anna@example.net>', 'Subject: Plan', '', 'Not finished', ''])
+
+  /** An account with a draft on its server, and the screen of that draft as it is open. */
+  async function withDraft(over: Partial<MessageState> = {}) {
+    const t = await composing()
+    const drafts = [{ uid: 7, subject: 'Plan', flags: ['\\Draft', '\\Seen'], source: DRAFT }]
+    const work = await t.givenAccount('draftsman', { INBOX: [], Trash: [], Sent: [], Drafts: drafts })
+    const folder = t.folderOf(await listFolders(t.db, work.id), 'Drafts')
+    const message: MessageState = {
+      name: 'message',
+      account: work,
+      folder,
+      summary: { uid: 7 } as StoredMessage,
+      origin: 'folder',
+      message: readable({ to: 'Anna <anna@example.net>', subject: 'Plan', text: 'Not finished', html: null }),
+      attachments: [],
+      ...over
+    }
+    t.smtp.credentials = { user: 'draftsman', pass: 'secret' }
+    return { ...t, work, folder, message }
+  }
+
+  it('can be written on, and sending or saving it replaces the revision it was opened from', async () => {
+    const t = await withDraft()
+    t.app.compose.startFromDraft(t.message)
+    expect(t.store.screen).toMatchObject({
+      name: 'compose',
+      draft: { to: 'Anna <anna@example.net>', subject: 'Plan', body: 'Not finished' },
+      saved: { uid: 7 },
+      returnTo: t.message
+    })
+  })
+
+  it('is not opened when saving it again would lose something, and says why on the message', async () => {
+    const t = await withDraft({ attachments: [{ filename: 'a.txt', contentType: 'text/plain', size: 1, partId: '2' } as never] })
+    t.app.compose.startFromDraft(t.message)
+    expect(t.store.screen).toMatchObject({ name: 'message', notice: expect.stringContaining('Anhänge') })
+  })
+
+  it('is not opened before its text has arrived', async () => {
+    const t = await withDraft({ message: undefined })
+    const before = t.store.screen
+    t.app.compose.startFromDraft(t.message)
+    expect(t.store.screen).toBe(before)
+  })
+
+  it('is kept on the server by a new message, which goes back to where it was started', async () => {
+    const t = await composing()
+    const work = (await getAccount(t.db, t.work.id))!
+    await t.app.compose.saveDraft({ ...t.state, account: work }, t.draft)
+    expect(t.server.calls).toContain('append Drafts')
+    expect(t.server.calls.some((call) => call.startsWith('delete'))).toBe(false)
+    expect(t.store.screen).toBe(returnTo)
+  })
+
+  it('replaces the revision it was opened from and goes to the drafts', async () => {
+    const t = await withDraft()
+    t.app.compose.startFromDraft(t.message)
+    const state = t.store.screen as ComposeState
+    t.server.calls.length = 0
+
+    await t.app.compose.saveDraft(state, { ...state.draft, body: 'Finished' })
+
+    const calls = t.server.calls
+    expect(calls).toContain('append Drafts')
+    await eventually(() => expect(t.server.calls).toContain('delete Drafts 7'))
+    expect(calls.indexOf('append Drafts')).toBeLessThan(calls.indexOf('delete Drafts 7'))
+    expect(t.store.screen).toMatchObject({ name: 'messages', folder: { imapPath: 'Drafts' } })
+  })
+
+  it('stays, with the reason, when there is no connection to keep it on, and keeps the message', async () => {
+    const t = await composing()
+    t.server.unreachable.add('work')
+    await t.app.compose.saveDraft(t.state, t.draft)
+    expect(t.store.screen).toMatchObject({
+      name: 'compose',
+      busy: false,
+      draft: t.draft,
+      error: expect.stringContaining('nicht erreichbar')
+    })
+    expect(t.files.removed).toEqual([])
+  })
+
+  it('does not drop the old revision when the new one could not be kept', async () => {
+    const t = await withDraft()
+    t.app.compose.startFromDraft(t.message)
+    const state = t.store.screen as ComposeState
+    t.server.unreachable.add('draftsman')
+    t.server.calls.length = 0
+    await t.app.compose.saveDraft(state, state.draft)
+    expect(t.server.calls.some((call) => call.startsWith('delete'))).toBe(false)
+    expect(t.store.screen).toMatchObject({ name: 'compose', error: expect.any(String) })
+  })
+
+  it('takes the attached files to the server with it, and removes the copies once the server has them', async () => {
+    const t = await composing()
+    t.files.stored.set('/store/a', new TextEncoder().encode('attached'))
+    const draft: Draft = {
+      ...t.draft,
+      attachments: [{ filename: 'a.txt', path: '/store/a', contentType: 'text/plain', size: 8 }]
+    }
+    await t.app.compose.saveDraft(t.state, draft)
+    expect(t.server.calls).toContain('append Drafts')
+    expect(t.files.removed).toEqual(['/store/a'])
+    expect(t.store.screen).toBe(returnTo)
+  })
+
+  it('is removed from the folder when its sending was queued', async () => {
+    const t = await withDraft()
+    t.app.compose.startFromDraft(t.message)
+    const state = t.store.screen as ComposeState
+    await t.app.services.connections.ensure(state.account)
+    t.server.calls.length = 0
+
+    await t.app.compose.send(state, state.draft)
+
+    await eventually(() => expect(t.server.calls).toContain('delete Drafts 7'))
+    expect(t.store.screen).toMatchObject({ name: 'messages', folder: { imapPath: 'Drafts' } })
+  })
+
+  it('stays as it was when it is given up, and goes to the drafts', async () => {
+    const t = await withDraft()
+    t.app.compose.startFromDraft(t.message)
+    const state = t.store.screen as ComposeState
+    t.server.calls.length = 0
+    await t.app.compose.cancel(state, state.draft)
+    expect(t.server.calls.some((call) => call.startsWith('delete'))).toBe(false)
+    expect(t.store.screen).toMatchObject({ name: 'messages', folder: { imapPath: 'Drafts' } })
   })
 })

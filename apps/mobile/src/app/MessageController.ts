@@ -11,7 +11,7 @@ import { getFolder, getFolderBySpecialUse, listFolders, type Folder } from '../f
 import type { MailActions } from '../mailActions'
 import { listMessages, type StoredMessage } from '../messages'
 import { readMessage } from '../messageText'
-import { assessMessage, knownDomainsOf } from '../reading/assessment'
+import { assessMessage, isOwnAddress, knownDomainsOf } from '../reading/assessment'
 import type { SearchHit } from '../search'
 import { isFirstContact, messagesFrom } from '../senderHistory'
 import type { UnifiedMessage } from '../unified'
@@ -81,8 +81,11 @@ export class MessageController {
       const full = await imap.fetchFullMessage(folder.imapPath, summary.uid)
       if (!full) throw new Error('Die Nachricht gibt es auf dem Server nicht mehr')
       const message = readMessage(full.source)
-      const knownDomains = knownDomainsOf(await listAccounts(this.services.db))
-      const firstContact = isFirstContact(await messagesFrom(this.services.db, parseAddress(message.from).address))
+      const accounts = await listAccounts(this.services.db)
+      const knownDomains = knownDomainsOf(accounts)
+      // What the user wrote themselves, a draft or a copy in the sent folder, is not a first message from anybody.
+      const sender = parseAddress(message.from).address
+      const firstContact = !isOwnAddress(accounts, sender) && isFirstContact(await messagesFrom(this.services.db, sender))
       this.store.showScreen({
         name: 'message',
         ...opened,

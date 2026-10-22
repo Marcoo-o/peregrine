@@ -10,6 +10,9 @@ import { useTheme } from './useTheme'
 export function MessageActions(props: {
   /** Whether the message has arrived: nothing can be answered before it has. */
   ready: boolean
+  /** A message that is a draft is written on and not answered. */
+  draft: boolean
+  onEdit: () => void
   flagged: boolean
   onReply: () => void
   onReplyAll: () => void
@@ -21,6 +24,16 @@ export function MessageActions(props: {
 }) {
   const styles = useStyles()
   const { colors } = useTheme()
+  if (props.draft) {
+    return (
+      <View style={styles.actionBar}>
+        <View style={styles.actionIcons}>
+          <IconButton name="compose" label="Weiterschreiben" disabled={!props.ready} onPress={props.onEdit} />
+          <IconButton name="trash" label="Löschen" onPress={props.onDelete} />
+        </View>
+      </View>
+    )
+  }
   return (
     <View style={styles.actionBar}>
       <View style={styles.actionIcons}>

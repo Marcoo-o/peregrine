@@ -15,6 +15,7 @@ export function ComposeScreen(props: {
   state: ComposeState
   files: Files
   onSend: (draft: Draft) => void
+  onSaveDraft: (draft: Draft) => void
   onCancel: (draft: Draft) => void
 }) {
   const styles = useStyles()
@@ -40,14 +41,27 @@ export function ComposeScreen(props: {
       <Header title="Neue Nachricht" back={{ label: 'Abbrechen', onPress: leave }} />
       <ConfirmDialog
         visible={discarding}
-        title="Nachricht verwerfen?"
-        text="Was geschrieben wurde, geht verloren."
-        confirmLabel="Verwerfen"
-        onCancel={() => setDiscarding(false)}
-        onConfirm={() => {
-          setDiscarding(false)
-          props.onCancel(draft)
-        }}
+        title="Nachricht noch nicht gesendet"
+        text="Die Nachricht kann als Entwurf behalten und später weitergeschrieben werden. Wird sie verworfen, geht sie verloren."
+        answers={[
+          { label: 'Weiter schreiben', onPress: () => setDiscarding(false) },
+          {
+            label: 'Als Entwurf speichern',
+            variant: 'secondary',
+            onPress: () => {
+              setDiscarding(false)
+              props.onSaveDraft(draft)
+            }
+          },
+          {
+            label: 'Verwerfen',
+            variant: 'danger',
+            onPress: () => {
+              setDiscarding(false)
+              props.onCancel(draft)
+            }
+          }
+        ]}
       />
       <Text style={styles.subtitle}>Von {account.emailAddress || account.displayName}</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}

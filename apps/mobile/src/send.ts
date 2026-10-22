@@ -65,6 +65,35 @@ export function smtpSettingsOf(account: Account): SmtpSettings | undefined {
 }
 
 /**
+ * The message that an input says, written out from an account: what is sent, and what a draft keeps. The account
+ * must have an address, which the callers have looked at.
+ */
+export async function composeFromInput(
+  account: Account,
+  input: ComposeInput,
+  files: FileAccess | undefined,
+  options: ComposeOptions = {}
+): Promise<ReturnType<typeof composeMessage>> {
+  const attachments = await readAttachments(input, files)
+  return composeMessage(
+    {
+      // A name that is only the address again says nothing, and shows twice in a mail client.
+      from: { name: account.displayName === account.emailAddress ? undefined : account.displayName, address: account.emailAddress },
+      to: input.to,
+      cc: input.cc,
+      bcc: input.bcc,
+      subject: input.subject,
+      text: input.textBody,
+      html: input.htmlBody === '' ? undefined : input.htmlBody,
+      attachments,
+      inReplyTo: input.inReplyTo,
+      references: input.references
+    },
+    options
+  )
+}
+
+/**
  * Sends one message from the application and says who it went to, with the source that went out.
  * Throws, with the reason, when it did not: the queue keeps a message whose sending threw and tries
  * it again.
@@ -89,23 +118,7 @@ export async function sendMessage(
   const settings = smtpSettingsOf(account)
   if (!settings) throw new Error('This account has no server for sending')
 
-  const attachments = await readAttachments(input, environment.files)
-  const composed = composeMessage(
-    {
-      // A name that is only the address again says nothing, and shows twice in a mail client.
-      from: { name: account.displayName === account.emailAddress ? undefined : account.displayName, address: account.emailAddress },
-      to: input.to,
-      cc: input.cc,
-      bcc: input.bcc,
-      subject: input.subject,
-      text: input.textBody,
-      html: input.htmlBody === '' ? undefined : input.htmlBody,
-      attachments,
-      inReplyTo: input.inReplyTo,
-      references: input.references
-    },
-    options
-  )
+  const composed = await composeFromInput(account, input, environment.files, options)
 
   const client = new SmtpClient(environment.makeTransport(), settings)
   try {

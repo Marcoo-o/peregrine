@@ -30,6 +30,12 @@ export function assessMessage(message: ReadableMessage, knownDomains: string[], 
   }
 }
 
+/** Whether an address is one of the user's own, in whatever case it is written. */
+export function isOwnAddress(accounts: { emailAddress: string }[], address: string): boolean {
+  const wanted = address.trim().toLowerCase()
+  return wanted !== '' && accounts.some((account) => account.emailAddress.trim().toLowerCase() === wanted)
+}
+
 /** The domains the user has addresses in, once each and in lower case: what a lookalike is measured against. */
 export function knownDomainsOf(accounts: { emailAddress: string }[]): string[] {
   const domains = accounts.flatMap(({ emailAddress }) => {

@@ -121,6 +121,8 @@ export interface ComposeState {
   /** The screen that is shown again when the message has gone into the queue or is given up. */
   returnTo: Screen
   draft: Draft
+  /** Where the server keeps an earlier revision of this message, when it was opened from a draft: sending or saving replaces it. */
+  saved?: { folder: Folder; uid: number }
   busy: boolean
   error?: string
 }

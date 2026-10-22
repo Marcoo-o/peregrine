@@ -86,12 +86,17 @@ export function FoldersScreen(props: {
         visible={confirmingRemove}
         title={`${account.displayName} entfernen?`}
         text="Das Konto, seine gespeicherten Nachrichten und alles, was noch auf eine Verbindung wartet, werden von diesem Gerät gelöscht. Auf dem Mailserver bleibt alles, wie es ist."
-        confirmLabel="Konto entfernen"
-        onCancel={() => setConfirmingRemove(false)}
-        onConfirm={() => {
-          setConfirmingRemove(false)
-          props.onRemove()
-        }}
+        answers={[
+          { label: 'Abbrechen', onPress: () => setConfirmingRemove(false) },
+          {
+            label: 'Konto entfernen',
+            variant: 'danger',
+            onPress: () => {
+              setConfirmingRemove(false)
+              props.onRemove()
+            }
+          }
+        ]}
       />
     </View>
   )

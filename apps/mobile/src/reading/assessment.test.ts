@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { readable } from '../testing/readable'
-import { assessMessage, assessPage, knownDomainsOf, linksInText } from './assessment'
+import { assessMessage, assessPage, isOwnAddress, knownDomainsOf, linksInText } from './assessment'
 
 describe('what is known of a message before it is shown', () => {
   it('has nothing to say about an ordinary message', () => {
@@ -102,5 +102,20 @@ describe('the links of a message that has no page', () => {
 
   it('says whether the message is the first from its sender, as it is told', () => {
     expect(assessMessage(readable(), [], true).firstContact).toBe(true)
+  })
+})
+
+describe("whether an address is the user's own", () => {
+  const accounts = [{ emailAddress: 'Work@Example.org' }, { emailAddress: 'home@example.org' }]
+
+  it('is any of the addresses of the accounts, in whatever case', () => {
+    expect(isOwnAddress(accounts, 'work@example.org')).toBe(true)
+    expect(isOwnAddress(accounts, ' HOME@example.org ')).toBe(true)
+  })
+
+  it('is not another address, nor none, nor an account that has no address', () => {
+    expect(isOwnAddress(accounts, 'anna@example.net')).toBe(false)
+    expect(isOwnAddress(accounts, '')).toBe(false)
+    expect(isOwnAddress([{ emailAddress: '' }], '')).toBe(false)
   })
 })

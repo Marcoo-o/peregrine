@@ -347,6 +347,12 @@ describe('what is known of a message that is opened', () => {
     expect(state.assessment).toMatchObject({ spam: null, failedAuth: [], sender: [] })
   })
 
+  it('does not take what the user wrote for a first message from somebody', async () => {
+    const t = await inboxWith(crlf(['From: Alex <work@example.org>', 'Subject: Note to self', '', 'Hello', '']))
+    const state = await openedFrom(t)
+    expect(state.assessment?.firstContact).toBe(false)
+  })
+
   it('knows a first message from an address by the messages the phone has of it', async () => {
     const t = await inboxWith(crlf(['From: Anna <anna@sender.test>', 'Subject: Hi', '', 'Hello', '']))
     const state = await openedFrom(t)

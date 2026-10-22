@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   attachPicked,
   detachFile,
+  editableDraft,
   emptyDraft,
   hasRecipient,
   isChanged,
@@ -247,5 +248,51 @@ describe('whether a draft was changed', () => {
     expect(isChanged(start, attached)).toBe(true)
     expect(isChanged(attached, { ...attached })).toBe(false)
     expect(isChanged(attached, start)).toBe(true)
+  })
+})
+
+describe('a draft that is written on again', () => {
+  const kept = () =>
+    readable({
+      to: 'Anna <anna@example.net>',
+      cc: 'Ben <ben@example.net>',
+      subject: 'Plan',
+      text: 'Not finished',
+      html: null,
+      headers: { 'in-reply-to': ' <one@example.net> ' },
+      references: '<zero@example.net> <one@example.net>'
+    })
+
+  it('is what was kept: who it is to, the subject, the text and the thread', () => {
+    expect(editableDraft(kept(), 0)).toEqual({
+      draft: {
+        to: 'Anna <anna@example.net>',
+        cc: 'Ben <ben@example.net>',
+        subject: 'Plan',
+        body: 'Not finished',
+        attachments: [],
+        inReplyTo: '<one@example.net>',
+        references: '<zero@example.net> <one@example.net>'
+      }
+    })
+  })
+
+  it('leaves out a thread that there is none of', () => {
+    const found = editableDraft(readable({ html: null, headers: {}, references: '' }), 0)
+    expect(found).toMatchObject({ draft: { inReplyTo: undefined, references: undefined } })
+  })
+
+  it('is refused, with the reason, when saving it again would lose attached files', () => {
+    expect(editableDraft(kept(), 2)).toMatchObject({ refusal: expect.stringContaining('Anhänge') })
+  })
+
+  it('is refused when it has a formatting that the phone does not write', () => {
+    expect(editableDraft({ ...kept(), html: '<p>Not finished</p>' }, 0)).toMatchObject({ refusal: expect.stringContaining('Formatierung') })
+  })
+
+  it('is refused when it has recipients that the phone does not show', () => {
+    expect(editableDraft({ ...kept(), headers: { bcc: 'secret@example.net' } }, 0)).toMatchObject({
+      refusal: expect.stringContaining('verdeckte Empfänger')
+    })
   })
 })
