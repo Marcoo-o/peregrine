@@ -265,6 +265,15 @@ Out, for now:
    it found is under "What stage 6 found".
 7. Push as an opt-in, if the platform rules still allow what is wanted by then.
 
+Between 6 and 7 the screens were given the look of the desktop application, made for the phone. What
+that is, and what it left out, is under "What the design found".
+After that, reading a message was brought closer to the desktop: HTML mail, what is known of the sender and
+the links, and the actions of a message. That is under "What reading like the desktop found".
+Then the lists: choosing several messages, folders as a tree, and a search. That is under "What the list and the
+navigation found".
+Last, the phone was set next to the desktop's window, and the frame was brought closer: pictures, a sidebar, a top
+bar. That is under "What looking at the desktop's window found".
+
 Stages 1 to 3 improve the desktop whether or not a phone ever appears. That is the test of
 whether this plan is honest rather than hopeful: if the first half only pays off when the second
 half ships, it is a bet, not a plan.
@@ -581,6 +590,185 @@ notification with sender, subject and account, and the tap opening the message w
 not testable there: how a maker's own battery rules treat a job that runs every half hour, which is what is
 left of "The rules for foreground services have tightened" for the periodic way too. The quiet hours and the
 muted accounts are covered by tests against the logic and were not run on the emulator.
+
+## What the design found
+
+The screens had been plain on purpose, with a colour written into every style. They are now made of the
+desktop's tokens (`src/renderer/src/styles.css`): its light and dark palette, its blue accent, the tints for
+what is chosen and for what went wrong. `src/ui/theme.ts` has them, `styles.ts` makes the style sheet of
+a theme once, and no screen names a colour. The theme is the system's and changes while the application
+runs, with the status bar.
+
+- *The colours are measured, not only copied.* `theme.test.ts` checks that every colour that is read on
+  another has the 4.5 to 1 that WCAG asks of text, in both themes. One value of the desktop fails: the
+  warning yellow is 3.4 to 1 on the light page, which is fine for an icon and not for words. The phone's
+  is a darker one, with a comment that says why it differs.
+- *What carries over from the desktop's lists:* the account colour as a stripe in front of a message in
+  the unified list, subject and sender in bold and the colour of the text while a message is unread, the
+  unread count of a folder in a pill of the accent, the folders named by their role. These needed data the
+  phone did not have. An account has a colour, given when it is added by the desktop's rule, and migration 4
+  gave the accounts that were there one each. The unread counts are counted in SQL.
+- *What is made for the phone:* a header with the way back and the title, targets of 48 dp, buttons that
+  are filled, outlined or red by what they do, a ring in the accent on the field being typed in, settings
+  in groups, and a date as short as it can be: the time for today, the day and month for this year, the
+  whole date for older mail. Hover and the density of the desktop's rows are left out: neither means
+  anything under a thumb.
+- *Left out for now:* icons. The desktop draws them with an icon library, which on the phone is a native
+  module more to build and to keep. Text and the colours carry the screens for the time being. The
+  accent is fixed to the desktop's blue, where the desktop lets the user choose one of twelve. Both can
+  be added on top of what is here without changing it.
+
+Shown on an Android 16 emulator in light and in dark, switching the system's setting while the application
+ran: the unified list, the accounts, the folders with their counts, a folder, an open message and the
+settings. The list and an open message were also looked at with the system font at 160 percent, where a
+layout made of fixed heights would break first: the rows grow with the text and the actions wrap onto
+more lines, and nothing is cut off. The forms were not looked at that way.
+
+## What reading like the desktop found
+
+The desktop sanitizes a message's HTML with DOMPurify in its window, which needs a DOM, so it does not carry
+over. The phone shows HTML mail in a WebView instead, and what keeps a message from doing anything is not a
+sanitizer. It is the policy the page is served under, the one `@peregrine/core/mailCsp` gives the desktop's
+reader: no script of the message runs, no form goes anywhere, and no image is fetched from outside until the user
+asks. The policy is the first thing in the page, before a byte of the message, and a message cannot unsay it. What
+the page builder takes out of the message besides, such as scripts and frames, is tidiness, and is written as that
+in the code: it is a pattern over text and nothing relies on it.
+
+- *The application decides every link.* The view refuses every navigation and hands the address to the
+  application, which opens it at once when nothing is wrong with it and asks first, with where it leads spelled
+  out, when it does not lead where it reads, by the rules of `linkSafety` in the core. Only web addresses and
+  telephone numbers are opened at all, and only when they are the address of a link the page has. The page tells
+  the application its links and images through one small script of ours, which the policy does not apply to,
+  and what it says is read field by field, with lengths cut.
+- *What the message has to say for itself* is said above it, in the desktop's order and words: the verdict of the
+  server's spam filter, the checks of the sender that failed, a name that claims another address, a reply that
+  would go elsewhere, links that do not lead where they read, images that only count the opening, and the images
+  that were held back, which one tap shows. The domains a sender or a link is measured against for looking like
+  one are those of the user's own addresses.
+- *The screen scrolls as one.* The page reports how tall it is and the view is that tall, so the message is not a
+  small window in the screen. What can be done to a message is a bar at the bottom, where the thumb is: answer,
+  answer everybody, pass on, star, and more, which has marking as unread, moving, archiving, marking as spam and
+  deleting. Answering everybody and passing on follow the desktop's rules. Archiving and marking as spam move the
+  message through the queue to the folder of that role, and say so when the account has none.
+- *Images that belong to the message* are taken out of it by content id and shown as data, up to a size, and are
+  not listed under the attachments any more.
+
+Two mistakes were found by trying to get past the checks on the emulator, with messages built for it, and both
+are fixed and covered by a test. A link was opened at once, past the check: an address that the view's whitelist
+does not match is opened by the view itself with the system's handler, before the application is asked, and the
+first version listed only the page's own address there. And sending a form in a message opened its address in the
+browser, because the view reports a form that is sent like a link that is followed. The desktop stops a form with
+`form-action 'none'`, and the phone's view had not stopped it before it asked the application. A navigation is now
+a tap only when it leads to the address of a link of the page.
+
+Shown on the Android 16 emulator, with messages from the test server: a newsletter with a style of its own, an
+inline image, a table, a link built to deceive, a counting pixel and an image from outside, held back and then
+shown on request, with the dialog for the deceiving link and not opening it; a forged message that has every hint
+there is, opened one by one, and put into the spam folder, which the server then had it in; passing a message on,
+with its subject and the message under a line that says what it is; and a message with a script, a handler on an
+image, a link with a script address, a form and an inline frame, of which nothing ran or opened and where a link
+that is only a host did open.
+
+Not done, and not looked at: the attachments of a message are not passed on when it is. Reading mode, printing
+and the source of a message are not there, nor the hint for a first message from an address, nor a setting to
+confirm every link or to show images always. Addresses in a message that has no HTML are not tappable. The page is
+white in the dark theme too, because mail is written for a white page, and that was not looked at in the dark. A
+table wider than the screen is cut and does not scroll, as the view does not scroll by itself. Answering everybody
+and archiving are covered by tests and were not run on the emulator. The policy comes in a meta element of the
+page, which the system's WebView has to honour; it does on the emulator's, and on an old phone that has not updated
+its WebView it is the first thing to check.
+
+## What the list and the navigation found
+
+Three things the desktop has that the phone's lists did not: several messages chosen at once, folders as a tree, and
+a search. All three are plain TypeScript with tests first, and the screens only show them.
+
+- *Choosing several messages.* A long press chooses the first, a tap then chooses or unchooses more, and the top of
+  the list says how many, lets the choice be left and chooses all. At the bottom, where the thumb is: read, unread,
+  star, archive, spam and delete. The back button ends the choice before it does anything else. What is chosen is
+  grouped by folder and goes through the actions of the queue, as for one message, so the unified list works across
+  accounts. Starring a mixed choice stars the rest and does not take stars off, so that a tap does one thing. An
+  account with no archive or spam folder is left alone and named in what is said.
+- *Folders as a tree.* Folders sit under the ones they are in and can be closed and opened, in the order they are
+  used: the inbox, drafts, sent, archive, spam, trash, and then the rest by name. A closed folder shows the unread
+  messages of everything under it. Migration 5 keeps where a folder sits, as the server lists it. The delimiter is
+  not stored and is read from what is between a folder and its parent in its path, so it works with a slash and with
+  a dot. A parent that cannot be chosen, which some servers have only as a place for others, is made up as a name,
+  as many levels as are missing.
+- *Searching.* The desktop's syntax, from the core: words, `von:`, `betreff:`, `hat:anhang`, `ist:ungelesen`,
+  `ist:markiert`, `vor:` and `nach:`. Every word has to be in the subject or in who wrote. It is a search of the
+  headers that are on the phone, in every folder of every account, newest first, and each result says its account
+  and folder. The phone keeps neither the recipients nor the text of a message, so `an:` is refused with a line that
+  says so and the search is made without it, and the text of a message is not searched. What is typed is searched
+  for after a pause and the newest search wins, and leaving a message that a search found goes back to the search.
+
+Shown on the Android 16 emulator: two messages chosen and marked read, one archived, each of which the server then
+had as it should be; a tree on a server that separates with a dot, with a made up level, closed and opened, with the
+count of each folder and the sum when closed; and a search with four results in four folders, opened and left again.
+
+Not done, and not looked at: swiping a message, which wants a gesture library and so a native module, and a preview
+of the text in the list, which wants the start of every message fetched and stored. The text of messages is not
+searched for the same reason, and there are no saved searches. The folders of all accounts are not folded into one
+tree of standard folders as the desktop does. A search cannot be narrowed by account, and its results cannot be
+chosen several at a time. Choosing across accounts, starring, spam and delete were run in tests and not on the
+emulator, and none of these screens was looked at in the dark.
+
+## What looking at the desktop's window found
+
+The first design worked from the desktop's style sheet and got the colours right. It was still far from the
+desktop, which only showed once the desktop was run next to the phone, with the same accounts. What was different
+was not the palette but the frame: the desktop has pictures for everything, a sidebar that holds every folder of
+every account, a top bar, and a line over the list with filters. The phone had text and glyphs, and three lists
+to go through, accounts, folders and messages.
+
+- *Pictures.* The desktop draws its icons with Lucide, so the phone does too, `react-native-svg` underneath, and a
+  folder, a role or an action looks the same on both. Each icon is imported by itself: the library has thousands.
+- *The sidebar as the way through.* A drawer, which React Native has, from the left edge or from the button of the top
+  bar. It has the desktop's content: the folders that are one for all accounts, and every account with its colour,
+  whether it is connected, and its folders as a tree with their pictures and counts, where the user is marked.
+  The lists of all accounts take a role for this, so inbox, drafts, sent, archive, spam and trash each have a list.
+- *The top of a list.* The button for the sidebar, a field for the search, bringing the list up to date and the
+  settings; over the list what it is, how many messages it has, and the filters for what is not read, starred or
+  has a file. Writing a message is a button over the corner of the list.
+
+Shown on the emulator, light: a folder opened from the sidebar, the top bar and the filters, the drawer with the
+accounts and the tree, and the list of sent messages of all accounts from the drawer.
+
+Afterwards, the actions of an open message became the desktop's row of pictures: reply, reply to all, forward,
+archive, star, delete and a menu for what is done less often. Seven fit the width of the narrowest phones when they
+share it, which is why moving, marking as unread and as spam are behind the last. The list no longer says twice that
+it has no messages: the line over it says so, and the list only speaks when the filters have taken away all there are.
+
+The hint for a first message from an address, which the desktop shows, is there too. The desktop keeps a count of
+contacts for it; the phone has no such table and asks the messages it has, since the sender of each is stored with
+it: a message is a first one when it is the only one from its address, itself included. That is a weaker statement
+than the desktop's, which has seen all the mail that ever came, so the phone's words say "among the messages on this
+device" and not "never before". It is shown as information, below the links and the counting pixels, not as a warning.
+
+Looked at on the emulator, in light and in dark: the open message with its hints and the row of pictures (all seven in
+view, the star filled in the warning colour once set), the list of a folder with its filters and the corner button, the
+sidebar, and the list of folders of an account. The dark theme held up in all of them; the page of a message stays
+white in both, as the sender made it.
+
+The list of accounts has the top bar of the other lists now, so the sidebar, the search and the settings are one tap
+away from it, and the three buttons that led to them are gone. A large system font (1.6) was tried on the form for an
+account: it holds, only the example in the first field is cut off.
+
+Two things the emulator showed that had nothing to do with looks, both fixed:
+
+- *Removing an account was one tap.* The button sat under "new message" on the screen of an account, and a tap on it
+  deleted the account with every message stored for it and what waited in the queue, without a question. It asks now,
+  and says what goes and that the mail server is not touched. Found by tapping where the other button had been.
+- *The back key left the application from every screen*, except while messages were chosen. It does what the way back
+  of the screen does now (`app/backAction.ts`): the sidebar is put away first, an open message goes back to its list,
+  and the lists where the application starts leave it, as the key does everywhere. The form for the first account has
+  no way back, so the key leaves from it. Writing a message asks before it throws away what was changed, whether
+  the button or the key was used, since the key is easier to hit by mistake than the button. These were tested, and the
+  dialog for removing an account was seen on the device; the back key on a message, and the question when writing,
+  were not seen there, because the emulator was closed before they could be.
+
+Not done: the list of folders of an account is still in the old style, with the account's buttons under it. Swiping, a
+preview of the text, tags, snoozing and the filter rules of the desktop do not exist on the phone.
 
 ## What stage 4 found
 

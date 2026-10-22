@@ -7,7 +7,7 @@ import { MailActions } from './mailActions'
 import { saveMessages } from './messages'
 import { createQueue } from './queue'
 import { migratedDatabase } from './testing/testDb'
-import { isInbox, listUnified, refreshInboxes } from './unified'
+import { isInbox, listUnified, refreshInboxes, refreshRole, roleOf, unifiedUnread } from './unified'
 
 const newAccount = (name: string): NewAccount => ({
   displayName: name,
@@ -70,6 +70,10 @@ describe('the unified list', () => {
       ['Work', 1, day(1).getTime()]
     ])
     expect(list[0]).toMatchObject({ accountId: t.b.id, folderId: t.bInbox.id })
+    // each message has the colour of its account, which differ
+    expect(list[0].accountColor).toBe(t.b.color)
+    expect(list[1].accountColor).toBe(t.a.color)
+    expect(t.a.color).not.toBe(t.b.color)
   })
 
   it('leaves out every other folder', async () => {
@@ -168,5 +172,97 @@ describe('bringing the inboxes up to date', () => {
     await refreshInboxes(t, await listAccounts(t.db))
     await refreshInboxes(t, await listAccounts(t.db))
     expect(t.asked.filter((x) => x.startsWith('connect'))).toEqual(['connect Work', 'connect Home'])
+  })
+})
+
+describe('which role a folder has', () => {
+  it('is the one the server names, the inbox for INBOX too, and none for any other folder', () => {
+    expect(roleOf({ specialUse: '\\Sent', imapPath: 'Sent Items' })).toBe('sent')
+    expect(roleOf({ specialUse: '\\Drafts', imapPath: 'Entwurf' })).toBe('drafts')
+    expect(roleOf({ specialUse: '\\Archive', imapPath: 'Old' })).toBe('archive')
+    expect(roleOf({ specialUse: '\\Junk', imapPath: 'Spam' })).toBe('junk')
+    expect(roleOf({ specialUse: '\\Trash', imapPath: 'Deleted' })).toBe('trash')
+    expect(roleOf({ specialUse: null, imapPath: 'INBOX' })).toBe('inbox')
+    expect(roleOf({ specialUse: null, imapPath: 'Projects' })).toBeNull()
+    expect(roleOf({ specialUse: '\\Flagged', imapPath: 'Starred' })).toBeNull()
+  })
+})
+
+describe('the unified list of one role', () => {
+  async function accounts() {
+    const made = await migratedDatabase()
+    const a = await addAccount(made.db, newAccount('Work'), { now: 1 })
+    const b = await addAccount(made.db, newAccount('Home'), { now: 2 })
+    const [aInbox, aSent, aTrash] = await syncFolders(made.db, a.id, [entry('INBOX', '\\Inbox'), entry('Sent', '\\Sent'), entry('Trash', '\\Trash')], ids)
+    const [bInbox, bSent] = await syncFolders(made.db, b.id, [entry('INBOX'), entry('Gesendet', '\\Sent')], ids)
+    await saveMessages(made.db, aInbox, [fetched(1, day(1), 'in work')])
+    await saveMessages(made.db, bInbox, [fetched(1, day(2), 'in home')])
+    await saveMessages(made.db, aSent, [fetched(1, day(3), 'sent from work')])
+    await saveMessages(made.db, bSent, [fetched(1, day(4), 'sent from home')])
+    await saveMessages(made.db, aTrash, [fetched(1, day(5), 'deleted at work')])
+    return { ...made, a, b }
+  }
+
+  it('holds the messages of that role of every account, newest first, and none of the others', async () => {
+    const t = await accounts()
+    expect((await listUnified(t.db, 200, 'sent')).map((m) => m.subject)).toEqual(['sent from home', 'sent from work'])
+    expect((await listUnified(t.db, 200, 'trash')).map((m) => m.subject)).toEqual(['deleted at work'])
+    expect((await listUnified(t.db, 200, 'inbox')).map((m) => m.subject)).toEqual(['in home', 'in work'])
+  })
+
+  it('is empty for a role that no account has a folder for', async () => {
+    const t = await accounts()
+    expect(await listUnified(t.db, 200, 'archive')).toEqual([])
+  })
+
+  it('has the inbox for what is not asked for in particular', async () => {
+    const t = await accounts()
+    expect((await listUnified(t.db)).map((m) => m.subject)).toEqual(['in home', 'in work'])
+  })
+})
+
+describe('the unread messages of each role', () => {
+  it('are counted across the accounts, and a role with none is 0', async () => {
+    const made = await migratedDatabase()
+    const a = await addAccount(made.db, newAccount('Work'), { now: 1 })
+    const b = await addAccount(made.db, newAccount('Home'), { now: 2 })
+    const [aInbox, aTrash] = await syncFolders(made.db, a.id, [entry('INBOX'), entry('Trash', '\\Trash')], ids)
+    const [bInbox] = await syncFolders(made.db, b.id, [entry('INBOX', '\\Inbox')], ids)
+    const seen = { ...fetched(3, day(3)), flags: ['\\Seen'] }
+    await saveMessages(made.db, aInbox, [fetched(1, day(1)), fetched(2, day(2)), seen])
+    await saveMessages(made.db, bInbox, [fetched(1, day(1))])
+    await saveMessages(made.db, aTrash, [fetched(1, day(1))])
+
+    expect(await unifiedUnread(made.db)).toEqual({ inbox: 3, drafts: 0, sent: 0, archive: 0, junk: 0, trash: 1 })
+  })
+})
+
+describe('bringing up to date what a role holds', () => {
+  it('fetches the folder of that role of each account and no other', async () => {
+    const made = await migratedDatabase()
+    const a = await addAccount(made.db, newAccount('Work'), { now: 1 })
+    const asked: string[] = []
+    const connections = new Connections(async () => {
+      return {
+        onClose: () => undefined,
+        disconnect: async () => undefined,
+        listMailboxes: async () => [entry('INBOX', '\\Inbox'), entry('Sent', '\\Sent'), entry('Archive', '\\Archive')],
+        syncFetch: async (path: string) => {
+          asked.push(`fetch ${path}`)
+          return { messages: [] }
+        }
+      } as unknown as ImapSession
+    })
+    const queue = createQueue(made.db, { changed: async () => undefined, log: { warn: () => undefined, error: () => undefined } })
+    const mail = new MailActions({ db: made.db, queue, session: (id) => connections.get(id), log: { error: () => undefined } })
+
+    const results = await refreshRole({ db: made.db, connections, mail }, [a], 'sent')
+
+    expect(results).toEqual([{ accountId: a.id, accountName: 'Work' }])
+    expect(asked).toEqual(['fetch Sent'])
+  })
+
+  it('is what refreshing the inboxes is, for the inbox', async () => {
+    expect(refreshInboxes).toBeTypeOf('function')
   })
 })

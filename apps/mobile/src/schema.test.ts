@@ -53,7 +53,7 @@ describe('a new installation', () => {
     const made = fakeConnection()
     await migrate(new OpSqliteDb(made.connection))
     expect(tables(made.raw)).toEqual(['accounts', 'folders', 'messages', 'pending_actions', 'settings'])
-    expect(version(made.raw)).toBe(3)
+    expect(version(made.raw)).toBe(5)
   })
 
   it('can be migrated again without harm, as it is at every start', async () => {
@@ -62,8 +62,47 @@ describe('a new installation', () => {
     await migrate(db)
     made.raw.prepare("INSERT INTO accounts (id, display_name, email_address, imap_host, imap_port, imap_secure, imap_username, password, created_at) VALUES ('a','a','','h',1,'tls','u','p',0)").run()
     await migrate(db)
-    expect(version(made.raw)).toBe(3)
+    expect(version(made.raw)).toBe(5)
     expect((made.raw.prepare('SELECT COUNT(*) AS n FROM accounts').get() as { n: number }).n).toBe(1)
+  })
+})
+
+describe('the colours of accounts', () => {
+  it('are given to the accounts there are, one each in the order they were added, round robin', async () => {
+    const made = fakeConnection()
+    const db = new OpSqliteDb(made.connection)
+    await migrate(db)
+    // The database as it was at version 3: without the colour, with accounts added out of order of their ids.
+    made.raw.exec('ALTER TABLE accounts DROP COLUMN color')
+    made.raw.exec('ALTER TABLE folders DROP COLUMN parent_path')
+    made.raw.exec('PRAGMA user_version = 3')
+    const insert = made.raw.prepare(
+      "INSERT INTO accounts (id, display_name, email_address, imap_host, imap_port, imap_secure, imap_username, password, created_at) VALUES (?, ?, '', 'h', 1, 'tls', 'u', 'p', ?)"
+    )
+    for (let n = 0; n < 8; n++) insert.run(`id-${7 - n}`, `account ${n}`, 100 + n)
+
+    await migrate(db)
+
+    const rows = made.raw.prepare('SELECT display_name, color FROM accounts ORDER BY created_at').all() as { display_name: string; color: string }[]
+    expect(rows.map((row) => row.color)).toEqual([
+      '#2f5d9f', '#16736b', '#6341b8', '#a2650c', '#b03a5b', '#4a5568', '#2f5d9f', '#16736b'
+    ])
+  })
+})
+
+describe('where folders sit', () => {
+  it('is a column of its own that folders that are there have empty until they are listed again', async () => {
+    const made = fakeConnection()
+    const db = new OpSqliteDb(made.connection)
+    await migrate(db)
+    made.raw.exec('ALTER TABLE folders DROP COLUMN parent_path')
+    made.raw.exec('PRAGMA user_version = 4')
+    made.raw.exec("INSERT INTO folders (id, account_id, imap_path, display_name, special_use) VALUES ('f', 'a', 'Projects/Phone', 'Phone', NULL)")
+
+    await migrate(db)
+
+    expect(made.raw.prepare('SELECT parent_path FROM folders').get()).toEqual({ parent_path: null })
+    expect(version(made.raw)).toBe(5)
   })
 })
 
@@ -100,7 +139,7 @@ describe('the migration from the prototype', () => {
     await migrate(db)
     expect(tables(raw)).toEqual(['accounts', 'folders', 'messages', 'pending_actions', 'settings'])
     expect((raw.prepare('SELECT COUNT(*) AS n FROM messages').get() as { n: number }).n).toBe(0)
-    expect(version(raw)).toBe(3)
+    expect(version(raw)).toBe(5)
   })
 
   it('is whole or nothing: a failure part way leaves the prototype as it was', async () => {

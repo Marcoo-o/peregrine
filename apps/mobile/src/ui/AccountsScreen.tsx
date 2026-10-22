@@ -1,34 +1,49 @@
-import { FlatList, Pressable, Text, View } from 'react-native'
+import { FlatList, Text, View } from 'react-native'
 import type { Account } from '../accounts'
 import type { AccountsState } from '../app/screens'
 import { Button } from './controls'
-import { styles } from './styles'
+import { Title } from './Header'
+import { ListRow } from './ListRow'
+import { TopBar } from './TopBar'
+import { useStyles } from './useStyles'
 
+/** The line under the name of an account: its address, unless that is the name already, which is what an account is called by default. */
+function addressLine(account: Account): string | undefined {
+  const address = account.emailAddress || account.imapHost
+  return address === account.displayName ? undefined : address
+}
+
+/**
+ * The accounts, as a list to open one from. The ways to the lists of all of them, to the search and to the settings
+ * are those of every list: the top bar and the sidebar.
+ */
 export function AccountsScreen(props: {
   state: AccountsState
   onOpen: (account: Account) => void
   onAdd: () => void
-  onUnified: () => void
+  onSearch: () => void
   onSettings: () => void
 }) {
+  const styles = useStyles()
   const { accounts, error } = props.state
   return (
     <View style={styles.fill}>
-      <Text style={styles.title}>Konten</Text>
-      {accounts.length >= 2 ? <Button label="Alle Posteingänge" onPress={props.onUnified} /> : null}
+      <TopBar onSearch={props.onSearch} onSettings={props.onSettings} />
+      <Title text="Konten" />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FlatList
         data={accounts}
         keyExtractor={(account) => account.id}
         renderItem={({ item }) => (
-          <Pressable style={styles.item} onPress={() => props.onOpen(item)}>
-            <Text style={styles.itemTitle}>{item.displayName}</Text>
-            <Text style={styles.itemMeta}>{item.emailAddress || item.imapHost}</Text>
-          </Pressable>
+          <ListRow
+            title={item.displayName}
+            meta={addressLine(item)}
+            color={item.color}
+            onPress={() => props.onOpen(item)}
+          />
         )}
       />
-      <Button label="Konto hinzufügen" onPress={props.onAdd} />
-      <Button label="Einstellungen" onPress={props.onSettings} />
+      <Button label="Konto hinzufügen" variant="secondary" onPress={props.onAdd} />
     </View>
   )
 }

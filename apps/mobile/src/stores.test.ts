@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { FetchedMessage, MailboxEntry } from '@peregrine/core/imapSession'
 import { enqueueAction } from '@peregrine/core/pendingActionsStore'
 import { addAccount, getAccount, listAccounts, removeAccount, type NewAccount } from './accounts'
+import { SEEN } from './flags'
 import { getFolder, listFolders, syncFolders } from './folders'
-import { deleteMessages, listMessages, saveMessages, setPendingMove } from './messages'
+import { applyFlags, deleteMessages, listMessages, saveMessages, setPendingMove, unreadCounts } from './messages'
 import { migratedDatabase } from './testing/testDb'
 
 const input = (over: Partial<NewAccount> = {}): NewAccount => ({
@@ -53,6 +54,27 @@ describe('accounts', () => {
     expect(await getAccount(db, 'nobody')).toBeUndefined()
   })
 
+  describe('their colours', () => {
+    it('differ for the first six and repeat after that, in the order the accounts were added', async () => {
+      const { db } = await migratedDatabase()
+      const colours: string[] = []
+      for (let n = 0; n < 8; n++) colours.push((await addAccount(db, input({ displayName: `Account ${n}` }), { now: n })).color)
+      expect(new Set(colours.slice(0, 6)).size).toBe(6)
+      expect(colours.slice(6)).toEqual(colours.slice(0, 2))
+    })
+
+    it('are kept, and a colour that was freed by removing an account is given again', async () => {
+      const { db } = await migratedDatabase()
+      const first = await addAccount(db, input(), { now: 1 })
+      const second = await addAccount(db, input({ imapUsername: 'other' }), { now: 2 })
+      expect((await getAccount(db, second.id))?.color).toBe(second.color)
+      await removeAccount(db, second.id)
+      const third = await addAccount(db, input({ imapUsername: 'third' }), { now: 3 })
+      expect(third.color).toBe(second.color)
+      expect(third.color).not.toBe(first.color)
+    })
+  })
+
   it('keeps every setting, the ones for sending too, and the login', async () => {
     const { db } = await migratedDatabase()
     const sending = input({ smtpHost: 'smtp.example.org', smtpPort: 587, smtpSecure: 'starttls', smtpUsername: 'alex', smtpPassword: 'other' })
@@ -89,6 +111,19 @@ describe('accounts', () => {
 })
 
 describe('folders', () => {
+  it('keeps where each folder sits, and takes what the server says on listing them again', async () => {
+    const { db } = await migratedDatabase()
+    const account = await addAccount(db, input())
+    await syncFolders(db, account.id, [entry('Projects'), entry('Projects/Phone', { name: 'Phone', parentPath: 'Projects' })])
+    expect((await listFolders(db, account.id)).map((folder) => [folder.imapPath, folder.parentPath]).sort()).toEqual([
+      ['Projects', null],
+      ['Projects/Phone', 'Projects']
+    ])
+
+    await syncFolders(db, account.id, [entry('Projects'), entry('Projects/Phone', { name: 'Phone', parentPath: null })])
+    expect((await listFolders(db, account.id)).find((folder) => folder.imapPath === 'Projects/Phone')?.parentPath).toBeNull()
+  })
+
   it('stores the folders the server lists, each with an id, the inbox first, then those with a role', async () => {
     const { db } = await migratedDatabase()
     const account = await addAccount(db, input())
@@ -228,5 +263,25 @@ describe('messages', () => {
     expect(await listMessages(db, folder.id)).toHaveLength(100)
     await expect(deleteMessages(db, folder.id, [])).resolves.toBeUndefined()
     await expect(setPendingMove(db, folder.id, [], null)).resolves.toBeUndefined()
+  })
+
+  describe('how many are not read', () => {
+    it('is counted for each folder of an account, and a folder with none is left out', async () => {
+      const { db, folder } = await inbox()
+      await saveMessages(db, folder, [fetched(1), fetched(2, { flags: ['\\Seen'] }), fetched(3, { flags: ['\\Flagged'] })])
+      expect(await unreadCounts(db, folder.accountId)).toEqual({ [folder.id]: 2 })
+      await applyFlags(db, folder.id, [1, 3], [SEEN], [])
+      expect(await unreadCounts(db, folder.accountId)).toEqual({})
+    })
+
+    it('takes the read flag in any case, as IMAP does, and counts only the account asked about', async () => {
+      const { db, folder } = await inbox()
+      await saveMessages(db, folder, [fetched(1, { flags: ['\\seen'] }), fetched(2, { flags: ['\\SEEN'] }), fetched(3)])
+      const other = await addAccount(db, input({ imapUsername: 'other' }))
+      const [otherInbox] = await syncFolders(db, other.id, [entry('INBOX')])
+      await saveMessages(db, otherInbox, [fetched(1), fetched(2)])
+      expect(await unreadCounts(db, folder.accountId)).toEqual({ [folder.id]: 1 })
+      expect(await unreadCounts(db, other.id)).toEqual({ [otherInbox.id]: 2 })
+    })
   })
 })

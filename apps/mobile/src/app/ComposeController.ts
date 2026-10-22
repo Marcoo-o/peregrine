@@ -1,5 +1,5 @@
-import type { Account } from '../accounts'
-import { emptyDraft, replyDraft, toComposeInput, type Draft } from '../draft'
+import { listAccounts, type Account } from '../accounts'
+import { emptyDraft, forwardDraft, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
 import { explainError } from '../errors'
 import { smtpSettingsOf } from '../send'
 import type { Navigator } from './Navigator'
@@ -27,10 +27,31 @@ export class ComposeController {
     this.show({ account, returnTo, draft: emptyDraft })
   }
 
+  /**
+   * An empty message from the first account, for the places that are not an account's: the list of all inboxes, a
+   * search. The account it is written from can be another one that the user has, and is told on the screen.
+   */
+  async startNewFromAnyAccount(returnTo: Screen): Promise<void> {
+    const [first] = await listAccounts(this.services.db)
+    if (first) this.startNew(first, returnTo)
+  }
+
   /** An answer to the open message, once its text is there to quote. */
   startReply(state: MessageState): void {
     if (!state.message) return
     this.show({ account: state.account, returnTo: state, draft: replyDraft(state.message) })
+  }
+
+  /** An answer to everybody the open message went to. */
+  startReplyAll(state: MessageState): void {
+    if (!state.message) return
+    this.show({ account: state.account, returnTo: state, draft: replyAllDraft(state.message, state.account.emailAddress) })
+  }
+
+  /** The open message, to be passed on to somebody. */
+  startForward(state: MessageState): void {
+    if (!state.message) return
+    this.show({ account: state.account, returnTo: state, draft: forwardDraft(state.message) })
   }
 
   /**

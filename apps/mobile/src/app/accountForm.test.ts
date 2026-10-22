@@ -128,7 +128,7 @@ describe('the account that is made from the form', () => {
 
 describe('the login of an account', () => {
   it('is what it takes to connect to its mailbox', () => {
-    const stored = { ...account('work'), id: 'x', createdAt: 0 }
+    const stored = { ...account('work'), id: 'x', createdAt: 0, color: '#2f5d9f' }
     expect(imapLoginOf(stored)).toEqual({ host: 'imap.example.org', port: 993, secure: 'tls', username: 'work', password: 'secret' })
   })
 })

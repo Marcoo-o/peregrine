@@ -10,14 +10,18 @@ describe('readMessage', () => {
     const message = readMessage(
       bytes(crlf(['From: Alex <alex@example.org>', 'Subject: Hallo', 'Date: Mon, 19 Oct 2026 10:00:00 +0200', '', 'Guten Tag', '']))
     )
-    expect(message).toEqual({
+    expect(message).toMatchObject({
       subject: 'Hallo',
       from: 'Alex <alex@example.org>',
       date: 'Mon, 19 Oct 2026 10:00:00 +0200',
       text: 'Guten Tag\r\n',
       messageId: '',
       references: '',
-      replyTo: ''
+      replyTo: '',
+      html: null,
+      to: '',
+      cc: '',
+      inlineImages: {}
     })
   })
 
@@ -179,5 +183,156 @@ describe('readMessage', () => {
     expect(readMessage(bytes('')).text).toBe('')
     expect(readMessage(bytes('Subject: nur Kopf')).subject).toBe('nur Kopf')
     expect(readMessage(bytes('Content-Type: multipart/mixed\r\n\r\nkein Boundary')).text).toBe('')
+  })
+})
+
+describe('readMessage, for showing it as the sender wrote it', () => {
+  const html = '<p>Hello <b>world</b></p>'
+
+  it('keeps the HTML of a message as it is, and the text with the tags off for what needs text', () => {
+    const message = readMessage(bytes(crlf(['Content-Type: text/html; charset=utf-8', '', html, ''])))
+    expect(message.html).toBe(html + '\r\n')
+    expect(message.text).toContain('Hello world')
+  })
+
+  it('has both the plain text and the HTML of an alternative, and the text is the plain one', () => {
+    const message = readMessage(
+      bytes(
+        crlf([
+          'Content-Type: multipart/alternative; boundary=b',
+          '',
+          '--b',
+          'Content-Type: text/plain',
+          '',
+          'plain version',
+          '--b',
+          'Content-Type: text/html',
+          '',
+          html,
+          '--b--',
+          ''
+        ])
+      )
+    )
+    expect(message.text).toBe('plain version')
+    expect(message.html).toBe(html)
+  })
+
+  it('decodes the HTML in the charset and the transfer encoding it has', () => {
+    const message = readMessage(
+      bytes(
+        crlf([
+          'Content-Type: text/html; charset=iso-8859-1',
+          'Content-Transfer-Encoding: quoted-printable',
+          '',
+          '<p>Gr=FC=DFe</p>',
+          ''
+        ])
+      )
+    )
+    expect(message.html).toBe('<p>Grüße</p>\r\n')
+  })
+
+  it('is not fooled by an HTML attachment into taking it for the message', () => {
+    const message = readMessage(
+      bytes(
+        crlf([
+          'Content-Type: multipart/mixed; boundary=b',
+          '',
+          '--b',
+          'Content-Type: text/plain',
+          '',
+          'the message',
+          '--b',
+          'Content-Type: text/html',
+          'Content-Disposition: attachment; filename=page.html',
+          '',
+          '<p>not the message</p>',
+          '--b--',
+          ''
+        ])
+      )
+    )
+    expect(message.html).toBeNull()
+    expect(message.text).toBe('the message')
+  })
+
+  it('reads who it is to and who has a copy', () => {
+    const message = readMessage(
+      bytes(crlf(['To: Alex <alex@example.org>, b@example.net', 'Cc: =?UTF-8?B?R3LDvMOfZQ==?= <c@example.net>', '', 'x']))
+    )
+    expect(message.to).toBe('Alex <alex@example.org>, b@example.net')
+    expect(message.cc).toBe('Grüße <c@example.net>')
+  })
+
+  it('has the headers that say what the server made of it, by lower case name', () => {
+    const message = readMessage(
+      bytes(
+        crlf([
+          'Authentication-Results: mx.example.org; spf=fail smtp.mailfrom=example.net',
+          'X-Spamd-Result: default: False [3.20 / 15.00]; ARC_NA(0.00)[]',
+          'Subject: x',
+          '',
+          'x'
+        ])
+      )
+    )
+    expect(message.headers['authentication-results']).toContain('spf=fail')
+    expect(message.headers['x-spamd-result']).toContain('3.20')
+  })
+
+  it('takes the images that the HTML refers to by content id, as data the HTML can show', () => {
+    const message = readMessage(
+      bytes(
+        crlf([
+          'Content-Type: multipart/related; boundary=b',
+          '',
+          '--b',
+          'Content-Type: text/html',
+          '',
+          '<img src="cid:logo@example.net">',
+          '--b',
+          'Content-Type: image/png',
+          'Content-ID: <logo@example.net>',
+          'Content-Transfer-Encoding: base64',
+          '',
+          'iVBORw0KGgo=',
+          '--b--',
+          ''
+        ])
+      )
+    )
+    expect(message.inlineImages).toEqual({ 'logo@example.net': 'data:image/png;base64,iVBORw0KGgo=' })
+  })
+
+  it('takes only images, and none that is too big to hold on to', () => {
+    const big = 'A'.repeat(8 * 1024 * 1024)
+    const message = readMessage(
+      bytes(
+        crlf([
+          'Content-Type: multipart/related; boundary=b',
+          '',
+          '--b',
+          'Content-Type: text/html',
+          '',
+          '<p>x</p>',
+          '--b',
+          'Content-Type: application/pdf',
+          'Content-ID: <doc@example.net>',
+          'Content-Transfer-Encoding: base64',
+          '',
+          'JVBERi0=',
+          '--b',
+          'Content-Type: image/jpeg',
+          'Content-ID: <huge@example.net>',
+          'Content-Transfer-Encoding: base64',
+          '',
+          big,
+          '--b--',
+          ''
+        ])
+      )
+    )
+    expect(message.inlineImages).toEqual({})
   })
 })

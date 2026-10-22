@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_NOTIFICATION_SETTINGS, type NotificationSettings } from '../settings'
 import type { NewMessage } from './newMail'
-import { buildNotifications, countText, senderName } from './notifications'
+import { buildNotifications, countText } from './notifications'
 
 const settings = (over: Partial<NotificationSettings> = {}): NotificationSettings => ({
   ...DEFAULT_NOTIFICATION_SETTINGS,
@@ -21,15 +21,6 @@ const message = (over: Partial<NewMessage> = {}): NewMessage => ({
 
 const noon = new Date(2026, 9, 20, 12, 0)
 const night = new Date(2026, 9, 20, 23, 30)
-
-describe('who wrote', () => {
-  it('is the name the sender gave, or the address when there is none', () => {
-    expect(senderName('Anna <anna@example.net>')).toBe('Anna')
-    expect(senderName('"Anna B." <anna@example.net>')).toBe('Anna B.')
-    expect(senderName('anna@example.net')).toBe('anna@example.net')
-    expect(senderName('<anna@example.net>')).toBe('anna@example.net')
-  })
-})
 
 describe('how many', () => {
   it('is said in the singular and the plural', () => {

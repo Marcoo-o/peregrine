@@ -9,10 +9,11 @@ import {
   type AccountForm,
   type FormFields
 } from '../app/accountForm'
-import { BackLink, Button } from './controls'
+import { Button } from './controls'
 import { FormInput, FormScroll } from './FormScroll'
+import { Header } from './Header'
 import { ServerFields } from './ServerFields'
-import { styles } from './styles'
+import { useStyles } from './useStyles'
 
 /** The form for a new account. It starts with what was typed last, so a failed sign-in is not typed again. */
 export function LoginScreen(props: {
@@ -21,12 +22,13 @@ export function LoginScreen(props: {
   onSubmit: (form: AccountForm) => void
   onCancel: () => void
 }) {
+  const styles = useStyles()
   const [fields, setFields] = useState<FormFields>(() => initialFields(props.previous))
   const set = (patch: Partial<FormFields>) => setFields((current) => ({ ...current, ...patch }))
 
   return (
     <FormScroll>
-      <Text style={styles.title}>Peregrine</Text>
+      <Header title="Peregrine" back={{ label: 'Konten', onPress: props.onCancel }} />
       <Text style={styles.hint}>Ein Konto per IMAP verbinden. Das Passwort bleibt verschlüsselt auf diesem Gerät.</Text>
       {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
       <FormInput
@@ -75,7 +77,6 @@ export function LoginScreen(props: {
         onSecure={(secure) => setFields((current) => withSmtpSecurity(current, secure))}
       />
       <Button label="Verbinden" disabled={!isSubmittable(fields)} onPress={() => props.onSubmit(toAccountForm(fields))} />
-      <BackLink label="‹ Zurück zu den Konten" onPress={props.onCancel} />
     </FormScroll>
   )
 }

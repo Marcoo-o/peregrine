@@ -1,9 +1,17 @@
-import { ActivityIndicator, FlatList, Text, View } from 'react-native'
+import { useMemo, useState } from 'react'
+import { FlatList, Text, View } from 'react-native'
 import type { MessagesState } from '../app/screens'
+import { filterMessages, NO_FILTER } from '../listFilter'
 import type { StoredMessage } from '../messages'
-import { BackLink } from './controls'
+import { Fab, Spinner } from './controls'
+import { EmptyListNote } from './EmptyListNote'
+import { folderLabel } from './folderLabel'
+import { ListHead } from './ListHead'
 import { MessageRow } from './MessageRow'
-import { styles } from './styles'
+import { SelectionBar, SelectionHeader } from './SelectionBar'
+import { TopBar } from './TopBar'
+import { useSelection, type SelectionActions } from './useSelection'
+import { useStyles } from './useStyles'
 
 /** What is said about a message whose move waits for a connection: where it is going. */
 function pendingNote(message: StoredMessage, folderNames: Record<string, string>): string | undefined {
@@ -13,29 +21,64 @@ function pendingNote(message: StoredMessage, folderNames: Record<string, string>
 
 export function MessagesScreen(props: {
   state: MessagesState
-  onBack: () => void
+  actions: SelectionActions
+  onRefresh: () => void
+  onSearch: () => void
+  onSettings: () => void
+  onCompose: () => void
   onOpen: (message: StoredMessage) => void
 }) {
-  const { folder, messages, folderNames, busy, error } = props.state
+  const styles = useStyles()
+  const { account, folder, messages, folderNames, busy, error } = props.state
+  const [filter, setFilter] = useState(NO_FILTER)
+  // What the choice needs of a message: where it is, which the list of one folder does not say of each of them.
+  const rows = useMemo(
+    () =>
+      filterMessages(messages, filter).map((message) => ({ message, accountId: account.id, folderId: folder.id, uid: message.uid })),
+    [messages, filter, account.id, folder.id]
+  )
+  const selection = useSelection(rows, props.actions)
+
   return (
     <View style={styles.fill}>
-      <BackLink label="‹ Ordner" onPress={props.onBack} />
-      <Text style={styles.title}>{folder.displayName}</Text>
-      {busy ? <ActivityIndicator style={styles.spinner} /> : null}
+      {selection.selecting ? (
+        <SelectionHeader selection={selection} total={rows.length} />
+      ) : (
+        <>
+          <TopBar onSearch={props.onSearch} onRefresh={props.onRefresh} onSettings={props.onSettings} />
+          <ListHead
+            title={`${account.displayName} · ${folderLabel(folder)}`}
+            total={messages.length}
+            shown={rows.length}
+            filter={filter}
+            onFilter={setFilter}
+          />
+        </>
+      )}
+      {busy ? <Spinner /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {selection.notice ? <Text style={styles.error}>{selection.notice}</Text> : null}
       <FlatList
-        data={messages}
-        keyExtractor={(message) => String(message.uid)}
-        ListEmptyComponent={busy ? undefined : <Text style={styles.hint}>Keine Nachrichten.</Text>}
+        data={rows}
+        extraData={selection.picked}
+        contentContainerStyle={styles.listBottom}
+        keyExtractor={(row) => String(row.uid)}
+        refreshing={busy}
+        onRefresh={props.onRefresh}
+        ListEmptyComponent={<EmptyListNote busy={busy} total={messages.length} />}
         renderItem={({ item }) => (
           <MessageRow
-            message={item}
-            byline={item.sender}
-            pendingNote={pendingNote(item, folderNames)}
-            onPress={() => props.onOpen(item)}
+            message={item.message}
+            sender={item.message.sender}
+            pendingNote={pendingNote(item.message, folderNames)}
+            choosing={selection.selecting}
+            chosen={selection.isChosen(item)}
+            onPress={() => (selection.selecting ? selection.toggle(item) : props.onOpen(item.message))}
+            onLongPress={() => selection.toggle(item)}
           />
         )}
       />
+      {selection.selecting ? <SelectionBar selection={selection} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
     </View>
   )
 }

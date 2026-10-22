@@ -1,8 +1,15 @@
-import { FlatList, Pressable, Text, View } from 'react-native'
+import { useMemo, useState } from 'react'
+import { FlatList, Text, View } from 'react-native'
 import type { FoldersState } from '../app/screens'
+import { buildFolderTree, visibleRows } from '../folderTree'
 import type { Folder } from '../folders'
-import { BackLink, Button } from './controls'
-import { styles } from './styles'
+import { Button } from './controls'
+import { ConfirmDialog } from './ConfirmDialog'
+import { folderIconName } from './folderIcon'
+import { folderLabel } from './folderLabel'
+import { Header } from './Header'
+import { ListRow } from './ListRow'
+import { useStyles } from './useStyles'
 
 export function FoldersScreen(props: {
   state: FoldersState
@@ -12,11 +19,24 @@ export function FoldersScreen(props: {
   onConnect: () => void
   onCompose: () => void
 }) {
-  const { account, folders, offline } = props.state
+  const styles = useStyles()
+  const { account, folders, unread, offline } = props.state
+  // The paths of the folders that are closed. Folders start open, so that nothing is hidden that has not been closed.
+  const [closed, setClosed] = useState<ReadonlySet<string>>(new Set())
+  const [confirmingRemove, setConfirmingRemove] = useState(false)
+  const rows = useMemo(() => visibleRows(buildFolderTree(folders), closed, unread), [folders, closed, unread])
+  const nested = rows.some((row) => row.expanded !== null)
+
+  const toggle = (path: string) =>
+    setClosed((current) => {
+      const next = new Set(current)
+      if (!next.delete(path)) next.add(path)
+      return next
+    })
+
   return (
     <View style={styles.fill}>
-      <BackLink label="‹ Konten" onPress={props.onBack} />
-      <Text style={styles.title}>{account.displayName}</Text>
+      <Header title={account.displayName} back={{ label: 'Konten', onPress: props.onBack }} />
       {offline ? (
         <View>
           <Text style={styles.error}>{offline}</Text>
@@ -24,17 +44,38 @@ export function FoldersScreen(props: {
         </View>
       ) : null}
       <FlatList
-        data={folders}
-        keyExtractor={(folder) => folder.id}
-        renderItem={({ item }) => (
-          <Pressable style={styles.item} onPress={() => props.onOpen(item)}>
-            <Text style={styles.itemTitle}>{item.imapPath}</Text>
-            {item.specialUse ? <Text style={styles.itemMeta}>{item.specialUse}</Text> : null}
-          </Pressable>
-        )}
+        data={rows}
+        keyExtractor={(row) => row.node.path}
+        renderItem={({ item }) => {
+          const { node } = item
+          return (
+            <ListRow
+              title={node.folder ? folderLabel(node.folder) : node.label}
+              icon={node.folder ? folderIconName(node.folder) : 'folder'}
+              count={item.count}
+              depth={item.depth}
+              // Room for the button is made for every row when any has one, so that the names line up.
+              expanded={nested ? item.expanded : undefined}
+              onToggle={() => toggle(node.path)}
+              // A name that only holds others has nothing to open: it opens and closes.
+              onPress={() => (node.folder ? props.onOpen(node.folder) : toggle(node.path))}
+            />
+          )
+        }}
       />
       <Button label="Neue Nachricht" onPress={props.onCompose} />
-      <Button label="Konto entfernen" onPress={props.onRemove} />
+      <Button label="Konto entfernen" variant="danger" onPress={() => setConfirmingRemove(true)} />
+      <ConfirmDialog
+        visible={confirmingRemove}
+        title={`${account.displayName} entfernen?`}
+        text="Das Konto, seine gespeicherten Nachrichten und alles, was noch auf eine Verbindung wartet, werden von diesem Gerät gelöscht. Auf dem Mailserver bleibt alles, wie es ist."
+        confirmLabel="Konto entfernen"
+        onCancel={() => setConfirmingRemove(false)}
+        onConfirm={() => {
+          setConfirmingRemove(false)
+          props.onRemove()
+        }}
+      />
     </View>
   )
 }

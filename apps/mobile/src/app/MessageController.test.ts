@@ -107,7 +107,8 @@ describe('opening a message', () => {
       ...t.summary,
       accountId: t.work.id,
       folderId: t.folder.id,
-      accountName: 'work'
+      accountName: 'work',
+      accountColor: '#2f5d9f'
     })
     expect(t.store.screen).toMatchObject({ name: 'message', origin: 'unified', account: { id: t.work.id } })
   })
@@ -296,5 +297,121 @@ describe('a message a notification was tapped for', () => {
     await t.app.messages.openTarget({ accountId: t.work.id, folderId: 'nothing', uid: 1 })
     await t.app.messages.openTarget({ accountId: t.work.id, folderId: t.folder.id, uid: 99 })
     expect(t.store.screen.name).toBe('login')
+  })
+})
+
+const SUSPICIOUS = crlf([
+  'From: "service@bank.example" <phish@attacker.test>',
+  'Reply-To: collect@elsewhere.test',
+  'Subject: Your account',
+  'Authentication-Results: mx.example.org; spf=fail; dkim=none; dmarc=fail',
+  'X-Spamd-Result: default: True [16.00 / 15.00]; FORGED_SENDER(5.00)[]',
+  'Content-Type: text/plain',
+  '',
+  'Please log in.',
+  ''
+])
+
+async function inboxWith(source: string, folders: Record<string, never[]> = { Trash: [], Archive: [], Junk: [] }) {
+  const t = await appHarness()
+  const work = await t.givenAccount('work', { INBOX: [{ uid: 1, subject: 'Your account', source }], ...folders })
+  const folder = t.folderOf(await listFolders(t.db, work.id), 'INBOX')
+  const summary = (await listMessages(t.db, folder.id))[0]
+  await t.app.services.connections.ensure(work)
+  t.server.calls.length = 0
+  return { ...t, work, folder, summary }
+}
+
+async function openedFrom(t: Awaited<ReturnType<typeof inboxWith>>): Promise<MessageState> {
+  await t.app.messages.open(t.work, t.folder, t.summary, 'folder')
+  const screen = t.store.screen
+  if (screen.name !== 'message') throw new Error(`expected the message, got ${screen.name}`)
+  return screen
+}
+
+describe('what is known of a message that is opened', () => {
+  it('is what the server made of it and what is wrong with who it says it is from, with the domains of the user', async () => {
+    const t = await inboxWith(SUSPICIOUS)
+    const state = await openedFrom(t)
+
+    expect(state.knownDomains).toEqual(['example.org'])
+    expect(state.assessment?.spam).toMatchObject({ verdict: 'spam' })
+    expect(state.assessment?.failedAuth).toEqual(['dmarc', 'spf'])
+    expect(state.assessment?.sender.map((finding) => finding.risk)).toEqual(['nameContainsOtherAddress', 'replyToMismatch'])
+  })
+
+  it('is nothing for an ordinary message', async () => {
+    // Not under example.net: the accounts are under example.org, and a name that is the same under another ending looks like theirs.
+    const t = await inboxWith(crlf(['From: Anna <anna@sender.test>', 'Subject: Hi', '', 'Hello', '']))
+    const state = await openedFrom(t)
+    expect(state.assessment).toMatchObject({ spam: null, failedAuth: [], sender: [] })
+  })
+
+  it('knows a first message from an address by the messages the phone has of it', async () => {
+    const t = await inboxWith(crlf(['From: Anna <anna@sender.test>', 'Subject: Hi', '', 'Hello', '']))
+    const state = await openedFrom(t)
+    // The message that is open is stored, and is the only one from its sender there.
+    expect(state.assessment?.firstContact).toBe(true)
+  })
+})
+
+describe('putting a message away', () => {
+  it('moves it to the archive of its account and shows the list without it', async () => {
+    const t = await inboxWith(SUSPICIOUS)
+    await t.app.messages.archive(await openedFrom(t))
+    expect(t.server.calls).toContain('move INBOX > Archive 1')
+    expect(t.store.screen).toMatchObject({ name: 'messages', messages: [] })
+  })
+
+  it('moves it to the spam folder of its account', async () => {
+    const t = await inboxWith(SUSPICIOUS)
+    await t.app.messages.markAsJunk(await openedFrom(t))
+    expect(t.server.calls).toContain('move INBOX > Junk 1')
+    expect(t.store.screen).toMatchObject({ name: 'messages', messages: [] })
+  })
+
+  it('says so, and stays on the message, when the account has no archive', async () => {
+    const t = await inboxWith(SUSPICIOUS, { Trash: [], Junk: [] })
+    const state = await openedFrom(t)
+    await t.app.messages.archive(state)
+    expect(t.server.calls.filter((call) => call.startsWith('move'))).toEqual([])
+    expect(t.store.screen).toMatchObject({ name: 'message', notice: 'Für dieses Konto ist kein Archivordner vorhanden' })
+  })
+
+  it('says so, and stays on the message, when the account has no spam folder', async () => {
+    const t = await inboxWith(SUSPICIOUS, { Trash: [], Archive: [] })
+    await t.app.messages.markAsJunk(await openedFrom(t))
+    expect(t.store.screen).toMatchObject({ name: 'message', notice: 'Für dieses Konto ist kein Spam-Ordner vorhanden' })
+  })
+})
+
+describe('a message that a search found', () => {
+  it('is opened from the account and folder it is in, and leaving it goes back to the same search', async () => {
+    const t = await connectedInbox()
+    await t.app.navigator.showSearch('contract')
+    const found = t.store.screen
+    if (found.name !== 'search') throw new Error('not the search')
+
+    await t.app.messages.openFromSearch(found.messages[0], 'contract')
+    expect(t.store.screen).toMatchObject({ name: 'message', origin: 'search', searchQuery: 'contract' })
+
+    const message = t.store.screen
+    if (message.name !== 'message') throw new Error('not the message')
+    await t.app.messages.leave(message)
+    expect(t.store.screen).toMatchObject({ name: 'search', query: 'contract' })
+  })
+
+  it('goes back to the search after being moved, where the message is no longer in its place', async () => {
+    const t = await connectedInbox()
+    await t.app.navigator.showSearch('contract')
+    const found = t.store.screen
+    if (found.name !== 'search') throw new Error('not the search')
+    await t.app.messages.openFromSearch(found.messages[0], 'contract')
+    const message = t.store.screen
+    if (message.name !== 'message') throw new Error('not the message')
+
+    await t.app.messages.delete(message)
+
+    expect(t.store.screen).toMatchObject({ name: 'search', query: 'contract' })
   })
 })

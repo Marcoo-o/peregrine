@@ -2,7 +2,7 @@ import { View } from 'react-native'
 import type { FormSecurity } from '../app/accountForm'
 import { Chip } from './controls'
 import { FormInput } from './FormScroll'
-import { styles } from './styles'
+import { useStyles } from './useStyles'
 
 /** The three fields that name a server: its address, how to connect to it, and the port. */
 export function ServerFields(props: {
@@ -15,6 +15,7 @@ export function ServerFields(props: {
   onPort: (port: string) => void
   onSecure: (secure: FormSecurity) => void
 }) {
+  const styles = useStyles()
   return (
     <>
       <FormInput

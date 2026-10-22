@@ -2,9 +2,11 @@ import type { ImapSession } from '@peregrine/core/imapSession'
 import { listAccounts, type Account } from '../accounts'
 import { explainError } from '../errors'
 import { listFolders, syncFolders, type Folder } from '../folders'
-import { listMessages } from '../messages'
+import { listMessages, unreadCounts } from '../messages'
+import { searchMessages } from '../search'
+import { loadSidebar, type SidebarData } from '../sidebar'
 import { syncFolder } from '../sync'
-import { listUnified, refreshInboxes, type RefreshResult } from '../unified'
+import { listUnified, refreshRole, type RefreshResult, type UnifiedRole } from '../unified'
 import { refreshQueueStatus } from './queueStatus'
 import type { Services } from './services'
 import type { AppStore } from './store'
@@ -30,6 +32,11 @@ export class Navigator {
     else await this.showAccounts()
   }
 
+  /** What the sidebar shows, read from the database each time it is opened. */
+  sidebar(): Promise<SidebarData> {
+    return loadSidebar(this.services.db)
+  }
+
   /** The list of accounts, or the form when there is none. */
   async showAccounts(error?: string): Promise<void> {
     this.store.setStatusAccount(null)
@@ -41,10 +48,12 @@ export class Navigator {
     this.store.showScreen({ name: 'login' })
   }
 
-  /** Leaves the form for the list of accounts, when there is one to go back to. */
-  async leaveLogin(): Promise<void> {
+  /** Leaves the form for the list of accounts, when there is one to go back to, and says whether it did. */
+  async leaveLogin(): Promise<boolean> {
     const accounts = await listAccounts(this.services.db)
-    if (accounts.length > 0) await this.showAccounts()
+    if (accounts.length === 0) return false
+    await this.showAccounts()
+    return true
   }
 
   /**
@@ -67,14 +76,39 @@ export class Navigator {
     this.store.setStatusAccount(account.id)
     await mail.flush(account.id)
     await syncFolders(db, account.id, await imap.listMailboxes())
-    this.store.showScreen({ name: 'folders', account, folders: await listFolders(db, account.id) })
+    await this.showFoldersScreen(account)
+    this.refreshStatus()
+  }
+
+  /**
+   * A folder of an account, opened from the sidebar: the account is connected when it is not, what waited in its
+   * queue is replayed, and the folder is fetched. When there is no connection the folder is shown as it was
+   * stored, with the reason.
+   */
+  async openFolder(account: Account, folder: Folder): Promise<void> {
+    this.store.setStatusAccount(account.id)
+    try {
+      await this.services.connections.ensure(account)
+      await this.services.mail.flush(account.id)
+    } catch (error) {
+      await this.showStoredMessages(account, folder, { busy: false, error: explainError(error) })
+      this.refreshStatus()
+      return
+    }
+    await this.showMessages(account, folder, { sync: true })
     this.refreshStatus()
   }
 
   /** The folders as they were last fetched, for going back to them without asking the server. */
   async showStoredFolders(account: Account): Promise<void> {
-    const folders = await listFolders(this.services.db, account.id)
-    this.store.showScreen({ name: 'folders', account, folders })
+    await this.showFoldersScreen(account)
+  }
+
+  /** The folders that are stored, with how much of each is not read, and what is to be said when the server could not be reached. */
+  private async showFoldersScreen(account: Account, offline?: string): Promise<void> {
+    const { db } = this.services
+    const folders = await listFolders(db, account.id)
+    this.store.showScreen({ name: 'folders', account, folders, unread: await unreadCounts(db, account.id), offline })
   }
 
   private async showFoldersOffline(account: Account, reason: string): Promise<void> {
@@ -83,21 +117,27 @@ export class Navigator {
       await this.showAccounts(`${account.displayName}: ${reason}`)
       return
     }
-    this.store.showScreen({ name: 'folders', account, folders, offline: reason })
+    await this.showFoldersScreen(account, reason)
     this.refreshStatus()
   }
 
+  /** The role of the list of all accounts that was shown last, which is the one shown again when none is asked for. */
+  private unifiedRole: UnifiedRole = 'inbox'
+
   /**
-   * The newest messages of every account's inbox in one list. It is shown at once from what is stored
-   * and, when asked, brought up to date after, account by account.
+   * The newest messages of the folders of a role, of every account, in one list: the inboxes unless it is told
+   * another role, and the one shown last when it is told none. It is shown at once from what is stored and, when
+   * asked, brought up to date after, account by account.
    */
-  async showUnified(options: { refresh: boolean }): Promise<void> {
+  async showUnified(options: { refresh: boolean; role?: UnifiedRole }): Promise<void> {
     const { db, connections, mail } = this.services
+    this.unifiedRole = options.role ?? this.unifiedRole
+    const role = this.unifiedRole
     this.store.setStatusAccount(null)
     await this.showUnifiedList(options.refresh, [], 'navigating')
     if (!options.refresh) return
 
-    const results = await refreshInboxes({ db, connections, mail }, await listAccounts(db))
+    const results = await refreshRole({ db, connections, mail }, await listAccounts(db), role)
     await this.showUnifiedList(false, results.filter((result) => result.error !== undefined), 'updating')
     this.refreshStatus()
   }
@@ -107,9 +147,26 @@ export class Navigator {
    * screen the user has moved on to while the accounts were being fetched.
    */
   private async showUnifiedList(busy: boolean, problems: RefreshResult[], reason: 'navigating' | 'updating'): Promise<void> {
-    const messages = await listUnified(this.services.db)
+    const role = this.unifiedRole
+    const messages = await listUnified(this.services.db, undefined, role)
     if (reason === 'updating' && this.store.screen.name !== 'unified') return
-    this.store.showScreen({ name: 'unified', messages, busy, problems })
+    this.store.showScreen({ name: 'unified', role, messages, busy, problems })
+  }
+
+  /** How many searches there have been, so that the newest is the one that is shown whichever finishes last. */
+  private searches = 0
+
+  /**
+   * The messages that a search finds, from the database. `opening` is the search screen being entered, and
+   * `typing` is the result for what has been typed since, which is shown only if it is the newest search and
+   * the user is still on the screen for it.
+   */
+  async showSearch(query: string, reason: 'opening' | 'typing' = 'opening'): Promise<void> {
+    const mine = ++this.searches
+    const { messages, unsupported } = await searchMessages(this.services.db, query)
+    if (mine !== this.searches) return
+    if (reason === 'typing' && this.store.screen.name !== 'search') return
+    this.store.showScreen({ name: 'search', query, messages, unsupported })
   }
 
   /** The messages of a folder from the database, and a sync with the server when asked to and there is one. */

@@ -3,6 +3,7 @@ import { listPendingActions } from '@peregrine/core/pendingActionsStore'
 import { getAccount } from '../accounts'
 import { emptyDraft, type Draft } from '../draft'
 import { appHarness, eventually } from '../testing/appHarness'
+import { readable } from '../testing/readable'
 import { senderProblem } from './ComposeController'
 import type { ComposeState, MessageState, Screen } from './screens'
 
@@ -40,6 +41,21 @@ describe('starting a message', () => {
     expect(t.state).toEqual({ name: 'compose', account: t.work, returnTo, draft: emptyDraft, busy: false })
   })
 
+  it('starts an empty one from the first account where there is no account to start it from', async () => {
+    const t = await appHarness()
+    const first = await t.givenAccount('work', {})
+    await t.givenAccount('home', {})
+    await t.app.compose.startNewFromAnyAccount(returnTo)
+    expect(t.store.screen).toMatchObject({ name: 'compose', account: { id: first.id }, returnTo })
+  })
+
+  it('starts nothing when there is no account at all', async () => {
+    const t = await appHarness()
+    const before = t.store.screen
+    await t.app.compose.startNewFromAnyAccount(returnTo)
+    expect(t.store.screen).toBe(before)
+  })
+
   it('starts an answer that quotes the message, and goes back to the message', async () => {
     const t = await composing()
     const message: MessageState = {
@@ -48,20 +64,58 @@ describe('starting a message', () => {
       folder: undefined as never,
       summary: undefined as never,
       origin: 'folder',
-      message: {
-        subject: 'Lunch',
-        from: 'Anna <anna@example.net>',
-        date: 'Mon, 19 Oct 2026 10:00:00 +0200',
-        text: 'Shall we?',
-        messageId: '<one@example.net>',
-        references: '',
-        replyTo: ''
-      }
+      message: readable()
     }
     t.app.compose.startReply(message)
     const screen = t.store.screen as ComposeState
     expect(screen.draft).toMatchObject({ to: 'Anna <anna@example.net>', subject: 'Re: Lunch', inReplyTo: '<one@example.net>' })
     expect(screen.returnTo).toBe(message)
+  })
+
+  it('starts an answer to everybody that leaves the account itself out, and goes back to the message', async () => {
+    const t = await composing()
+    const message: MessageState = {
+      name: 'message',
+      account: t.work,
+      folder: undefined as never,
+      summary: undefined as never,
+      origin: 'folder',
+      message: readable({ to: `Alex <${t.work.emailAddress}>, Bob <bob@sender.test>`, cc: 'Cara <cara@sender.test>' })
+    }
+    t.app.compose.startReplyAll(message)
+    const screen = t.store.screen as ComposeState
+    expect(screen.draft).toMatchObject({
+      to: 'Anna <anna@example.net>, Bob <bob@sender.test>',
+      cc: 'Cara <cara@sender.test>',
+      subject: 'Re: Lunch'
+    })
+    expect(screen.returnTo).toBe(message)
+  })
+
+  it('starts a message to be passed on, with nobody to send it to yet', async () => {
+    const t = await composing()
+    const message: MessageState = {
+      name: 'message',
+      account: t.work,
+      folder: undefined as never,
+      summary: undefined as never,
+      origin: 'folder',
+      message: readable()
+    }
+    t.app.compose.startForward(message)
+    const screen = t.store.screen as ComposeState
+    expect(screen.draft).toMatchObject({ to: '', subject: 'Fwd: Lunch' })
+    expect(screen.draft.body).toContain('Weitergeleitete Nachricht')
+    expect(screen.returnTo).toBe(message)
+  })
+
+  it('starts neither of them for a message whose text has not arrived', async () => {
+    const t = await composing()
+    const message = { name: 'message', account: t.work, origin: 'folder' } as unknown as MessageState
+    const before = t.store.screen
+    t.app.compose.startReplyAll(message)
+    t.app.compose.startForward(message)
+    expect(t.store.screen).toBe(before)
   })
 
   it('does not start an answer to a message whose text has not arrived', async () => {

@@ -1,15 +1,19 @@
+import { parseAddress } from '@peregrine/smtp/headers'
 import { refusalForOpening } from '@peregrine/core/attachmentSafety'
 import { SNIFF_BYTES } from '@peregrine/core/fileType'
 import type { Account } from '../accounts'
-import { getAccount } from '../accounts'
+import { getAccount, listAccounts } from '../accounts'
 import { attachmentContent, listAttachments, type AttachmentInfo } from '../attachments'
 import { refusalText } from '../attachmentText'
 import { describeError, explainError } from '../errors'
 import { FLAGGED, SEEN } from '../flags'
-import { getFolder, listFolders, type Folder } from '../folders'
+import { getFolder, getFolderBySpecialUse, listFolders, type Folder } from '../folders'
 import type { MailActions } from '../mailActions'
 import { listMessages, type StoredMessage } from '../messages'
 import { readMessage } from '../messageText'
+import { assessMessage, knownDomainsOf } from '../reading/assessment'
+import type { SearchHit } from '../search'
+import { isFirstContact, messagesFrom } from '../senderHistory'
 import type { UnifiedMessage } from '../unified'
 import type { MessageTarget } from '../background/notifications'
 import type { Navigator } from './Navigator'
@@ -40,6 +44,14 @@ export class MessageController {
     if (account && folder) await this.open(account, folder, message, 'unified')
   }
 
+  /** Opens a message that a search found, and remembers the search, which leaving the message goes back to. */
+  async openFromSearch(message: SearchHit, query: string): Promise<void> {
+    const { db } = this.services
+    const account = await getAccount(db, message.accountId)
+    const folder = await getFolder(db, message.folderId)
+    if (account && folder) await this.open(account, folder, message, 'search', query)
+  }
+
   /** Opens the message a notification was tapped for, if the application still has it. */
   async openTarget(target: MessageTarget): Promise<void> {
     const { db } = this.services
@@ -54,18 +66,29 @@ export class MessageController {
    * Opens a message: marks it read, which is made here at once and told to the server through the
    * queue, and fetches its text, which needs the server and says why when it cannot have it.
    */
-  async open(account: Account, folder: Folder, summary: StoredMessage, origin: MessageOrigin): Promise<void> {
-    const opened = { account, folder, summary, origin }
+  async open(
+    account: Account,
+    folder: Folder,
+    summary: StoredMessage,
+    origin: MessageOrigin,
+    searchQuery?: string
+  ): Promise<void> {
+    const opened = { account, folder, summary, origin, searchQuery }
     this.store.showScreen({ name: 'message', ...opened })
     if (!summary.flags.includes(SEEN)) this.markRead(folder, summary)
     try {
       const imap = await this.services.connections.ensure(account)
       const full = await imap.fetchFullMessage(folder.imapPath, summary.uid)
       if (!full) throw new Error('Die Nachricht gibt es auf dem Server nicht mehr')
+      const message = readMessage(full.source)
+      const knownDomains = knownDomainsOf(await listAccounts(this.services.db))
+      const firstContact = isFirstContact(await messagesFrom(this.services.db, parseAddress(message.from).address))
       this.store.showScreen({
         name: 'message',
         ...opened,
-        message: readMessage(full.source),
+        message,
+        assessment: assessMessage(message, knownDomains, firstContact),
+        knownDomains,
         source: full.source,
         attachments: this.attachmentsOf(full.source)
       })
@@ -91,6 +114,7 @@ export class MessageController {
   /** Back to the list the message was opened from, which shows what was done to it. */
   async leave(from: OnOpenMessage): Promise<void> {
     if (from.origin === 'unified') await this.navigator.showUnified({ refresh: false })
+    else if (from.origin === 'search') await this.navigator.showSearch(from.searchQuery ?? '')
     else await this.navigator.showMessages(from.account, from.folder, { sync: false })
   }
 
@@ -111,12 +135,37 @@ export class MessageController {
     if (fresh) this.store.showScreen({ ...state, summary: fresh })
   }
 
+  /** Puts the message into the archive of its account, or says that there is none. */
+  async archive(state: MessageState): Promise<void> {
+    await this.moveToRole(state, '\\Archive', 'Für dieses Konto ist kein Archivordner vorhanden')
+  }
+
+  /** Puts the message into the spam folder of its account, or says that there is none. */
+  async markAsJunk(state: MessageState): Promise<void> {
+    await this.moveToRole(state, '\\Junk', 'Für dieses Konto ist kein Spam-Ordner vorhanden')
+  }
+
+  private async moveToRole(state: MessageState, role: string, missing: string): Promise<void> {
+    const target = await getFolderBySpecialUse(this.services.db, state.account.id, role)
+    if (!target) {
+      this.showNotice(state, missing)
+      return
+    }
+    await this.move(this.asMove(state), target)
+  }
+
+  /** What a move needs of a message that is open, without the choice of a folder having been shown. */
+  private asMove(state: MessageState): MoveState {
+    const { account, folder, summary, origin, searchQuery } = state
+    return { name: 'move', account, folder, summary, origin, searchQuery, targets: [], returnTo: state }
+  }
+
   /** Shows the folders the message can go to. */
   async startMove(state: MessageState): Promise<void> {
     const folders = await listFolders(this.services.db, state.account.id)
     const targets = folders.filter((folder) => folder.id !== state.folder.id)
-    const { account, folder, summary, origin } = state
-    this.store.showScreen({ name: 'move', account, folder, summary, origin, targets, returnTo: state })
+    const { account, folder, summary, origin, searchQuery } = state
+    this.store.showScreen({ name: 'move', account, folder, summary, origin, searchQuery, targets, returnTo: state })
   }
 
   async move(state: MoveState, target: Folder): Promise<void> {

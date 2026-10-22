@@ -1,6 +1,7 @@
-import { createContext, useContext, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useRef, useState, type ReactNode } from 'react'
 import { KeyboardAvoidingView, ScrollView, TextInput, type ScrollViewInstance, type TextInputProps } from 'react-native'
-import { styles } from './styles'
+import { useStyles } from './useStyles'
+import { useTheme } from './useTheme'
 
 /** How far above the top of the screen the field that is typed in is put, so that it is not under the edge. */
 const FIELD_MARGIN = 24
@@ -13,6 +14,7 @@ const ScrollToField = createContext<(top: number) => void>(() => undefined)
  * and the ones above it are what is already written.
  */
 export function FormScroll(props: { children: ReactNode }) {
+  const styles = useStyles()
   const scroll = useRef<ScrollViewInstance>(null)
   const scrollToField = (top: number) => scroll.current?.scrollTo({ y: Math.max(0, top - FIELD_MARGIN), animated: true })
   return (
@@ -26,19 +28,28 @@ export function FormScroll(props: { children: ReactNode }) {
 
 /** A field of a `FormScroll`. It knows where it is, and has the form scroll to it when it is typed in. */
 export function FormInput(props: TextInputProps) {
+  const styles = useStyles()
+  const { colors } = useTheme()
   const scrollToField = useContext(ScrollToField)
   const top = useRef(0)
+  const [focused, setFocused] = useState(false)
   return (
     <TextInput
       {...props}
-      style={[styles.input, props.style]}
+      placeholderTextColor={colors.muted}
+      style={[styles.input, focused && styles.inputFocused, props.style]}
       onLayout={(event) => {
         top.current = event.nativeEvent.layout.y
         props.onLayout?.(event)
       }}
       onFocus={(event) => {
+        setFocused(true)
         scrollToField(top.current)
         props.onFocus?.(event)
+      }}
+      onBlur={(event) => {
+        setFocused(false)
+        props.onBlur?.(event)
       }}
     />
   )

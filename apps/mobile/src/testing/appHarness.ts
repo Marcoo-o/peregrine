@@ -22,7 +22,13 @@ export interface FakeMessage {
   source?: string
 }
 
-const ROLES: Record<string, string> = { INBOX: '\\Inbox', Trash: '\\Trash', Archive: '\\Archive', Sent: '\\Sent' }
+const ROLES: Record<string, string> = {
+  INBOX: '\\Inbox',
+  Trash: '\\Trash',
+  Archive: '\\Archive',
+  Junk: '\\Junk',
+  Sent: '\\Sent'
+}
 
 /** One account's mail on the fake server: folders by path. */
 type Mailbox = Record<string, FakeMessage[]>

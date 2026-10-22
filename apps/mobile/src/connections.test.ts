@@ -17,6 +17,7 @@ const account = (id: string): Account => ({
   smtpUsername: null,
   password: 'secret',
   smtpPassword: null,
+  color: '#2f5d9f',
   createdAt: 0
 })
 

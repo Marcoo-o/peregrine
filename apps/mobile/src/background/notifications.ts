@@ -1,5 +1,5 @@
 import { shouldNotify } from '@peregrine/core/notificationPolicy'
-import { parseAddress } from '@peregrine/smtp/headers'
+import { senderName } from '../senderName'
 import { policyOf, type NotificationSettings } from '../settings'
 import type { NewMessage } from './newMail'
 
@@ -33,12 +33,6 @@ const NEW_MESSAGE = 'Neue Nachricht'
 /** What is said when the preview is off, or when there is more than one: how many, and nothing else. */
 export function countText(count: number): string {
   return count === 1 ? '1 neue Nachricht' : `${count} neue Nachrichten`
-}
-
-/** Who wrote a message, as a name when the sender gave one and as the address when not. */
-export function senderName(sender: string): string {
-  const { name, address } = parseAddress(sender)
-  return name || address
 }
 
 /**

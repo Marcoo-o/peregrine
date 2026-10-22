@@ -10,6 +10,8 @@ export interface Folder {
   displayName: string
   /** The role the server names, such as `\Sent`, or null. */
   specialUse: string | null
+  /** The path of the folder it sits in, as the server spells it, or null at the top or when not known yet. */
+  parentPath: string | null
 }
 
 interface FolderRow {
@@ -18,7 +20,10 @@ interface FolderRow {
   imap_path: string
   display_name: string
   special_use: string | null
+  parent_path: string | null
 }
+
+const COLUMNS = 'id, account_id, imap_path, display_name, special_use, parent_path'
 
 function toFolder(row: FolderRow): Folder {
   return {
@@ -26,14 +31,15 @@ function toFolder(row: FolderRow): Folder {
     accountId: row.account_id,
     imapPath: row.imap_path,
     displayName: row.display_name,
-    specialUse: row.special_use
+    specialUse: row.special_use,
+    parentPath: row.parent_path
   }
 }
 
 /** The inbox first, then the folders with a role, then the rest, each group by name. */
 export async function listFolders(db: SqlDb, accountId: string): Promise<Folder[]> {
   const rows = await db.all<FolderRow>(
-    `SELECT id, account_id, imap_path, display_name, special_use FROM folders WHERE account_id = ?
+    `SELECT ${COLUMNS} FROM folders WHERE account_id = ?
      ORDER BY CASE WHEN special_use = '\\Inbox' OR upper(imap_path) = 'INBOX' THEN 0
                    WHEN special_use IS NOT NULL THEN 1 ELSE 2 END,
               display_name COLLATE NOCASE`,
@@ -44,7 +50,7 @@ export async function listFolders(db: SqlDb, accountId: string): Promise<Folder[
 
 export async function getFolder(db: SqlDb, id: string): Promise<Folder | undefined> {
   const row = await db.get<FolderRow>(
-    'SELECT id, account_id, imap_path, display_name, special_use FROM folders WHERE id = ?',
+    `SELECT ${COLUMNS} FROM folders WHERE id = ?`,
     id
   )
   return row ? toFolder(row) : undefined
@@ -57,7 +63,7 @@ export async function getFolderBySpecialUse(
   specialUse: string
 ): Promise<Folder | undefined> {
   const row = await db.get<FolderRow>(
-    `SELECT id, account_id, imap_path, display_name, special_use FROM folders
+    `SELECT ${COLUMNS} FROM folders
      WHERE account_id = ? AND special_use = ? ORDER BY display_name LIMIT 1`,
     accountId,
     specialUse
@@ -82,7 +88,7 @@ export async function syncFolders(
 ): Promise<Folder[]> {
   await db.transaction(async (tx) => {
     const known = await tx.all<FolderRow>(
-      'SELECT id, account_id, imap_path, display_name, special_use FROM folders WHERE account_id = ?',
+      `SELECT ${COLUMNS} FROM folders WHERE account_id = ?`,
       accountId
     )
     const byPath = new Map(known.map((row) => [row.imap_path, row]))
@@ -95,19 +101,21 @@ export async function syncFolders(
       const existing = byPath.get(entry.path)
       if (existing) {
         await tx.run(
-          'UPDATE folders SET display_name = ?, special_use = ? WHERE id = ?',
+          'UPDATE folders SET display_name = ?, special_use = ?, parent_path = ? WHERE id = ?',
           entry.name,
           entry.specialUse,
+          entry.parentPath,
           existing.id
         )
       } else {
         await tx.run(
-          'INSERT INTO folders (id, account_id, imap_path, display_name, special_use) VALUES (?, ?, ?, ?, ?)',
+          'INSERT INTO folders (id, account_id, imap_path, display_name, special_use, parent_path) VALUES (?, ?, ?, ?, ?, ?)',
           makeId(),
           accountId,
           entry.path,
           entry.name,
-          entry.specialUse
+          entry.specialUse,
+          entry.parentPath
         )
       }
     }

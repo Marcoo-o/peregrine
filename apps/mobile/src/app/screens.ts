@@ -3,9 +3,11 @@ import type { AttachmentInfo } from '../attachments'
 import type { Draft } from '../draft'
 import type { NotificationSettings } from '../settings'
 import type { Folder } from '../folders'
+import type { MessageAssessment } from '../reading/assessment'
 import type { StoredMessage } from '../messages'
 import type { ReadableMessage } from '../messageText'
-import type { RefreshResult, UnifiedMessage } from '../unified'
+import type { SearchHit, SearchResult } from '../search'
+import type { RefreshResult, UnifiedMessage, UnifiedRole } from '../unified'
 
 /**
  * What the application can be showing. One of these is the whole of what a screen needs, so that a
@@ -13,7 +15,7 @@ import type { RefreshResult, UnifiedMessage } from '../unified'
  */
 
 /** Where a message was opened from, and so where leaving it goes back to. */
-export type MessageOrigin = 'folder' | 'unified'
+export type MessageOrigin = 'folder' | 'unified' | 'search'
 
 export interface LoadingState {
   name: 'loading'
@@ -32,16 +34,29 @@ export interface LoginState {
 
 export interface UnifiedState {
   name: 'unified'
+  /** Which folders of the accounts the list holds: the inboxes, the sent folders, and so on. */
+  role: UnifiedRole
   messages: UnifiedMessage[]
   busy: boolean
   /** The accounts that could not be brought up to date, each with its reason. */
   problems: RefreshResult[]
 }
 
+export interface SearchState {
+  name: 'search'
+  /** What was typed. */
+  query: string
+  messages: SearchHit[]
+  /** The parts of the search that the phone cannot do, which it was made without. */
+  unsupported: SearchResult['unsupported']
+}
+
 export interface FoldersState {
   name: 'folders'
   account: Account
   folders: Folder[]
+  /** How many messages of each folder are not read, by the id of the folder. A folder with none is left out. */
+  unread: Record<string, number>
   /** Why the account could not be reached, when what is shown is only what was fetched before. */
   offline?: string
 }
@@ -63,6 +78,8 @@ interface OpenMessage {
   folder: Folder
   summary: StoredMessage
   origin: MessageOrigin
+  /** The search the message was found by, which leaving it goes back to. */
+  searchQuery?: string
 }
 
 export interface MessageState extends OpenMessage {
@@ -71,6 +88,10 @@ export interface MessageState extends OpenMessage {
   /** The source of the message and the attachments found in it, for saving and opening them. */
   source?: Uint8Array
   attachments?: AttachmentInfo[]
+  /** What is known of the message from its headers: what the server made of it and who it says it is from. */
+  assessment?: MessageAssessment
+  /** The domains of the user's addresses, which a sender or a link is measured against for looking like one. */
+  knownDomains?: string[]
   /** What was said about the last thing done with an attachment. */
   notice?: string
   error?: string
@@ -109,6 +130,7 @@ export type Screen =
   | AccountsState
   | LoginState
   | UnifiedState
+  | SearchState
   | FoldersState
   | MessagesState
   | MessageState
@@ -120,6 +142,7 @@ export type Screen =
 export function showsQueueStatus(screen: Screen): boolean {
   return (
     screen.name === 'unified' ||
+    screen.name === 'search' ||
     screen.name === 'folders' ||
     screen.name === 'messages' ||
     screen.name === 'message' ||
