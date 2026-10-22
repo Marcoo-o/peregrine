@@ -66,6 +66,19 @@ describe('keeping a message as a draft', () => {
     expect(appended[0].source).toContain('From: Work <work@example.org>')
   })
 
+  it('keeps the blind copy in the headers, which a message that is sent never has', async () => {
+    const { db, added, imap, appended } = await account()
+    await saveDraft(db, undefined, imap, input(added.id, { bcc: [{ name: 'Carl', address: 'carl@example.net' }] }))
+    expect(appended[0].source).toMatch(/^Bcc: Carl <carl@example\.net>/m)
+  })
+
+  it('keeps a draft for nobody but a blind copy', async () => {
+    const { db, added, imap, appended } = await account()
+    await saveDraft(db, undefined, imap, input(added.id, { to: [], bcc: [{ name: '', address: 'carl@example.net' }] }))
+    expect(appended[0].source).toMatch(/^Bcc: carl@example\.net/m)
+    expect(appended[0].source).not.toMatch(/^To:/m)
+  })
+
   it('keeps what it needs of a thread', async () => {
     const { db, added, imap, appended } = await account()
     await saveDraft(db, undefined, imap, input(added.id, { inReplyTo: '<one@example.net>', references: '<zero@example.net> <one@example.net>' }))

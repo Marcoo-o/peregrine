@@ -6,6 +6,7 @@ export const readable = (over: Partial<ReadableMessage> = {}): ReadableMessage =
   from: 'Anna <anna@example.net>',
   to: 'Alex <alex@example.org>',
   cc: '',
+  bcc: '',
   date: 'Mon, 19 Oct 2026 10:00:00 +0200',
   text: 'Shall we?',
   html: null,

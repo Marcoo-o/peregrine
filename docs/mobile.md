@@ -962,6 +962,41 @@ are covered by tests only.
 Not done: a time of one's own, bringing a message that comes back to the top, filtering by a tag in the search, and tags of
 other clients as filters (only the tags the user made are offered).
 
+## What managing tags and the blind copy found
+
+**Managing tags.** Tags could be made and set, and now they can be changed and forgotten, in "Einstellungen" under
+"Tags verwalten", as the desktop's settings have them. A tag is a row of a list: its colour, its name, and under the
+name its keyword. A tap opens a sheet to change the name and the colour, with a button to delete; "Neuer Tag" makes one.
+
+- *Renaming and recolouring leave the keyword as it was,* as on the desktop. It is what the messages carry on the server;
+  a new one would leave the tag on none of them. The sheet says so under the name.
+- *Forgetting a tag forgets only its definition.* The keyword stays on the messages that have it, and they show it
+  by what it is, in grey, as they do for a tag another client made. The dialog says that. Taking it off every message
+  would mean rewriting mail this phone has not all fetched, and another client may use the keyword under its own name.
+  A tag made again with the same name is the same keyword, and its messages are its again.
+- A name that is nothing is not a name: the button is off for it, and the controller refuses it as well.
+- The twelve colours are one component now (`TagColors`), used by the sheet that sets tags and by this one.
+- Where the phone differs from the desktop: a name that comes to the keyword of a tag there is gives that tag back,
+  where the desktop makes a second tag with a suffix (`_2`). Typing "für später" for the tag "Für später" is the same tag.
+
+**The blind copy.** The compose screen has a "Bcc (verdeckt)" field after "Kopie", with the suggestions of the other
+two, and a message can go to nobody but a blind copy.
+
+- *A message that is sent never has the header,* and the address is only in the envelope: that is the point of a
+  blind copy, and a test looks for the address in what the recipient gets. This was true before and is checked now.
+- *A draft is the one place that has to keep it,* since it is all the draft can remember who it was for. The core's
+  `composeMessage` had no way to write the header, so it has an option `draft`, and only a draft writes `Bcc`. The saved
+  draft of the emulator has `Bcc: secret@example.net`, and the draft of a message to nobody has no `To`.
+- *Drafts with a blind copy can be written on again.* They were refused before ("verdeckte Empfänger"), because saving
+  them again would have lost it. The message that is read has its `bcc` now, from that header, with the names decoded.
+- Leaving a message with only a blind copy typed asks, like any other change.
+
+Seen on the emulator: a tag renamed and recoloured with its keyword unchanged, the Bcc field and a draft saved with the
+header on the server, and the buttons of the dialog for leaving a message by weight. Forgetting a tag, writing on a draft with
+a blind copy and sending one are covered by tests only.
+
+Not done: ordering the tags, the number of messages of a tag, deleting the keyword from the messages, a tag in the search.
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was

@@ -256,6 +256,7 @@ describe('a draft that is written on again', () => {
     readable({
       to: 'Anna <anna@example.net>',
       cc: 'Ben <ben@example.net>',
+      bcc: 'Carl <carl@example.net>',
       subject: 'Plan',
       text: 'Not finished',
       html: null,
@@ -268,6 +269,7 @@ describe('a draft that is written on again', () => {
       draft: {
         to: 'Anna <anna@example.net>',
         cc: 'Ben <ben@example.net>',
+        bcc: 'Carl <carl@example.net>',
         subject: 'Plan',
         body: 'Not finished',
         attachments: [],
@@ -290,9 +292,32 @@ describe('a draft that is written on again', () => {
     expect(editableDraft({ ...kept(), html: '<p>Not finished</p>' }, 0)).toMatchObject({ refusal: expect.stringContaining('Formatierung') })
   })
 
-  it('is refused when it has recipients that the phone does not show', () => {
-    expect(editableDraft({ ...kept(), headers: { bcc: 'secret@example.net' } }, 0)).toMatchObject({
-      refusal: expect.stringContaining('verdeckte Empfänger')
-    })
+  it('keeps its blind copy, which the phone shows and writes now, and has none where there was none', () => {
+    expect(editableDraft({ ...kept(), bcc: '' }, 0)).toMatchObject({ draft: { bcc: '' } })
+  })
+})
+
+describe('a blind copy', () => {
+  const written = { ...emptyDraft, to: 'anna@example.net', bcc: 'Carl <carl@example.net>, dora@example.net' }
+
+  it('is who gets a copy that the others do not see, each address of the list', () => {
+    expect(toComposeInput('a', written).bcc).toEqual([
+      { name: 'Carl', address: 'carl@example.net' },
+      { name: '', address: 'dora@example.net' }
+    ])
+  })
+
+  it('is a recipient: a message to nobody but a blind copy can be sent', () => {
+    expect(hasRecipient({ ...emptyDraft, bcc: 'carl@example.net' })).toBe(true)
+    expect(hasRecipient(emptyDraft)).toBe(false)
+  })
+
+  it('is a change of a draft, which leaving it asks about', () => {
+    expect(isChanged(emptyDraft, { ...emptyDraft, bcc: 'carl@example.net' })).toBe(true)
+  })
+
+  it('is empty in an answer and in a message passed on', () => {
+    expect(replyDraft(readable()).bcc).toBe('')
+    expect(forwardDraft(readable()).bcc).toBe('')
   })
 })

@@ -44,6 +44,27 @@ export async function createTag(db: SqlDb, name: string, color?: string): Promis
   return tag
 }
 
+/**
+ * Renames a tag or gives it another colour, as the desktop does. The keyword stays as it was: it is what the messages
+ * carry on the server, and a new one would leave the tag on none of them. A name that is nothing changes nothing.
+ * Returns whether it was changed.
+ */
+export async function updateTag(db: SqlDb, id: string, name: string, color: string): Promise<boolean> {
+  const trimmed = name.trim()
+  if (trimmed === '') return false
+  await db.run('UPDATE tags SET name = ?, color = ? WHERE id = ?', trimmed, color, id)
+  return true
+}
+
+/**
+ * Forgets a tag, as the desktop does: the definition goes, and the keyword stays on the messages that have it, which
+ * then show it by its keyword, in grey. Taking it off every message would mean rewriting mail that this phone has not
+ * all fetched, and the keyword may be in use by another client under a name of its own.
+ */
+export async function deleteTag(db: SqlDb, id: string): Promise<void> {
+  await db.run('DELETE FROM tags WHERE id = ?', id)
+}
+
 /** A tag as a message shows it. */
 export interface ShownTag {
   keyword: string

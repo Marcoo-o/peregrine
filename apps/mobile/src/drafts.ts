@@ -30,6 +30,7 @@ export async function saveDraft(
   if (input.encrypt || input.sign) throw new Error('Verschlüsseln und Signieren gibt es auf dem Handy noch nicht.')
   const folder = await draftsFolderOf(db, input.accountId)
   if (!folder) throw new Error('Dieses Konto hat keinen Ordner für Entwürfe.')
-  const composed = await composeFromInput(account, input, files)
+  // A draft is written with its blind copy, which is all it has to remember who it was for.
+  const composed = await composeFromInput(account, input, files, { draft: true })
   return imap.appendMessage(folder.imapPath, composed.source, ['\\Draft', '\\Seen'])
 }

@@ -32,4 +32,32 @@ describe('the tags of the user', () => {
     expect(await t.app.tags.create('work')).toEqual(first)
     expect(t.store.state.tags).toHaveLength(1)
   })
+
+  it('are shown on a screen of their own', async () => {
+    const t = await appHarness()
+    t.app.tags.show()
+    expect(t.store.screen).toEqual({ name: 'tags' })
+  })
+
+  it('are renamed and recoloured, and the store has the change at once', async () => {
+    const t = await appHarness()
+    const made = (await t.app.tags.create('Work'))!
+    expect(await t.app.tags.update(made.id, 'Arbeit', '#2a7a4f')).toBe(true)
+    expect(t.store.state.tags).toEqual([{ ...made, name: 'Arbeit', color: '#2a7a4f' }])
+  })
+
+  it('are not renamed to nothing', async () => {
+    const t = await appHarness()
+    const made = (await t.app.tags.create('Work'))!
+    expect(await t.app.tags.update(made.id, ' ', '#2a7a4f')).toBe(false)
+    expect(t.store.state.tags).toEqual([made])
+  })
+
+  it('are forgotten, and the store has it at once', async () => {
+    const t = await appHarness()
+    const made = (await t.app.tags.create('Work'))!
+    await t.app.tags.create('Trips')
+    await t.app.tags.remove(made.id)
+    expect(t.store.state.tags.map((tag) => tag.name)).toEqual(['Trips'])
+  })
 })

@@ -141,6 +141,28 @@ describe('sending', () => {
     expect(t.server.calls).toContain('append Sent')
   })
 
+  it('sends a blind copy to its address and tells nobody else of it', async () => {
+    const t = await composing()
+    await t.app.services.connections.ensure(t.work)
+
+    await t.app.compose.send(t.state, { ...t.draft, bcc: 'Carl <carl@example.net>' })
+
+    const recipients = t.smtp.received.filter((line) => line.startsWith('RCPT'))
+    expect(recipients.some((line) => line.includes('carl@example.net'))).toBe(true)
+    expect(recipients.some((line) => line.includes('anna@example.net'))).toBe(true)
+    const sent = new TextDecoder().decode(t.smtp.messages[0])
+    expect(sent).not.toContain('carl@example.net')
+    expect(sent).not.toMatch(/^Bcc:/im)
+  })
+
+  it('can go to nobody but a blind copy', async () => {
+    const t = await composing()
+    await t.app.services.connections.ensure(t.work)
+    await t.app.compose.send(t.state, { ...t.draft, to: '', bcc: 'carl@example.net' })
+    expect(t.smtp.messages).toHaveLength(1)
+    expect(t.smtp.received.some((line) => line.startsWith('RCPT') && line.includes('carl@example.net'))).toBe(true)
+  })
+
   it('waits in the queue when there is no connection, and goes back all the same', async () => {
     const t = await composing()
     await t.app.compose.send(t.state, t.draft)
