@@ -1,6 +1,7 @@
-import { Text, View } from 'react-native'
+import { ScrollView, Text, View } from 'react-native'
 import { countText, type ListFilter } from '../listFilter'
 import { Chip } from './controls'
+import { useTags } from './tags'
 import { useStyles } from './useStyles'
 
 /**
@@ -17,6 +18,7 @@ export function ListHead(props: {
 }) {
   const styles = useStyles()
   const { filter } = props
+  const tags = useTags()
   return (
     <View>
       <View style={styles.listTitleRow}>
@@ -25,7 +27,7 @@ export function ListHead(props: {
         </Text>
         <Text style={styles.listCount}>{countText(props.shown, props.total)}</Text>
       </View>
-      <View style={styles.filters}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         <Chip label="Ungelesen" icon="unread" active={filter.unread} onPress={() => props.onFilter({ ...filter, unread: !filter.unread })} />
         <Chip label="Markiert" icon="star" active={filter.starred} onPress={() => props.onFilter({ ...filter, starred: !filter.starred })} />
         <Chip
@@ -34,7 +36,16 @@ export function ListHead(props: {
           active={filter.attachments}
           onPress={() => props.onFilter({ ...filter, attachments: !filter.attachments })}
         />
-      </View>
+        {tags.map((tag) => (
+          <Chip
+            key={tag.id}
+            label={tag.name}
+            dot={tag.color}
+            active={filter.tag === tag.keyword}
+            onPress={() => props.onFilter({ ...filter, tag: filter.tag === tag.keyword ? null : tag.keyword })}
+          />
+        ))}
+      </ScrollView>
     </View>
   )
 }

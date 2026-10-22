@@ -24,7 +24,15 @@ export function Button(props: { label: string; onPress: () => void; disabled?: b
 }
 
 /** A small thing to do, or one of several to choose from, which is tinted when it is the one chosen. */
-export function Chip(props: { label: string; active: boolean; onPress: () => void; disabled?: boolean; icon?: IconName }) {
+export function Chip(props: {
+  label: string
+  active: boolean
+  onPress: () => void
+  disabled?: boolean
+  icon?: IconName
+  /** A colour, shown as a dot before the label: the colour of a tag. */
+  dot?: string
+}) {
   const styles = useStyles()
   const { colors } = useTheme()
   return (
@@ -38,6 +46,7 @@ export function Chip(props: { label: string; active: boolean; onPress: () => voi
       onPress={props.onPress}
     >
       <View style={styles.chipContent}>
+        {props.dot ? <View style={[styles.tagDot, { backgroundColor: props.dot }]} /> : null}
         {props.icon ? <Icon name={props.icon} size={16} color={props.active ? colors.accent : colors.text} /> : null}
         <Text style={props.active ? styles.chipTextActive : styles.chipText}>{props.label}</Text>
       </View>

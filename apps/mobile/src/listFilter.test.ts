@@ -29,8 +29,28 @@ describe('the filters of a list', () => {
   })
 
   it('narrow each other when several are on, so that what is left has every one of them', () => {
-    expect(uids({ unread: true, starred: false, attachments: true })).toEqual([4])
-    expect(uids({ unread: true, starred: true, attachments: true })).toEqual([])
+    expect(uids({ unread: true, starred: false, attachments: true, tag: null })).toEqual([4])
+    expect(uids({ unread: true, starred: true, attachments: true, tag: null })).toEqual([])
+  })
+
+  it('can be narrowed to one tag, which keeps the messages that have its keyword in any case', () => {
+    const tagged = [
+      { flags: ['Work'], hasAttachment: false, uid: 1 },
+      { flags: ['work', '\\Seen'], hasAttachment: false, uid: 2 },
+      { flags: ['Other'], hasAttachment: false, uid: 3 },
+      { flags: [], hasAttachment: false, uid: 4 }
+    ]
+    expect(filterMessages(tagged, { ...NO_FILTER, tag: 'Work' }).map((m) => m.uid)).toEqual([1, 2])
+    expect(filterMessages(tagged, { ...NO_FILTER, tag: 'Nothing' })).toEqual([])
+    expect(filterMessages(tagged, NO_FILTER)).toHaveLength(4)
+  })
+
+  it('narrows further with a tag together with the other filters', () => {
+    const tagged = [
+      { flags: ['Work'], hasAttachment: true, uid: 1 },
+      { flags: ['Work'], hasAttachment: false, uid: 2 }
+    ]
+    expect(filterMessages(tagged, { ...NO_FILTER, attachments: true, tag: 'Work' }).map((m) => m.uid)).toEqual([1])
   })
 
   it('compare the flags without regard to case, as IMAP does', () => {

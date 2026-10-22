@@ -182,7 +182,7 @@ function createStyles({ colors }: Theme) {
     listTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
     listTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
     listCount: { fontSize: 13, color: colors.muted },
-    filters: { flexDirection: 'row', gap: SIZE.gap, marginVertical: SIZE.gap },
+    filters: { flexDirection: 'row', gap: SIZE.gap, marginVertical: SIZE.gap, paddingRight: SIZE.padding },
     chipContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     // The button that writes a message, over the list, at the corner where the thumb is.
     fab: {
@@ -217,8 +217,9 @@ function createStyles({ colors }: Theme) {
     tagColor: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: 'transparent' },
     tagColorChosen: { borderColor: colors.text },
     // A row that is swiped: the pictures that come out from under it, and the row itself, which has to cover them.
-    swipeUnder: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row' },
-    swipeSide: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, gap: 2 },
+    swipeSide: { position: 'absolute', top: 0, bottom: 0, justifyContent: 'center', overflow: 'hidden', paddingHorizontal: 20 },
+    swipeSideLeft: { left: 0, alignItems: 'flex-start' },
+    swipeSideRight: { right: 0, alignItems: 'flex-end' },
     swipeLabel: { color: colors.onAccent, fontSize: 12, fontWeight: '600' },
     swipeRow: { backgroundColor: colors.background },
     // The line of text under a subject in a list.
