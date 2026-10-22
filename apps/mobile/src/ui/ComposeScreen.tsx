@@ -2,18 +2,23 @@ import { useEffect, useRef, useState } from 'react'
 import { BackHandler, Pressable, Text, View } from 'react-native'
 import type { ComposeState } from '../app/screens'
 import { formatSize } from '../attachmentText'
+import { withContact, type Contact } from '../contacts'
 import { hasRecipient, isChanged, type Draft } from '../draft'
 import type { Files } from '../files'
 import { Button, Chip, Spinner } from './controls'
 import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
+import { SuggestionList } from './SuggestionList'
 import { useStyles } from './useStyles'
 import { useComposeForm } from './useComposeForm'
+import { useSuggestions } from './useSuggestions'
 
 export function ComposeScreen(props: {
   state: ComposeState
   files: Files
+  /** The people to suggest for an address that is being typed. */
+  suggest: (typed: string) => Promise<Contact[]>
   onSend: (draft: Draft) => void
   onSaveDraft: (draft: Draft) => void
   onCancel: (draft: Draft) => void
@@ -23,6 +28,9 @@ export function ComposeScreen(props: {
   const form = useComposeForm(props.state.draft, props.files)
   const { draft } = form
   const [discarding, setDiscarding] = useState(false)
+  const [typing, setTyping] = useState<'to' | 'cc' | null>(null)
+  const forTo = useSuggestions(props.suggest, draft.to, typing === 'to')
+  const forCc = useSuggestions(props.suggest, draft.cc, typing === 'cc')
 
   // Leaving with something written asks first, whether it is the button or the back key of the phone.
   const leave = () => (isChanged(props.state.draft, draft) ? setDiscarding(true) : props.onCancel(draft))
@@ -72,7 +80,10 @@ export function ComposeScreen(props: {
         keyboardType="email-address"
         value={draft.to}
         onChangeText={(to) => form.update({ to })}
+        onFocus={() => setTyping('to')}
+        onBlur={() => setTyping((now) => (now === 'to' ? null : now))}
       />
+      <SuggestionList contacts={forTo} onChoose={(contact) => form.update({ to: withContact(draft.to, contact) })} />
       <FormInput
         placeholder="Kopie"
         autoCapitalize="none"
@@ -80,7 +91,10 @@ export function ComposeScreen(props: {
         keyboardType="email-address"
         value={draft.cc}
         onChangeText={(cc) => form.update({ cc })}
+        onFocus={() => setTyping('cc')}
+        onBlur={() => setTyping((now) => (now === 'cc' ? null : now))}
       />
+      <SuggestionList contacts={forCc} onChoose={(contact) => form.update({ cc: withContact(draft.cc, contact) })} />
       <FormInput
         placeholder="Betreff"
         value={draft.subject}

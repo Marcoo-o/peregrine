@@ -337,3 +337,20 @@ describe('drafts', () => {
     expect(t.store.screen).toMatchObject({ name: 'messages', folder: { imapPath: 'Drafts' } })
   })
 })
+
+describe('suggesting who to write to', () => {
+  it('suggests the people the phone has mail from, and not the accounts of the user', async () => {
+    const t = await appHarness()
+    await t.givenAccount('work', { INBOX: [{ uid: 1 }, { uid: 2 }] }, { emailAddress: 'sender@example.net' })
+    await t.givenAccount('home', { INBOX: [{ uid: 1 }] })
+    // Every message of the fake server is from sender@example.net, which is one of the user's own addresses here.
+    expect(await t.app.compose.suggest('sender')).toEqual([])
+  })
+
+  it('suggests an address that the user does not have', async () => {
+    const t = await appHarness()
+    await t.givenAccount('work', { INBOX: [{ uid: 1 }, { uid: 2 }] })
+    expect(await t.app.compose.suggest('SENDER@')).toEqual([{ name: '', address: 'sender@example.net' }])
+    expect(await t.app.compose.suggest('nobody')).toEqual([])
+  })
+})

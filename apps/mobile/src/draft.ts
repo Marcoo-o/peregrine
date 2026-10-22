@@ -129,7 +129,7 @@ export function replyDraft(message: ReadableMessage): Draft {
 }
 
 /** An address as it is typed into a field: the name in quotes when it holds anything that would split it. */
-function written(address: EmailAddress): string {
+export function written(address: EmailAddress): string {
   if (!address.name) return address.address
   const name = /[",;<>@()[\]:\\]/.test(address.name) ? `"${address.name.replace(/(["\\])/g, '\\$1')}"` : address.name
   return `${name} <${address.address}>`
