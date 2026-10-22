@@ -750,9 +750,25 @@ view, the star filled in the warning colour once set), the list of a folder with
 sidebar, and the list of folders of an account. The dark theme held up in all of them; the page of a message stays
 white in both, as the sender made it.
 
-Not done: the lists of accounts and of folders are still there and are reached from the sidebar, and are not styled
-like it. A large system font was not tried on the forms. Swiping, a preview of the text, tags, snoozing and the filter
-rules of the desktop do not exist on the phone.
+The list of accounts has the top bar of the other lists now, so the sidebar, the search and the settings are one tap
+away from it, and the three buttons that led to them are gone. A large system font (1.6) was tried on the form for an
+account: it holds, only the example in the first field is cut off.
+
+Two things the emulator showed that had nothing to do with looks, both fixed:
+
+- *Removing an account was one tap.* The button sat under "new message" on the screen of an account, and a tap on it
+  deleted the account with every message stored for it and what waited in the queue, without a question. It asks now,
+  and says what goes and that the mail server is not touched. Found by tapping where the other button had been.
+- *The back key left the application from every screen*, except while messages were chosen. It does what the way back
+  of the screen does now (`app/backAction.ts`): the sidebar is put away first, an open message goes back to its list,
+  and the lists where the application starts leave it, as the key does everywhere. The form for the first account has
+  no way back, so the key leaves from it. Writing a message asks before it throws away what was changed, whether
+  the button or the key was used, since the key is easier to hit by mistake than the button. These were tested, and the
+  dialog for removing an account was seen on the device; the back key on a message, and the question when writing,
+  were not seen there, because the emulator was closed before they could be.
+
+Not done: the list of folders of an account is still in the old style, with the account's buttons under it. Swiping, a
+preview of the text, tags, snoozing and the filter rules of the desktop do not exist on the phone.
 
 ## What stage 4 found
 

@@ -119,11 +119,11 @@ describe('the list of accounts and the form', () => {
   it('leaves the form for the accounts only when there are some', async () => {
     const t = await appHarness()
     t.app.navigator.showLogin()
-    await t.app.navigator.leaveLogin()
+    expect(await t.app.navigator.leaveLogin()).toBe(false)
     expect(t.store.screen.name).toBe('login')
 
     await t.givenAccount('work', { INBOX: [] })
-    await t.app.navigator.leaveLogin()
+    expect(await t.app.navigator.leaveLogin()).toBe(true)
     expect(t.store.screen.name).toBe('accounts')
   })
 })

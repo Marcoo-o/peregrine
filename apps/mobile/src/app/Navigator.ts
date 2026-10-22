@@ -48,10 +48,12 @@ export class Navigator {
     this.store.showScreen({ name: 'login' })
   }
 
-  /** Leaves the form for the list of accounts, when there is one to go back to. */
-  async leaveLogin(): Promise<void> {
+  /** Leaves the form for the list of accounts, when there is one to go back to, and says whether it did. */
+  async leaveLogin(): Promise<boolean> {
     const accounts = await listAccounts(this.services.db)
-    if (accounts.length > 0) await this.showAccounts()
+    if (accounts.length === 0) return false
+    await this.showAccounts()
+    return true
   }
 
   /**

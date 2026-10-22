@@ -4,6 +4,7 @@ import type { FoldersState } from '../app/screens'
 import { buildFolderTree, visibleRows } from '../folderTree'
 import type { Folder } from '../folders'
 import { Button } from './controls'
+import { ConfirmDialog } from './ConfirmDialog'
 import { folderIconName } from './folderIcon'
 import { folderLabel } from './folderLabel'
 import { Header } from './Header'
@@ -22,6 +23,7 @@ export function FoldersScreen(props: {
   const { account, folders, unread, offline } = props.state
   // The paths of the folders that are closed. Folders start open, so that nothing is hidden that has not been closed.
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set())
+  const [confirmingRemove, setConfirmingRemove] = useState(false)
   const rows = useMemo(() => visibleRows(buildFolderTree(folders), closed, unread), [folders, closed, unread])
   const nested = rows.some((row) => row.expanded !== null)
 
@@ -62,7 +64,18 @@ export function FoldersScreen(props: {
         }}
       />
       <Button label="Neue Nachricht" onPress={props.onCompose} />
-      <Button label="Konto entfernen" variant="danger" onPress={props.onRemove} />
+      <Button label="Konto entfernen" variant="danger" onPress={() => setConfirmingRemove(true)} />
+      <ConfirmDialog
+        visible={confirmingRemove}
+        title={`${account.displayName} entfernen?`}
+        text="Das Konto, seine gespeicherten Nachrichten und alles, was noch auf eine Verbindung wartet, werden von diesem Gerät gelöscht. Auf dem Mailserver bleibt alles, wie es ist."
+        confirmLabel="Konto entfernen"
+        onCancel={() => setConfirmingRemove(false)}
+        onConfirm={() => {
+          setConfirmingRemove(false)
+          props.onRemove()
+        }}
+      />
     </View>
   )
 }

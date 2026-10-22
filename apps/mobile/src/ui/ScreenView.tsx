@@ -27,7 +27,6 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           state={screen}
           onOpen={(account) => navigator.openAccount(account)}
           onAdd={() => navigator.showLogin()}
-          onUnified={() => navigator.showUnified({ refresh: true })}
           onSearch={() => navigator.showSearch('')}
           onSettings={() => settings.show()}
         />

@@ -24,6 +24,18 @@ export interface Draft {
 
 export const emptyDraft: Draft = { to: '', cc: '', subject: '', body: '', attachments: [] }
 
+/** Whether the user has changed a draft from the one it started as, so that leaving it would lose something. */
+export function isChanged(start: Draft, now: Draft): boolean {
+  const files = (draft: Draft) => draft.attachments.map((file) => file.path).join('|')
+  return (
+    start.to !== now.to ||
+    start.cc !== now.cc ||
+    start.subject !== now.subject ||
+    start.body !== now.body ||
+    files(start) !== files(now)
+  )
+}
+
 /**
  * Splits a list of addresses as it is typed, at commas and semicolons that are not inside a name in
  * quotes or an address in angle brackets: `"Anna, B" <a@example.net>, c@example.net` is two.

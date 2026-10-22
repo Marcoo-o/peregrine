@@ -1,9 +1,11 @@
-import { Pressable, Text, View } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { BackHandler, Pressable, Text, View } from 'react-native'
 import type { ComposeState } from '../app/screens'
 import { formatSize } from '../attachmentText'
-import { hasRecipient, type Draft } from '../draft'
+import { hasRecipient, isChanged, type Draft } from '../draft'
 import type { Files } from '../files'
 import { Button, Chip, Spinner } from './controls'
+import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
 import { useStyles } from './useStyles'
@@ -19,10 +21,34 @@ export function ComposeScreen(props: {
   const { account, busy, error } = props.state
   const form = useComposeForm(props.state.draft, props.files)
   const { draft } = form
+  const [discarding, setDiscarding] = useState(false)
+
+  // Leaving with something written asks first, whether it is the button or the back key of the phone.
+  const leave = () => (isChanged(props.state.draft, draft) ? setDiscarding(true) : props.onCancel(draft))
+  const leaving = useRef(leave)
+  leaving.current = leave
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      leaving.current()
+      return true
+    })
+    return () => subscription.remove()
+  }, [])
 
   return (
     <FormScroll>
-      <Header title="Neue Nachricht" back={{ label: 'Abbrechen', onPress: () => props.onCancel(draft) }} />
+      <Header title="Neue Nachricht" back={{ label: 'Abbrechen', onPress: leave }} />
+      <ConfirmDialog
+        visible={discarding}
+        title="Nachricht verwerfen?"
+        text="Was geschrieben wurde, geht verloren."
+        confirmLabel="Verwerfen"
+        onCancel={() => setDiscarding(false)}
+        onConfirm={() => {
+          setDiscarding(false)
+          props.onCancel(draft)
+        }}
+      />
       <Text style={styles.subtitle}>Von {account.emailAddress || account.displayName}</Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FormInput

@@ -4,6 +4,7 @@ import {
   detachFile,
   emptyDraft,
   hasRecipient,
+  isChanged,
   parseAddressList,
   forwardDraft,
   replyAllDraft,
@@ -223,5 +224,28 @@ describe('a message passed on', () => {
 
   it('has a subject for a message that had none', () => {
     expect(forwardDraft(original({ subject: '' })).subject).toBe('Fwd:')
+  })
+})
+
+describe('whether a draft was changed', () => {
+  const file = { filename: 'a.txt', path: '/copies/a.txt', contentType: 'text/plain', size: 1 }
+  const start = { ...emptyDraft, to: 'anna@example.net', subject: 'Re: Plan', body: '> quoted' }
+
+  it('is not for the draft it started as', () => {
+    expect(isChanged(start, { ...start })).toBe(false)
+  })
+
+  it('is for a change of any part the user writes', () => {
+    expect(isChanged(start, { ...start, to: 'ben@example.net' })).toBe(true)
+    expect(isChanged(start, { ...start, cc: 'ben@example.net' })).toBe(true)
+    expect(isChanged(start, { ...start, subject: 'Re: Plan B' })).toBe(true)
+    expect(isChanged(start, { ...start, body: '> quoted, and an answer' })).toBe(true)
+  })
+
+  it('is for a file attached or taken off', () => {
+    const attached = { ...start, attachments: [file] }
+    expect(isChanged(start, attached)).toBe(true)
+    expect(isChanged(attached, { ...attached })).toBe(false)
+    expect(isChanged(attached, start)).toBe(true)
   })
 })

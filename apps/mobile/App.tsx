@@ -10,6 +10,7 @@ import { describeError } from './src/errors'
 import { createPlatform } from './src/platform'
 import type { SidebarData } from './src/sidebar'
 import { DrawerContext, locationOf, showsDrawer } from './src/ui/drawer'
+import { useHardwareBack } from './src/ui/useHardwareBack'
 import { LoadingScreen } from './src/ui/LoadingScreen'
 import { ScreenView } from './src/ui/ScreenView'
 import { Sidebar } from './src/ui/Sidebar'
@@ -33,6 +34,9 @@ export default function App() {
   const drawer = useRef<InstanceType<typeof DrawerLayoutAndroid>>(null)
   const [sidebar, setSidebar] = useState<SidebarData | null>(null)
   const drawerControl = useMemo(() => ({ open: () => drawer.current?.openDrawer() }), [])
+  const drawerOpen = useRef(false)
+  const sidebarControl = useMemo(() => ({ isOpen: () => drawerOpen.current, close: () => drawer.current?.closeDrawer() }), [])
+  useHardwareBack(application, state.screen, sidebarControl)
 
   useEffect(() => {
     let cancelled = false
@@ -79,7 +83,13 @@ export default function App() {
         drawerBackgroundColor={colors.sunken}
         // The sidebar is for the lists and the places that lead to them, and not for a message that is being read.
         drawerLockMode={application && showsDrawer(state.screen.name) ? 'unlocked' : 'locked-closed'}
-        onDrawerOpen={reloadSidebar}
+        onDrawerOpen={() => {
+          drawerOpen.current = true
+          reloadSidebar()
+        }}
+        onDrawerClose={() => {
+          drawerOpen.current = false
+        }}
         renderNavigationView={() => (
           <SafeAreaView style={{ flex: 1, backgroundColor: colors.sunken }}>
             {application ? (
