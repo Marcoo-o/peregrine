@@ -54,8 +54,8 @@
     "mailparser": "^3.9.46",
     "nodemailer": "^10.1.7",
     "openpgp": "^6.3.1",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "react-i18next": "^17.0.11",
     "react-window": "^2.3.0",
     "zustand": "^5.0.14"
