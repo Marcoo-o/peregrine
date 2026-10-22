@@ -3,6 +3,7 @@ import { FlatList, Text, View } from 'react-native'
 import type { MessagesState } from '../app/screens'
 import { filterMessages, NO_FILTER } from '../listFilter'
 import type { StoredMessage } from '../messages'
+import type { Tag } from '../tags'
 import { Fab, Spinner } from './controls'
 import { EmptyListNote } from './EmptyListNote'
 import { folderLabel } from './folderLabel'
@@ -27,6 +28,7 @@ export function MessagesScreen(props: {
   onSearch: () => void
   onSettings: () => void
   onCompose: () => void
+  onCreateTag: (name: string, color: string) => Promise<Tag | undefined>
   onOpen: (message: StoredMessage) => void
 }) {
   const styles = useStyles()
@@ -86,7 +88,7 @@ export function MessagesScreen(props: {
           </SwipeableRow>
         )}
       />
-      {selection.selecting ? <SelectionBar selection={selection} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
+      {selection.selecting ? <SelectionBar selection={selection} flagLists={selection.picked.map((row) => row.message.flags)} onCreateTag={props.onCreateTag} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
     </View>
   )
 }

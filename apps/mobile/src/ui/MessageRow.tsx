@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native'
 import { FLAGGED, SEEN } from '../flags'
 import type { StoredMessage } from '../messages'
 import { senderName } from '../senderName'
+import { TagChips } from './TagChips'
 import { Icon } from './Icon'
 import { shortDate } from './shortDate'
 import { useStyles } from './useStyles'
@@ -64,6 +65,7 @@ export function MessageRow(props: {
             {message.subject || '(ohne Betreff)'}
           </Text>
         </View>
+        <TagChips flags={message.flags} />
         {props.showPreview !== false && message.preview ? (
           <Text style={styles.preview} numberOfLines={2}>
             {message.preview}

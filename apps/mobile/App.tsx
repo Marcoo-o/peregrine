@@ -10,6 +10,7 @@ import { describeError } from './src/errors'
 import { createPlatform } from './src/platform'
 import type { SidebarData } from './src/sidebar'
 import { DrawerContext, locationOf, showsDrawer } from './src/ui/drawer'
+import { TagsContext } from './src/ui/tags'
 import { useHardwareBack } from './src/ui/useHardwareBack'
 import { LoadingScreen } from './src/ui/LoadingScreen'
 import { ScreenView } from './src/ui/ScreenView'
@@ -116,7 +117,9 @@ export default function App() {
                 onDiscard={() => application.discardFailedActions()}
               />
             ) : null}
-            {application ? <ScreenView application={application} screen={state.screen} /> : <LoadingScreen />}
+            <TagsContext.Provider value={state.tags}>
+              {application ? <ScreenView application={application} screen={state.screen} /> : <LoadingScreen />}
+            </TagsContext.Provider>
           </SafeAreaView>
         </DrawerContext.Provider>
       </DrawerLayoutAndroid>

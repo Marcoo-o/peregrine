@@ -8,6 +8,7 @@ import { discardFailedActions, refreshQueueStatus } from './queueStatus'
 import { SelectionController } from './SelectionController'
 import { createServices, type Platform, type Services } from './services'
 import { SettingsController } from './SettingsController'
+import { TagController } from './TagController'
 import type { AppStore } from './store'
 
 /**
@@ -21,6 +22,7 @@ export class Application {
   readonly accounts: AccountSetup
   readonly settings: SettingsController
   readonly selection: SelectionController
+  readonly tags: TagController
 
   constructor(
     readonly services: Services,
@@ -32,6 +34,7 @@ export class Application {
     this.accounts = new AccountSetup(services, store, this.navigator)
     this.settings = new SettingsController(services, store, this.navigator)
     this.selection = new SelectionController(services, store, this.navigator)
+    this.tags = new TagController(services, store)
   }
 
   /**
@@ -42,6 +45,7 @@ export class Application {
   async start(): Promise<void> {
     await this.services.sweepCopies()
     await this.settings.applySchedule()
+    await this.tags.load()
     await this.navigator.start()
     await this.openLaunchTarget()
   }

@@ -52,8 +52,8 @@ describe('a new installation', () => {
   it('gets the newest schema and nothing of the old one', async () => {
     const made = fakeConnection()
     await migrate(new OpSqliteDb(made.connection))
-    expect(tables(made.raw)).toEqual(['accounts', 'folders', 'messages', 'pending_actions', 'settings'])
-    expect(version(made.raw)).toBe(6)
+    expect(tables(made.raw)).toEqual(['accounts', 'folders', 'messages', 'pending_actions', 'settings', 'tags'])
+    expect(version(made.raw)).toBe(7)
   })
 
   it('can be migrated again without harm, as it is at every start', async () => {
@@ -62,7 +62,7 @@ describe('a new installation', () => {
     await migrate(db)
     made.raw.prepare("INSERT INTO accounts (id, display_name, email_address, imap_host, imap_port, imap_secure, imap_username, password, created_at) VALUES ('a','a','','h',1,'tls','u','p',0)").run()
     await migrate(db)
-    expect(version(made.raw)).toBe(6)
+    expect(version(made.raw)).toBe(7)
     expect((made.raw.prepare('SELECT COUNT(*) AS n FROM accounts').get() as { n: number }).n).toBe(1)
   })
 })
@@ -77,6 +77,7 @@ describe('the colours of accounts', () => {
     made.raw.exec('ALTER TABLE folders DROP COLUMN parent_path')
     made.raw.exec('ALTER TABLE messages DROP COLUMN body_text')
     made.raw.exec('ALTER TABLE messages DROP COLUMN preview_text')
+    made.raw.exec('DROP TABLE tags')
     made.raw.exec('PRAGMA user_version = 3')
     const insert = made.raw.prepare(
       "INSERT INTO accounts (id, display_name, email_address, imap_host, imap_port, imap_secure, imap_username, password, created_at) VALUES (?, ?, '', 'h', 1, 'tls', 'u', 'p', ?)"
@@ -100,13 +101,14 @@ describe('where folders sit', () => {
     made.raw.exec('ALTER TABLE folders DROP COLUMN parent_path')
     made.raw.exec('ALTER TABLE messages DROP COLUMN body_text')
     made.raw.exec('ALTER TABLE messages DROP COLUMN preview_text')
+    made.raw.exec('DROP TABLE tags')
     made.raw.exec('PRAGMA user_version = 4')
     made.raw.exec("INSERT INTO folders (id, account_id, imap_path, display_name, special_use) VALUES ('f', 'a', 'Projects/Phone', 'Phone', NULL)")
 
     await migrate(db)
 
     expect(made.raw.prepare('SELECT parent_path FROM folders').get()).toEqual({ parent_path: null })
-    expect(version(made.raw)).toBe(6)
+    expect(version(made.raw)).toBe(7)
   })
 })
 
@@ -117,6 +119,7 @@ describe('the text of messages', () => {
     await migrate(db)
     made.raw.exec('ALTER TABLE messages DROP COLUMN body_text')
     made.raw.exec('ALTER TABLE messages DROP COLUMN preview_text')
+    made.raw.exec('DROP TABLE tags')
     made.raw.exec('PRAGMA user_version = 5')
     made.raw.exec(
       "INSERT INTO messages (folder_id, uid, account_id, subject, sender, date_ms, flags, size, has_attachment) VALUES ('f', 1, 'a', 'Hi', 'x@example.net', 1, '[]', 1, 0)"
@@ -129,7 +132,7 @@ describe('the text of messages', () => {
       body_text: null,
       preview_text: null
     })
-    expect(version(made.raw)).toBe(6)
+    expect(version(made.raw)).toBe(7)
   })
 })
 
@@ -164,9 +167,9 @@ describe('the migration from the prototype', () => {
   it('drops the cache of message headers and the old tables, and has the new ones', async () => {
     const { db, raw } = installedPrototype()
     await migrate(db)
-    expect(tables(raw)).toEqual(['accounts', 'folders', 'messages', 'pending_actions', 'settings'])
+    expect(tables(raw)).toEqual(['accounts', 'folders', 'messages', 'pending_actions', 'settings', 'tags'])
     expect((raw.prepare('SELECT COUNT(*) AS n FROM messages').get() as { n: number }).n).toBe(0)
-    expect(version(raw)).toBe(6)
+    expect(version(raw)).toBe(7)
   })
 
   it('is whole or nothing: a failure part way leaves the prototype as it was', async () => {

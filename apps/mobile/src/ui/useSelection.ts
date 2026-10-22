@@ -9,6 +9,7 @@ export interface SelectionActions {
   archive(picked: Picked[]): Promise<string | undefined>
   markAsJunk(picked: Picked[]): Promise<string | undefined>
   remove(picked: Picked[]): Promise<void>
+  setTag(picked: Picked[], keyword: string, on: boolean): Promise<void>
 }
 
 /**
@@ -53,6 +54,8 @@ export function useSelection<T extends Picked>(shown: readonly T[], actions: Sel
     archive: () => act(() => actions.archive(picked)),
     markAsJunk: () => act(() => actions.markAsJunk(picked)),
     remove: () => act(() => actions.remove(picked)),
+    // A tag is set on the choice without ending it, so that more can be set on the same messages.
+    setTag: (keyword: string, on: boolean) => actions.setTag(picked, keyword, on),
     // One message that was swiped, which is not a choice and has nothing to do with the one that is being made.
     archiveMessage: async (message: Picked) => setNotice((await actions.archive([message])) || undefined),
     removeMessage: async (message: Picked) => {

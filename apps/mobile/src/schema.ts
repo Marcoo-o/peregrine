@@ -116,7 +116,18 @@ const MIGRATIONS: string[][] = [
   // 6. The text of a message, which is what the list shows the first of and what a search looks through. It is null
   // until the text has been fetched, and empty when it was fetched and there was none or it could not be read, so that
   // a message that fails is not tried again for ever.
-  ['ALTER TABLE messages ADD COLUMN body_text TEXT', 'ALTER TABLE messages ADD COLUMN preview_text TEXT']
+  ['ALTER TABLE messages ADD COLUMN body_text TEXT', 'ALTER TABLE messages ADD COLUMN preview_text TEXT'],
+  // 7. The tags the user has made, as the desktop has them: a name, the IMAP keyword that goes on the server, and a colour.
+  // The tags of a message are its keywords, which are in its flags; this is only what they are called and how they look.
+  [
+    `CREATE TABLE tags (
+       id TEXT PRIMARY KEY,
+       name TEXT NOT NULL,
+       keyword TEXT NOT NULL UNIQUE COLLATE NOCASE,
+       color TEXT NOT NULL,
+       sort_order INTEGER NOT NULL
+     )`
+  ]
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */

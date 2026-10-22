@@ -206,6 +206,16 @@ function createStyles({ colors }: Theme) {
     listBottom: { paddingBottom: 88 },
     accountTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SIZE.gap },
     // The people suggested under an address field, as one block that belongs to the field above it.
+    // The tags of a message as small marks under its subject, and the sheet that sets them.
+    tagRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 4 },
+    tagChip: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, maxWidth: 140 },
+    tagChipText: { color: '#ffffff', fontSize: 12, fontWeight: '600' },
+    tagList: { maxHeight: 280 },
+    tagSheetRow: { minHeight: SIZE.target, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 },
+    tagDot: { width: 14, height: 14, borderRadius: 7 },
+    tagColors: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingVertical: SIZE.gap, paddingHorizontal: 4 },
+    tagColor: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: 'transparent' },
+    tagColorChosen: { borderColor: colors.text },
     // A row that is swiped: the pictures that come out from under it, and the row itself, which has to cover them.
     swipeUnder: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row' },
     swipeSide: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, gap: 2 },

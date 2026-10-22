@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { FlatList, Text, View } from 'react-native'
 import type { UnifiedState } from '../app/screens'
 import { filterMessages, NO_FILTER } from '../listFilter'
+import type { Tag } from '../tags'
 import type { UnifiedMessage } from '../unified'
 import { Fab } from './controls'
 import { EmptyListNote } from './EmptyListNote'
@@ -22,6 +23,7 @@ export function UnifiedScreen(props: {
   onSearch: () => void
   onSettings: () => void
   onCompose: () => void
+  onCreateTag: (name: string, color: string) => Promise<Tag | undefined>
   onOpen: (message: UnifiedMessage) => void
 }) {
   const styles = useStyles()
@@ -81,7 +83,7 @@ export function UnifiedScreen(props: {
           </SwipeableRow>
         )}
       />
-      {selection.selecting ? <SelectionBar selection={selection} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
+      {selection.selecting ? <SelectionBar selection={selection} flagLists={selection.picked.map((message) => message.flags)} onCreateTag={props.onCreateTag} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
     </View>
   )
 }

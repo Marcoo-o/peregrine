@@ -143,6 +143,14 @@ export class MessageController {
     if (fresh) this.store.showScreen({ ...state, summary: fresh })
   }
 
+  /** Sets a tag on the open message, or takes it off, and stays on it. */
+  async setTag(state: MessageState, keyword: string, on: boolean): Promise<void> {
+    const { mail, db } = this.services
+    await mail.setFlags(state.folder, [state.summary.uid], on ? [keyword] : [], on ? [] : [keyword])
+    const fresh = (await listMessages(db, state.folder.id)).find((message) => message.uid === state.summary.uid)
+    if (fresh) this.store.showScreen({ ...state, summary: fresh })
+  }
+
   /** Puts the message into the archive of its account, or says that there is none. */
   async archive(state: MessageState): Promise<void> {
     await this.moveToRole(state, '\\Archive', 'Für dieses Konto ist kein Archivordner vorhanden')
