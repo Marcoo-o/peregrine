@@ -68,7 +68,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
         <FoldersScreen
           state={screen}
           onOpen={(folder) => navigator.showMessages(screen.account, folder, { sync: true })}
-          onBack={() => navigator.showAccounts()}
+          onSearch={() => navigator.showSearch('')}
+          onSettings={() => settings.show()}
           onRemove={() => accounts.remove(screen.account)}
           onConnect={() => navigator.openAccount(screen.account)}
           onCompose={() => compose.startNew(screen.account, screen)}
