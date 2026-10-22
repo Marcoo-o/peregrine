@@ -1,7 +1,7 @@
 import type { Account } from '../accounts'
 import type { AttachmentInfo } from '../attachments'
 import type { Draft } from '../draft'
-import type { NotificationSettings } from '../settings'
+import type { ListSettings, NotificationSettings } from '../settings'
 import type { Folder } from '../folders'
 import type { MessageAssessment } from '../reading/assessment'
 import type { StoredMessage } from '../messages'
@@ -37,6 +37,8 @@ export interface UnifiedState {
   /** Which folders of the accounts the list holds: the inboxes, the sent folders, and so on. */
   role: UnifiedRole
   messages: UnifiedMessage[]
+  /** Whether the lines of text under the subjects are shown. */
+  showPreview: boolean
   busy: boolean
   /** The accounts that could not be brought up to date, each with its reason. */
   problems: RefreshResult[]
@@ -47,6 +49,7 @@ export interface SearchState {
   /** What was typed. */
   query: string
   messages: SearchHit[]
+  showPreview: boolean
   /** The parts of the search that the phone cannot do, which it was made without. */
   unsupported: SearchResult['unsupported']
 }
@@ -66,6 +69,7 @@ export interface MessagesState {
   account: Account
   folder: Folder
   messages: StoredMessage[]
+  showPreview: boolean
   /** The names of the account's folders by id, for saying where a message is on its way to. */
   folderNames: Record<string, string>
   busy: boolean
@@ -108,6 +112,8 @@ export interface MoveState extends OpenMessage {
 export interface SettingsState {
   name: 'settings'
   settings: NotificationSettings
+  /** What is set about the lists of messages. */
+  list: ListSettings
   accounts: Account[]
   /** Whether the system lets the application show notifications at all, whatever is switched on here. */
   permitted: boolean

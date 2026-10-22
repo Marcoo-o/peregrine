@@ -831,6 +831,48 @@ a comma is written as are covered by tests.
 Not done: people written to, the tab or the keyboard's own way of choosing, and suggestions for the field of an
 account other than the one that is written from (all accounts' senders are suggested for any).
 
+## What the text of messages found
+
+The list and the search of "What the list and the navigation found" had only headers: the phone fetches the envelope of
+a message, and the text only when the message is opened. That left the desktop's line of text under every subject
+missing, and a search that could not find a word that was only in a message. Both need the text, so the phone keeps it.
+
+- *The text is fetched after the lists, not before them.* A list is shown at once from what is stored and brought up to
+  date; then the next 25 messages of that folder that have no text are fetched, newest first, one trip each, and the
+  list is shown again with the lines that came in. It is done for the folder of a list of one account and for the
+  folder of the role of a unified list, and not in the background while the application is shut: that would spend a
+  battery on mail nobody has looked at. A folder that has not been looked at is worked through 25 at a time.
+- *Opening a message keeps its text at no cost,* since it is fetched for reading anyway.
+- *What is kept:* the text without the HTML, up to 20,000 characters, with one kind of line end, for the search; and
+  the first 160 characters of what the message says itself, flattened to one line, for the list. Lines that quote an
+  earlier message are left out of the second, since they are not what this one says. Two lines are shown, so that a long
+  one is cut by the screen and not by a count.
+- *Large messages are not fetched for a line.* The whole of a message is fetched, attachments with it, so a message of
+  more than 512 KiB is left out and stored with an empty text, and gets its line and its place in the search when it
+  is opened, which fetches it anyway. Twenty-five messages of that size over mobile data would cost more than the
+  lines are worth.
+- *Messages that fail are not tried again.* One the server no longer has, and one that cannot be read, are stored with an
+  empty text, which is a text and not "not fetched yet" (the columns are null until then). A broken connection stops
+  the run, keeps what it did and leaves the rest for the next visit. A folder is fetched one run at a time, so a list
+  that is brought up to date twice in a row does not fetch twice.
+- *Search* now takes every word in the subject, in who wrote or in the text, in any case, with `%` and `_` meaning
+  themselves as before. `betreff:` and `von:` stay for those fields. A message whose text has not come yet is found by
+  its headers, and the help line says "in the text of the messages that are loaded already".
+- *A switch for the line,* as the desktop has one: "Text unter dem Betreff zeigen" in the settings, on by default,
+  under "Listen". It matters to somebody who does not want a stranger to read the first of their mail over their
+  shoulder. The setting is its own group in the settings table, and the lists carry it in their state, read
+  together with the list before the screen is looked at: reading it after made a list that the user had already left
+  come back, which a test of the search found.
+- The migration adds the two columns (`body_text`, `preview_text`) to the messages that are there, with null in them.
+
+Seen on the emulator: the five messages of the inbox without a line, then each with one after the folder was opened, and
+a search for a word that is only in the text finding the one message with the line under its subject. The run that stops
+on a failed connection and the migration of a database with messages are covered by tests only.
+
+Not done: fetching in the background; the text of attachments; and a fetch of
+only the start of a message, which would reach the large ones too (the whole of each message is fetched now, and a partial
+fetch of a MIME part would need a new call in the protocol layer).
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was

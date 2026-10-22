@@ -309,7 +309,7 @@ describe('searching', () => {
   it('shows an empty search with nothing found, and not everything', async () => {
     const t = await twoAccounts()
     await t.app.navigator.showSearch('')
-    expect(t.store.screen).toEqual({ name: 'search', query: '', messages: [], unsupported: [] })
+    expect(t.store.screen).toEqual({ name: 'search', query: '', messages: [], showPreview: true, unsupported: [] })
   })
 
   it('says what part of a search the phone cannot do', async () => {

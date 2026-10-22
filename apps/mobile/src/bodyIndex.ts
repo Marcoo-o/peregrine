@@ -11,6 +11,13 @@ export const MAX_BODY_CHARS = 20_000
 export const PREVIEW_CHARS = 160
 
 /**
+ * The size above which a message is not fetched just to show a line of it. The whole of a message is fetched, with its
+ * attachments, and a list that fetches twenty-five of them over mobile data must not cost what a few large files do.
+ * Such a message gets its line, and its place in the search, when it is opened, which fetches it anyway.
+ */
+export const MAX_INDEXED_BYTES = 512 * 1024
+
+/**
  * How many texts are fetched in one go. Each is a trip to the server, so a folder that has not been looked at is
  * worked through a few at a time, newest first, which is the order it is read in.
  */
@@ -44,20 +51,20 @@ export async function storeBody(db: SqlDb, folderId: string, uid: number, text: 
   )
 }
 
-/** The newest messages of a folder whose text has not been fetched. */
-async function withoutText(db: SqlDb, folderId: string, limit: number): Promise<number[]> {
-  const rows = await db.all<{ uid: number }>(
-    'SELECT uid FROM messages WHERE folder_id = ? AND body_text IS NULL ORDER BY uid DESC LIMIT ?',
+/** The newest messages of a folder whose text has not been fetched, with how large each is. */
+async function withoutText(db: SqlDb, folderId: string, limit: number): Promise<Array<{ uid: number; size: number }>> {
+  return db.all<{ uid: number; size: number }>(
+    'SELECT uid, size FROM messages WHERE folder_id = ? AND body_text IS NULL ORDER BY uid DESC LIMIT ?',
     folderId,
     limit
   )
-  return rows.map((row) => row.uid)
 }
 
 /**
  * Fetches the text of the next messages of a folder that have none stored, and stores it. Returns how many were done.
  *
- * A message the server no longer has, and one that cannot be read, are stored with no text, so that they are not
+ * A message the server no longer has, one that cannot be read and one that is too large to fetch for this are stored
+ * with no text, so that they are not
  * tried again at every visit. A connection that fails is not that: it stops the run, is logged, and what was done
  * before it stays done, and the same messages are the next ones the next time.
  */
@@ -69,7 +76,13 @@ export async function indexBodies(
   limit: number = INDEX_BATCH
 ): Promise<number> {
   let done = 0
-  for (const uid of await withoutText(db, folder.id, limit)) {
+  for (const { uid, size } of await withoutText(db, folder.id, limit)) {
+    if (size > MAX_INDEXED_BYTES) {
+      // Nothing is fetched for it, and it is not asked about again: opening it keeps its text.
+      await storeBody(db, folder.id, uid, '')
+      done++
+      continue
+    }
     let full: Awaited<ReturnType<ImapSession['fetchFullMessage']>>
     try {
       full = await session.fetchFullMessage(folder.imapPath, uid)

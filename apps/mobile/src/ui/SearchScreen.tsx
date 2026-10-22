@@ -12,7 +12,7 @@ import { useTheme } from './useTheme'
 const TYPING_PAUSE_MS = 250
 
 const HELP =
-  'Wörter suchen im Betreff und beim Absender. Dazu geht von:, betreff:, hat:anhang, ist:ungelesen, ist:markiert, ' +
+  'Wörter suchen im Betreff, beim Absender und im Text der Nachrichten, die schon geladen sind. Dazu geht von:, betreff:, hat:anhang, ist:ungelesen, ist:markiert, ' +
   'vor:2026-10-01 und nach:2026-09-01. Mehrere Angaben grenzen weiter ein.'
 
 const UNSUPPORTED: Record<SearchState['unsupported'][number], string> = {
@@ -69,6 +69,7 @@ export function SearchScreen(props: {
           <MessageRow
             message={item}
             sender={item.sender}
+            showPreview={props.state.showPreview}
             account={`${item.accountName} · ${folderLabel(item.folder)}`}
             accountColor={item.accountColor}
             pendingNote={item.pendingMoveTo ? 'wird verschoben, sobald es geht' : undefined}

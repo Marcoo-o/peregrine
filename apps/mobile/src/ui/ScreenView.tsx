@@ -135,6 +135,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onBack={() => settings.back()}
           onEnabled={(enabled) => settings.setEnabled(enabled)}
           onPreview={(preview) => settings.setPreview(preview)}
+          onShowPreview={(show) => settings.setShowPreview(show)}
           onQuietHours={(on) => settings.setQuietHours(on)}
           onQuietTime={(end, value) => settings.setQuietTime(end, value)}
           onMuted={(accountId) => settings.toggleMuted(accountId)}

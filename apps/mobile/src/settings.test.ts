@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_LIST_SETTINGS,
   DEFAULT_NOTIFICATION_SETTINGS,
   DEFAULT_QUIET_HOURS,
   hasQuietHours,
   INTERVAL_CHOICES,
+  loadListSettings,
   loadNotificationSettings,
   policyOf,
+  saveListSettings,
   saveNotificationSettings
 } from './settings'
 import { migratedDatabase } from './testing/testDb'
@@ -97,5 +100,37 @@ describe('the notification settings', () => {
   it('give the desktop’s rule what it asks for', () => {
     const policy = policyOf({ ...DEFAULT_NOTIFICATION_SETTINGS, enabled: true, mutedAccountIds: ['a'], quietFrom: '22:00', quietTo: '07:00' })
     expect(policy).toEqual({ enabled: true, mutedAccountIds: ['a'], quietFrom: '22:00', quietTo: '07:00' })
+  })
+})
+
+describe('the settings of the lists', () => {
+  it('show the text under the subjects when nothing was set', async () => {
+    const { db } = await migratedDatabase()
+    expect(await loadListSettings(db)).toEqual(DEFAULT_LIST_SETTINGS)
+    expect(DEFAULT_LIST_SETTINGS.showPreview).toBe(true)
+  })
+
+  it('come back as they were stored', async () => {
+    const { db } = await migratedDatabase()
+    expect(await saveListSettings(db, { showPreview: false })).toEqual({ showPreview: false })
+    expect(await loadListSettings(db)).toEqual({ showPreview: false })
+    await saveListSettings(db, { showPreview: true })
+    expect(await loadListSettings(db)).toEqual({ showPreview: true })
+  })
+
+  it('take what is stored that is not a switch for the default, and what is not JSON for nothing set', async () => {
+    const { db } = await migratedDatabase()
+    await db.run("INSERT INTO settings (name, value) VALUES ('list', ?)", JSON.stringify({ showPreview: 'no' }))
+    expect(await loadListSettings(db)).toEqual(DEFAULT_LIST_SETTINGS)
+    await db.run("UPDATE settings SET value = 'not json' WHERE name = 'list'")
+    expect(await loadListSettings(db)).toEqual(DEFAULT_LIST_SETTINGS)
+    await db.run("UPDATE settings SET value = 'null' WHERE name = 'list'")
+    expect(await loadListSettings(db)).toEqual(DEFAULT_LIST_SETTINGS)
+  })
+
+  it('are kept apart from the notification settings', async () => {
+    const { db } = await migratedDatabase()
+    await saveListSettings(db, { showPreview: false })
+    expect(await loadNotificationSettings(db)).toEqual(DEFAULT_NOTIFICATION_SETTINGS)
   })
 })

@@ -53,6 +53,7 @@ export function SettingsScreen(props: {
   onBack: () => void
   onEnabled: (enabled: boolean) => void
   onPreview: (preview: boolean) => void
+  onShowPreview: (show: boolean) => void
   onQuietHours: (on: boolean) => void
   onQuietTime: (end: QuietEnd, value: string) => void
   onMuted: (accountId: string) => void
@@ -60,13 +61,18 @@ export function SettingsScreen(props: {
   onRunNow: () => void
 }) {
   const styles = useStyles()
-  const { settings, accounts, permitted, notice } = props.state
+  const { settings, list, accounts, permitted, notice } = props.state
   const quiet = hasQuietHours(settings)
   const off = !settings.enabled
 
   return (
     <FormScroll>
       <Header title="Einstellungen" back={{ label: 'Konten', onPress: props.onBack }} />
+
+      <Text style={styles.section}>Listen</Text>
+      <View style={styles.group}>
+        <SwitchRow label="Text unter dem Betreff zeigen" value={list.showPreview} onChange={props.onShowPreview} />
+      </View>
 
       <Text style={styles.section}>Benachrichtigungen</Text>
       <View style={styles.group}>

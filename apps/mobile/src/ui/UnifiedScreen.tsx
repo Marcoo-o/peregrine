@@ -63,6 +63,7 @@ export function UnifiedScreen(props: {
           <MessageRow
             message={item}
             sender={item.sender}
+            showPreview={props.state.showPreview}
             account={item.accountName}
             accountColor={item.accountColor}
             pendingNote={item.pendingMoveTo ? 'wird verschoben, sobald es geht' : undefined}

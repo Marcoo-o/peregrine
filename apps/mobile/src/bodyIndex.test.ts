@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { FetchedMessage, ImapSession, MailboxEntry } from '@peregrine/core/imapSession'
 import { addAccount } from './accounts'
-import { BodyIndexer, indexBodies, INDEX_BATCH, MAX_BODY_CHARS, PREVIEW_CHARS, previewOf, searchableOf, storeBody } from './bodyIndex'
+import {
+  BodyIndexer,
+  indexBodies,
+  INDEX_BATCH,
+  MAX_BODY_CHARS,
+  MAX_INDEXED_BYTES,
+  PREVIEW_CHARS,
+  previewOf,
+  searchableOf,
+  storeBody
+} from './bodyIndex'
 import { syncFolders } from './folders'
 import { listMessages, saveMessages } from './messages'
 import { migratedDatabase } from './testing/testDb'
@@ -40,15 +50,15 @@ describe('the text that is kept for the search', () => {
 })
 
 const entry = (path: string): MailboxEntry => ({ path, name: path, parentPath: null, flags: [], specialUse: null })
-const header = (uid: number): FetchedMessage => ({
+const header = (uid: number, size = 100): FetchedMessage => ({
   uid,
   flags: [],
-  size: 100,
+  size,
   hasAttachment: false,
   envelope: { subject: `Message ${uid}`, date: new Date(2026, 9, 1, 12, 0), from: [{ address: 'anna@sender.test' }] }
 })
 
-async function folderWith(uids: number[]) {
+async function folderWith(uids: number[], sizes: Record<number, number> = {}) {
   const { db } = await migratedDatabase()
   const account = await addAccount(
     db,
@@ -69,7 +79,7 @@ async function folderWith(uids: number[]) {
     { now: 1 }
   )
   const [folder] = await syncFolders(db, account.id, [entry('INBOX')])
-  await saveMessages(db, folder, uids.map(header))
+  await saveMessages(db, folder, uids.map((uid) => header(uid, sizes[uid])))
   return { db, folder }
 }
 
@@ -129,6 +139,22 @@ describe('fetching the texts of a folder', () => {
     expect(await indexBodies(imap, db, folder, quiet)).toBe(0)
     expect(asked).toEqual([1])
     expect(await db.get('SELECT body_text FROM messages')).toEqual({ body_text: '' })
+  })
+
+  it('fetches nothing for a message that is too large to fetch for a line of it, and is not asked about it again', async () => {
+    const { db, folder } = await folderWith([1, 2], { 2: MAX_INDEXED_BYTES + 1 })
+    const { imap, asked } = session({ 1: mail('one'), 2: mail('two') })
+    expect(await indexBodies(imap, db, folder, quiet)).toBe(2)
+    expect(asked).toEqual([1])
+    expect(await previews(db, folder.id)).toEqual({ 1: 'one', 2: '' })
+    expect(await indexBodies(imap, db, folder, quiet)).toBe(0)
+  })
+
+  it('takes a message of exactly that size', async () => {
+    const { db, folder } = await folderWith([1], { 1: MAX_INDEXED_BYTES })
+    const { imap, asked } = session({ 1: mail('one') })
+    await indexBodies(imap, db, folder, quiet)
+    expect(asked).toEqual([1])
   })
 
   it('does the same for a message that cannot be read, and says so', async () => {

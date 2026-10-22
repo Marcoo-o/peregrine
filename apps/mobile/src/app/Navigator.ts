@@ -5,6 +5,7 @@ import { explainError } from '../errors'
 import { listFolders, syncFolders, type Folder } from '../folders'
 import { listMessages, unreadCounts } from '../messages'
 import { searchMessages } from '../search'
+import { loadListSettings } from '../settings'
 import { loadSidebar, type SidebarData } from '../sidebar'
 import { syncFolder } from '../sync'
 import { listUnified, refreshRole, type RefreshResult, type UnifiedRole } from '../unified'
@@ -156,8 +157,10 @@ export class Navigator {
   private async showUnifiedList(busy: boolean, problems: RefreshResult[], reason: 'navigating' | 'updating'): Promise<void> {
     const role = this.unifiedRole
     const messages = await listUnified(this.services.db, undefined, role)
+    // Everything is read before the screen is looked at, so that nothing is waited for between looking and showing.
+    const { showPreview } = await loadListSettings(this.services.db)
     if (reason === 'updating' && this.store.screen.name !== 'unified') return
-    this.store.showScreen({ name: 'unified', role, messages, busy, problems })
+    this.store.showScreen({ name: 'unified', role, messages, showPreview, busy, problems })
   }
 
   /** How many searches there have been, so that the newest is the one that is shown whichever finishes last. */
@@ -171,9 +174,10 @@ export class Navigator {
   async showSearch(query: string, reason: 'opening' | 'typing' = 'opening'): Promise<void> {
     const mine = ++this.searches
     const { messages, unsupported } = await searchMessages(this.services.db, query)
+    const { showPreview } = await loadListSettings(this.services.db)
     if (mine !== this.searches) return
     if (reason === 'typing' && this.store.screen.name !== 'search') return
-    this.store.showScreen({ name: 'search', query, messages, unsupported })
+    this.store.showScreen({ name: 'search', query, messages, showPreview, unsupported })
   }
 
   /** The messages of a folder from the database, and a sync with the server when asked to and there is one. */
@@ -214,7 +218,8 @@ export class Navigator {
     const { db } = this.services
     const folderNames = Object.fromEntries((await listFolders(db, account.id)).map((f) => [f.id, f.displayName]))
     const messages = await listMessages(db, folder.id)
-    this.store.showScreen({ name: 'messages', account, folder, messages, folderNames, ...status })
+    const { showPreview } = await loadListSettings(db)
+    this.store.showScreen({ name: 'messages', account, folder, messages, showPreview, folderNames, ...status })
   }
 
   /** Reads what waits in the queue into the store, without making anybody wait for it. */
