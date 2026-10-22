@@ -3,7 +3,7 @@ import { analyzeLink } from '@peregrine/core/linkSafety'
 import { assessSpam } from '@peregrine/core/spamScore'
 import { hintsFor } from './hints'
 
-const calm = { spam: null, failedAuth: [], sender: [] }
+const calm = { spam: null, failedAuth: [], sender: [], firstContact: false }
 const nothingOnPage = { links: [], trackingPixels: 0 }
 
 const hints = (over: Partial<Parameters<typeof hintsFor>[0]> = {}) =>
@@ -77,13 +77,19 @@ describe('what a message has to say for itself', () => {
     expect(hints({ remoteImages: 3, showingImages: true })).toEqual([])
   })
 
+  it('tells a first message from an address, without alarm and without a thing to do about it', () => {
+    expect(hints({ assessment: { ...calm, firstContact: true } })).toEqual([
+      expect.objectContaining({ id: 'first-contact', tone: 'info', title: 'Erste Nachricht von dieser Adresse' })
+    ])
+  })
+
   it('keeps the order of the desktop: the server, the sender, the links, the images', () => {
     const spam = assessSpam({ 'x-spamd-result': 'default: True [16.00 / 15.00]; X(5.00)[]' })!
     const found = hints({
-      assessment: { spam, failedAuth: ['spf'], sender: [{ risk: 'replyToMismatch', detail: 'a@b.test' }] },
+      assessment: { spam, failedAuth: ['spf'], sender: [{ risk: 'replyToMismatch', detail: 'a@b.test' }], firstContact: true },
       page: { links: [analyzeLink('https://evil.test/a', 'https://paypal.com/')], trackingPixels: 1 },
       remoteImages: 1
     })
-    expect(found.map((hint) => hint.id)).toEqual(['spam', 'auth', 'sender-replyToMismatch', 'links', 'pixels', 'images'])
+    expect(found.map((hint) => hint.id)).toEqual(['spam', 'auth', 'sender-replyToMismatch', 'links', 'pixels', 'first-contact', 'images'])
   })
 })

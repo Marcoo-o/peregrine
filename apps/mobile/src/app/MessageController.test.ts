@@ -344,7 +344,14 @@ describe('what is known of a message that is opened', () => {
     // Not under example.net: the accounts are under example.org, and a name that is the same under another ending looks like theirs.
     const t = await inboxWith(crlf(['From: Anna <anna@sender.test>', 'Subject: Hi', '', 'Hello', '']))
     const state = await openedFrom(t)
-    expect(state.assessment).toEqual({ spam: null, failedAuth: [], sender: [] })
+    expect(state.assessment).toMatchObject({ spam: null, failedAuth: [], sender: [] })
+  })
+
+  it('knows a first message from an address by the messages the phone has of it', async () => {
+    const t = await inboxWith(crlf(['From: Anna <anna@sender.test>', 'Subject: Hi', '', 'Hello', '']))
+    const state = await openedFrom(t)
+    // The message that is open is stored, and is the only one from its sender there.
+    expect(state.assessment?.firstContact).toBe(true)
   })
 })
 

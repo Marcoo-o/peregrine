@@ -87,6 +87,16 @@ export function spamText(assessment: SpamAssessment): { banner: string; source: 
   }
 }
 
+/**
+ * The words for a first message from an address. The desktop's say that nothing ever arrived from it before; the
+ * phone only knows what it has fetched, so what it says is that.
+ */
+export const FIRST_CONTACT = {
+  banner: 'Erste Nachricht von dieser Adresse',
+  detail:
+    'Unter den Nachrichten auf diesem Gerät ist nichts anderes von dieser Adresse. Das ist für sich genommen unverdächtig, die meisten Erstkontakte sind harmlos. Es lohnt sich nur, bei Zahlungsaufforderungen oder Anmeldedaten genauer hinzusehen.'
+}
+
 export const REMOTE_CONTENT_BLOCKED = 'Externe Bilder wurden zum Schutz Ihrer Privatsphäre blockiert.'
 
 /** The words for the images that only report that the message was opened, as a title and an explanation. */

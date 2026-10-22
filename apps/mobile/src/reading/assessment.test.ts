@@ -4,22 +4,23 @@ import { assessMessage, assessPage, knownDomainsOf, linksInText } from './assess
 
 describe('what is known of a message before it is shown', () => {
   it('has nothing to say about an ordinary message', () => {
-    expect(assessMessage(readable(), [])).toEqual({ spam: null, failedAuth: [], sender: [] })
+    expect(assessMessage(readable(), [], false)).toEqual({ spam: null, failedAuth: [], sender: [], firstContact: false })
   })
 
   it('has the verdict of the server, when it found the message borderline or spam, and not when it found it clean', () => {
-    const spam = assessMessage(readable({ headers: { 'x-spamd-result': 'default: True [16.00 / 15.00]; FORGED_SENDER(5.00)[]' } }), [])
+    const spam = assessMessage(readable({ headers: { 'x-spamd-result': 'default: True [16.00 / 15.00]; FORGED_SENDER(5.00)[]' } }), [], false)
     expect(spam.spam).toMatchObject({ verdict: 'spam', source: 'rspamd' })
     expect(spam.spam?.symbols[0].name).toBe('FORGED_SENDER')
 
-    const clean = assessMessage(readable({ headers: { 'x-spamd-result': 'default: False [1.00 / 15.00]; ARC_NA(0.00)[]' } }), [])
+    const clean = assessMessage(readable({ headers: { 'x-spamd-result': 'default: False [1.00 / 15.00]; ARC_NA(0.00)[]' } }), [], false)
     expect(clean.spam).toBeNull()
   })
 
   it('has the checks of the sender that failed, and only those', () => {
     const results = assessMessage(
       readable({ headers: { 'authentication-results': 'mx.example.org; spf=pass; dkim=pass; dmarc=fail action=none' } }),
-      []
+      [],
+      false
     )
     expect(results.failedAuth).toEqual(['dmarc'])
   })
@@ -29,18 +30,18 @@ describe('what is known of a message before it is shown', () => {
       from: '"service@bank.example" <phish@attacker.test>',
       replyTo: 'collect@elsewhere.test'
     })
-    const risks = assessMessage(message, []).sender.map((finding) => finding.risk)
+    const risks = assessMessage(message, [], false).sender.map((finding) => finding.risk)
     expect(risks).toEqual(['nameContainsOtherAddress', 'replyToMismatch'])
   })
 
   it('finds a sender who looks like somebody the user writes to', () => {
     const message = readable({ from: 'Support <help@examp1e.org>' })
-    const found = assessMessage(message, ['example.org']).sender
+    const found = assessMessage(message, ['example.org'], false).sender
     expect(found.map((finding) => finding.risk)).toContain('lookalikeDomain')
   })
 
   it('does not take the user own domain for a lookalike of itself', () => {
-    expect(assessMessage(readable({ from: 'Alex <alex@example.org>' }), ['example.org']).sender).toEqual([])
+    expect(assessMessage(readable({ from: 'Alex <alex@example.org>' }), ['example.org'], false).sender).toEqual([])
   })
 })
 
@@ -97,5 +98,9 @@ describe('the links of a message that has no page', () => {
     const links = linksInText('See https://example.net/a, and (https://example.org/b). Also http://a.test/c!')
     expect(links.map((link) => link.href)).toEqual(['https://example.net/a', 'https://example.org/b', 'http://a.test/c'])
     expect(links.every((link) => link.text === '')).toBe(true)
+  })
+
+  it('says whether the message is the first from its sender, as it is told', () => {
+    expect(assessMessage(readable(), [], true).firstContact).toBe(true)
   })
 })

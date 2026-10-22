@@ -739,9 +739,14 @@ archive, star, delete and a menu for what is done less often. Seven fit the widt
 share it, which is why moving, marking as unread and as spam are behind the last. The list no longer says twice that
 it has no messages: the line over it says so, and the list only speaks when the filters have taken away all there are.
 
-Not done: the hint for a first message from an address, which the desktop shows, is not there. The lists of accounts
-and of folders are still there and are reached from the sidebar, and are not styled like it. Nothing here was looked
-at in the dark theme, and the row of pictures was not looked at on the device. Swiping, a preview of the text, tags,
+The hint for a first message from an address, which the desktop shows, is there too. The desktop keeps a count of
+contacts for it; the phone has no such table and asks the messages it has, since the sender of each is stored with
+it: a message is a first one when it is the only one from its address, itself included. That is a weaker statement
+than the desktop's, which has seen all the mail that ever came, so the phone's words say "among the messages on this
+device" and not "never before". It is shown as information, below the links and the counting pixels, not as a warning.
+
+Not done: the lists of accounts and of folders are still there and are reached from the sidebar, and are not styled
+like it. Nothing here was looked at in the dark theme, and the row of pictures was not looked at on the device. Swiping, a preview of the text, tags,
 snoozing and the filter rules of the desktop do not exist on the phone.
 
 ## What stage 4 found

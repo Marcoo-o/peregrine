@@ -1,3 +1,4 @@
+import { parseAddress } from '@peregrine/smtp/headers'
 import { refusalForOpening } from '@peregrine/core/attachmentSafety'
 import { SNIFF_BYTES } from '@peregrine/core/fileType'
 import type { Account } from '../accounts'
@@ -12,6 +13,7 @@ import { listMessages, type StoredMessage } from '../messages'
 import { readMessage } from '../messageText'
 import { assessMessage, knownDomainsOf } from '../reading/assessment'
 import type { SearchHit } from '../search'
+import { isFirstContact, messagesFrom } from '../senderHistory'
 import type { UnifiedMessage } from '../unified'
 import type { MessageTarget } from '../background/notifications'
 import type { Navigator } from './Navigator'
@@ -80,11 +82,12 @@ export class MessageController {
       if (!full) throw new Error('Die Nachricht gibt es auf dem Server nicht mehr')
       const message = readMessage(full.source)
       const knownDomains = knownDomainsOf(await listAccounts(this.services.db))
+      const firstContact = isFirstContact(await messagesFrom(this.services.db, parseAddress(message.from).address))
       this.store.showScreen({
         name: 'message',
         ...opened,
         message,
-        assessment: assessMessage(message, knownDomains),
+        assessment: assessMessage(message, knownDomains, firstContact),
         knownDomains,
         source: full.source,
         attachments: this.attachmentsOf(full.source)

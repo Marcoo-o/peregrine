@@ -14,16 +14,19 @@ export interface MessageAssessment {
   spam: SpamAssessment | null
   failedAuth: Array<keyof AuthResults>
   sender: SenderFinding[]
+  /** Nothing else of what the phone has is from the sender. Worth knowing, not a warning. */
+  firstContact: boolean
 }
 
-export function assessMessage(message: ReadableMessage, knownDomains: string[]): MessageAssessment {
+export function assessMessage(message: ReadableMessage, knownDomains: string[], firstContact: boolean): MessageAssessment {
   const spam = assessSpam(message.headers)
   const from = parseAddress(message.from)
   const replyTo = message.replyTo ? parseAddress(message.replyTo).address : null
   return {
     spam: spam && spam.verdict !== 'clean' ? spam : null,
     failedAuth: failedChecks(parseAuthenticationResults(message.headers['authentication-results'])),
-    sender: analyzeSender(from.name ?? '', from.address, replyTo, knownDomains)
+    sender: analyzeSender(from.name ?? '', from.address, replyTo, knownDomains),
+    firstContact
   }
 }
 

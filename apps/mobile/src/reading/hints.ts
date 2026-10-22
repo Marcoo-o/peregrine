@@ -2,6 +2,7 @@ import type { MessageAssessment, PageAssessment } from './assessment'
 import {
   AUTH_BANNER,
   authFailedText,
+  FIRST_CONTACT,
   linkFindingText,
   REMOTE_CONTENT_BLOCKED,
   senderFindingText,
@@ -85,6 +86,10 @@ export function hintsFor(input: {
   if (page.trackingPixels > 0) {
     const text = trackingPixelsText(page.trackingPixels)
     hints.push({ id: 'pixels', tone: 'info', title: text.banner, detail: text.detail })
+  }
+
+  if (assessment.firstContact) {
+    hints.push({ id: 'first-contact', tone: 'info', title: FIRST_CONTACT.banner, detail: FIRST_CONTACT.detail })
   }
 
   if (input.remoteImages > 0 && !input.showingImages) {
