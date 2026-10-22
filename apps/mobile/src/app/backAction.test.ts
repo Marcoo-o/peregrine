@@ -5,7 +5,7 @@ import type { Screen } from './screens'
 const application = () => ({
   navigator: { showAccounts: vi.fn(async () => undefined), leaveLogin: vi.fn(async () => true) },
   messages: { leave: vi.fn(async () => undefined), cancelMove: vi.fn(async () => undefined) },
-  settings: { back: vi.fn(async () => undefined) }
+  settings: { back: vi.fn(async () => undefined), show: vi.fn(async () => undefined) }
 })
 
 // The controllers are what the screens' own ways back call, so a stand-in with those calls is all that is looked at.
@@ -33,6 +33,9 @@ describe('what the back key does', () => {
 
     backAction(asApplication(app), named('settings'), () => undefined)?.()
     expect(app.settings.back).toHaveBeenCalledOnce()
+
+    backAction(asApplication(app), named('tags'), () => undefined)?.()
+    expect(app.settings.show).toHaveBeenCalledOnce()
 
     backAction(asApplication(app), named('search'), () => undefined)?.()
     backAction(asApplication(app), named('folders'), () => undefined)?.()

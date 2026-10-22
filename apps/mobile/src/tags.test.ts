@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TAG_COLORS } from '@peregrine/core/tags'
-import { createTag, listTags, shownTags, tagCoverage, UNKNOWN_TAG_COLOR, type Tag } from './tags'
+import { createTag, deleteTag, listTags, shownTags, tagCoverage, UNKNOWN_TAG_COLOR, updateTag, type Tag } from './tags'
 import { migratedDatabase } from './testing/testDb'
 
 const tag = (keyword: string, name = keyword, color = '#2f5d9f', sortOrder = 0): Tag => ({ id: keyword, name, keyword, color, sortOrder })
@@ -77,5 +77,57 @@ describe('how many of the chosen messages have a tag', () => {
 
   it('is none when nothing is chosen', () => {
     expect(tagCoverage([], 'Work')).toBe('none')
+  })
+})
+
+describe('changing a tag', () => {
+  it('renames it and recolours it, and the keyword stays what it was, since the messages carry that', async () => {
+    const { db } = await migratedDatabase()
+    const made = (await createTag(db, 'Work'))!
+    expect(await updateTag(db, made.id, '  Arbeit  ', '#2a7a4f')).toBe(true)
+    expect(await listTags(db)).toEqual([{ ...made, name: 'Arbeit', color: '#2a7a4f' }])
+  })
+
+  it('changes nothing for a name that is nothing', async () => {
+    const { db } = await migratedDatabase()
+    const made = (await createTag(db, 'Work'))!
+    expect(await updateTag(db, made.id, '   ', '#2a7a4f')).toBe(false)
+    expect(await listTags(db)).toEqual([made])
+  })
+
+  it('leaves the others as they are, and a tag that is not there as nothing', async () => {
+    const { db } = await migratedDatabase()
+    const first = (await createTag(db, 'One'))!
+    const second = (await createTag(db, 'Two'))!
+    await updateTag(db, first.id, 'Uno', first.color)
+    await updateTag(db, 'nothing', 'Ghost', first.color)
+    expect((await listTags(db)).map((tag) => tag.name)).toEqual(['Uno', 'Two'])
+    expect((await listTags(db))[1]).toEqual(second)
+  })
+})
+
+describe('forgetting a tag', () => {
+  it('takes the definition and leaves the others', async () => {
+    const { db } = await migratedDatabase()
+    const first = (await createTag(db, 'One'))!
+    const second = (await createTag(db, 'Two'))!
+    await deleteTag(db, first.id)
+    expect(await listTags(db)).toEqual([second])
+  })
+
+  it('leaves the keyword on the messages, which show it by its keyword in grey after that', async () => {
+    const { db } = await migratedDatabase()
+    const made = (await createTag(db, 'Für später'))!
+    const flags = ['Fuer_spaeter']
+    expect(shownTags(flags, await listTags(db))).toEqual([{ keyword: 'Fuer_spaeter', name: 'Für später', color: made.color }])
+    await deleteTag(db, made.id)
+    expect(shownTags(flags, await listTags(db))).toEqual([{ keyword: 'Fuer_spaeter', name: 'Fuer spaeter', color: UNKNOWN_TAG_COLOR }])
+  })
+
+  it('can be made again with the same name, which is the same keyword', async () => {
+    const { db } = await migratedDatabase()
+    const first = (await createTag(db, 'Work'))!
+    await deleteTag(db, first.id)
+    expect(await createTag(db, 'Work')).toMatchObject({ keyword: 'Work', name: 'Work' })
   })
 })

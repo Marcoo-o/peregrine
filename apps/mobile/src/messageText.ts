@@ -9,6 +9,8 @@ export interface ReadableMessage {
   /** Who it is to and who has a copy, as written, with the names decoded. */
   to: string
   cc: string
+  /** Who has a blind copy, which only a message that was kept to be written on has: a message that was sent hides it. */
+  bcc: string
   date: string
   /** The plain text, or the HTML with its tags taken off when that is all there is. What an answer quotes. */
   text: string
@@ -52,6 +54,7 @@ export function readMessage(source: Uint8Array): ReadableMessage {
     from: header('from'),
     to: header('to'),
     cc: header('cc'),
+    bcc: header('bcc'),
     date: header('date'),
     text: plain ?? (html === null ? '' : stripTags(html)),
     html,

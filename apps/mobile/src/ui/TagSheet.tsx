@@ -5,6 +5,7 @@ import { TAG_COLORS } from '@peregrine/core/tags'
 import type { Tag } from '../tags'
 import { Chip } from './controls'
 import { Icon } from './Icon'
+import { TagColors } from './TagColors'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
 
@@ -77,19 +78,7 @@ export function TagSheet(props: {
               returnKeyType="done"
               maxLength={40}
             />
-            <View style={styles.tagColors}>
-              {TAG_COLORS.map((candidate) => (
-                <Pressable
-                  key={candidate}
-                  accessibilityRole="radio"
-                  accessibilityLabel={`Farbe ${candidate}`}
-                  accessibilityState={{ selected: candidate === color }}
-                  hitSlop={6}
-                  style={[styles.tagColor, { backgroundColor: candidate }, candidate === color && styles.tagColorChosen]}
-                  onPress={() => setColor(candidate)}
-                />
-              ))}
-            </View>
+            <TagColors color={color} onChange={setColor} />
             <Chip label="Anlegen und setzen" active={false} disabled={name.trim() === ''} onPress={() => void create()} />
           </Pressable>
         </Pressable>

@@ -28,9 +28,10 @@ export function ComposeScreen(props: {
   const form = useComposeForm(props.state.draft, props.files)
   const { draft } = form
   const [discarding, setDiscarding] = useState(false)
-  const [typing, setTyping] = useState<'to' | 'cc' | null>(null)
+  const [typing, setTyping] = useState<'to' | 'cc' | 'bcc' | null>(null)
   const forTo = useSuggestions(props.suggest, draft.to, typing === 'to')
   const forCc = useSuggestions(props.suggest, draft.cc, typing === 'cc')
+  const forBcc = useSuggestions(props.suggest, draft.bcc, typing === 'bcc')
 
   // Leaving with something written asks first, whether it is the button or the back key of the phone.
   const leave = () => (isChanged(props.state.draft, draft) ? setDiscarding(true) : props.onCancel(draft))
@@ -95,6 +96,17 @@ export function ComposeScreen(props: {
         onBlur={() => setTyping((now) => (now === 'cc' ? null : now))}
       />
       <SuggestionList contacts={forCc} onChoose={(contact) => form.update({ cc: withContact(draft.cc, contact) })} />
+      <FormInput
+        placeholder="Bcc (verdeckt)"
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="email-address"
+        value={draft.bcc}
+        onChangeText={(bcc) => form.update({ bcc })}
+        onFocus={() => setTyping('bcc')}
+        onBlur={() => setTyping((now) => (now === 'bcc' ? null : now))}
+      />
+      <SuggestionList contacts={forBcc} onChoose={(contact) => form.update({ bcc: withContact(draft.bcc, contact) })} />
       <FormInput
         placeholder="Betreff"
         value={draft.subject}

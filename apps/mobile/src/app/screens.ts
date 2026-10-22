@@ -133,6 +133,11 @@ export interface ComposeState {
   error?: string
 }
 
+/** The tags of the user, which are shown from the store: this screen is what is open, and holds nothing. */
+export interface TagsState {
+  name: 'tags'
+}
+
 export type Screen =
   | LoadingState
   | AccountsState
@@ -145,6 +150,7 @@ export type Screen =
   | MoveState
   | ComposeState
   | SettingsState
+  | TagsState
 
 /** The screens that are about the mail of the accounts and so show what waits in the queue. */
 export function showsQueueStatus(screen: Screen): boolean {

@@ -11,6 +11,7 @@ import { MessagesScreen } from './MessagesScreen'
 import { MoveScreen } from './MoveScreen'
 import { SearchScreen } from './SearchScreen'
 import { SettingsScreen } from './SettingsScreen'
+import { TagsScreen } from './TagsScreen'
 import { UnifiedScreen } from './UnifiedScreen'
 
 /** The screen for what the application is showing, with what each of its buttons does handed to it. */
@@ -134,6 +135,14 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onCancel={(draft) => compose.cancel(screen, draft)}
         />
       )
+    case 'tags':
+      return (
+        <TagsScreen
+          onBack={() => settings.show()}
+          onSave={(tag, name, color) => void (tag ? tags.update(tag.id, name, color) : tags.create(name, color))}
+          onDelete={(tag) => void tags.remove(tag.id)}
+        />
+      )
     case 'settings':
       return (
         <SettingsScreen
@@ -142,6 +151,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onEnabled={(enabled) => settings.setEnabled(enabled)}
           onPreview={(preview) => settings.setPreview(preview)}
           onShowPreview={(show) => settings.setShowPreview(show)}
+          onTags={() => tags.show()}
           onQuietHours={(on) => settings.setQuietHours(on)}
           onQuietTime={(end, value) => settings.setQuietTime(end, value)}
           onMuted={(accountId) => settings.toggleMuted(accountId)}

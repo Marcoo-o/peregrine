@@ -15,6 +15,8 @@ export interface DraftAttachment {
 export interface Draft {
   to: string
   cc: string
+  /** Who gets a copy that the others do not see. */
+  bcc: string
   subject: string
   body: string
   attachments: DraftAttachment[]
@@ -22,12 +24,12 @@ export interface Draft {
   references?: string
 }
 
-export const emptyDraft: Draft = { to: '', cc: '', subject: '', body: '', attachments: [] }
+export const emptyDraft: Draft = { to: '', cc: '', bcc: '', subject: '', body: '', attachments: [] }
 
 /**
  * The draft of a message that was kept as one, to be written on, or the reason it cannot be: saving it again would
- * leave out what the phone cannot show or write, and the server's copy would lose it. That is attached files, a
- * formatted text (the phone writes plain text only) and recipients that are not shown (`Bcc`).
+ * leave out what the phone cannot show or write, and the server's copy would lose it. That is attached files and a
+ * formatted text (the phone writes plain text only). The blind copy is shown and written, and is kept in a draft.
  */
 export function editableDraft(message: ReadableMessage, attachmentCount: number): { draft: Draft } | { refusal: string } {
   if (attachmentCount > 0) {
@@ -36,13 +38,11 @@ export function editableDraft(message: ReadableMessage, attachmentCount: number)
   if (message.html !== null) {
     return { refusal: 'Dieser Entwurf hat eine Formatierung, die das Handy noch nicht bearbeiten kann, ohne sie zu verlieren.' }
   }
-  if (message.headers['bcc']) {
-    return { refusal: 'Dieser Entwurf hat verdeckte Empfänger, die das Handy noch nicht zeigen kann.' }
-  }
   return {
     draft: {
       to: message.to,
       cc: message.cc,
+      bcc: message.bcc,
       subject: message.subject,
       body: message.text,
       attachments: [],
@@ -58,6 +58,7 @@ export function isChanged(start: Draft, now: Draft): boolean {
   return (
     start.to !== now.to ||
     start.cc !== now.cc ||
+    start.bcc !== now.bcc ||
     start.subject !== now.subject ||
     start.body !== now.body ||
     files(start) !== files(now)
@@ -120,6 +121,7 @@ export function replyDraft(message: ReadableMessage): Draft {
   return {
     to: message.replyTo || message.from,
     cc: '',
+    bcc: '',
     subject: replySubject(message.subject),
     body: `\n\n${heading}\n${quoted}\n`,
     attachments: [],
@@ -175,7 +177,7 @@ export function forwardDraft(message: ReadableMessage): Draft {
     `Betreff: ${message.subject}\n` +
     `An: ${message.to}\n\n` +
     `${text}\n`
-  return { to: '', cc: '', subject, body, attachments: [] }
+  return { to: '', cc: '', bcc: '', subject, body, attachments: [] }
 }
 
 /** The input of the queue and of sending, from what was typed. */
@@ -184,7 +186,7 @@ export function toComposeInput(accountId: string, draft: Draft): ComposeInput {
     accountId,
     to: parseAddressList(draft.to),
     cc: parseAddressList(draft.cc),
-    bcc: [],
+    bcc: parseAddressList(draft.bcc),
     subject: draft.subject,
     textBody: draft.body,
     htmlBody: '',
@@ -196,7 +198,7 @@ export function toComposeInput(accountId: string, draft: Draft): ComposeInput {
 
 /** Whether there is anything to send to: the screen enables its button on this. */
 export function hasRecipient(draft: Draft): boolean {
-  return splitAddressList(`${draft.to},${draft.cc}`).length > 0
+  return splitAddressList(`${draft.to},${draft.cc},${draft.bcc}`).length > 0
 }
 
 /** Why a picked file was not attached. */

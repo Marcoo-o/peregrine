@@ -186,6 +186,16 @@ describe('readMessage', () => {
   })
 })
 
+describe('the blind copy of a message that was kept to be written on', () => {
+  it('is read from its Bcc header, with the names decoded, and is empty where there is none', () => {
+    const kept = readMessage(
+      bytes(crlf(['From: work@example.org', 'To: anna@example.net', 'Bcc: =?utf-8?Q?J=C3=BCrgen?= <juergen@example.net>', 'Subject: Hi', '', 'Text', '']))
+    )
+    expect(kept.bcc).toBe('Jürgen <juergen@example.net>')
+    expect(readMessage(bytes(crlf(['From: a@example.net', 'Subject: Hi', '', 'Text', '']))).bcc).toBe('')
+  })
+})
+
 describe('readMessage, for showing it as the sender wrote it', () => {
   const html = '<p>Hello <b>world</b></p>'
 

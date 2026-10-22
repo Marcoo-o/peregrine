@@ -26,7 +26,7 @@ export interface ComposeInput {
   from: AddressInput
   to: AddressInput[]
   cc?: AddressInput[]
-  /** Kept out of the headers and put into the envelope, which is the point of a blind copy. */
+  /** Kept out of the headers and put into the envelope, which is the point of a blind copy. A draft keeps it in the headers. */
   bcc?: AddressInput[]
   replyTo?: AddressInput
   subject: string
@@ -44,6 +44,11 @@ export interface ComposeOptions {
   now?: Date
   /** For fixed ids in tests. Defaults to Math.random, which an id needs to be unique and not secret. */
   random?: () => number
+  /**
+   * The message is one that is kept to be written on, and not sent: a blind copy is written into its headers, since
+   * it is all the draft has to remember who it is for. A message that goes out never has one.
+   */
+  draft?: boolean
 }
 
 export interface Composed {
@@ -86,6 +91,7 @@ export function composeMessage(input: ComposeInput, options: ComposeOptions = {}
   const headers = [addressHeader('From', [from])]
   if (to.length > 0) headers.push(addressHeader('To', to))
   if (cc.length > 0) headers.push(addressHeader('Cc', cc))
+  if (options.draft === true && bcc.length > 0) headers.push(addressHeader('Bcc', bcc))
   if (replyTo) headers.push(addressHeader('Reply-To', [replyTo]))
   headers.push(textHeader('Subject', input.subject))
   headers.push(`Date: ${rfc5322Date(now)}`)

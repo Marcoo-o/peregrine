@@ -108,6 +108,27 @@ describe('the headers of a message', () => {
     expect(composed.envelope).toEqual({ from: 'alex@example.org', to: ['anna@example.net', 'bert@example.com', 'carl@example.org'] })
   })
 
+  it('writes the blind copy into the headers of a draft, which has nobody else to remember it for', () => {
+    const composed = composeMessage(
+      { ...base, to: ['anna@example.net'], bcc: ['Carl <carl@example.org>'] },
+      { ...fixed, draft: true }
+    )
+    expect(split(composed.source).headers.get('bcc')).toBe('Carl <carl@example.org>')
+    expect(composed.envelope.to).toEqual(['anna@example.net', 'carl@example.org'])
+  })
+
+  it('writes no empty Bcc header for a draft without one, and none for a message that is sent', () => {
+    expect(split(composeMessage(base, { ...fixed, draft: true }).source).headers.has('bcc')).toBe(false)
+    expect(split(composeMessage({ ...base, bcc: ['carl@example.org'] }, { ...fixed, draft: false }).source).headers.has('bcc')).toBe(false)
+  })
+
+  it('makes a draft for nobody but a blind copy, since that is a message too', () => {
+    const composed = composeMessage({ ...base, to: [], bcc: ['carl@example.org'] }, { ...fixed, draft: true })
+    const { headers } = split(composed.source)
+    expect(headers.has('to')).toBe(false)
+    expect(headers.get('bcc')).toBe('carl@example.org')
+  })
+
   it('writes a Reply-To when there is one', () => {
     expect(split(compose({ replyTo: 'office@example.org' }).source).headers.get('reply-to')).toBe('office@example.org')
   })
