@@ -873,6 +873,51 @@ Not done: fetching in the background; the text of attachments; and a fetch of
 only the start of a message, which would reach the large ones too (the whole of each message is fetched now, and a partial
 fetch of a MIME part would need a new call in the protocol layer).
 
+## What organising the lists found
+
+A message could be archived or deleted only by opening it or by choosing it with a long press, and the tags that the
+desktop sets, which are keywords on the server, could not be seen or set. Two things for the lists.
+
+**Swiping.** A message in a list of a folder or of all accounts is swiped to the right to archive it and to the left to
+delete it, as the green and the red that come out from under the row say. It goes through the same actions as the choice
+of several messages, so the queue, the notice for an account without an archive and the list shown again are the same.
+
+- A swipe begins after 12 dp sideways and only when the touch is clearly more sideways than up or down, and it
+  takes the touch from the list then and not before, so scrolling is never in the way. Letting go after more than a third
+  of the width does it; short of that the row springs back. These decisions are plain functions with tests (`swipe.ts`).
+- It is off while messages are being chosen, where a tap is a choice.
+- Nobody can swipe with a screen reader or a keyboard, so the row offers the same two things as accessibility actions.
+- There is no "undo". Both moves can be undone by moving the message back, and the queue shows what waits, but a snack bar
+  that takes it back is the next thing to want. The search results are not swipeable: after an action they would have to
+  be searched again, which the controller of the lists does not do.
+
+**Tags.** The desktop's tags are IMAP keywords, so a tag set on the phone is on the server for the webmail and the desktop,
+and the other way round. The phone keeps only what a keyword is called and how it looks.
+
+- A table of tags (migration 7: name, keyword, colour, order) as the desktop has it. The keyword is made from the name
+  by the desktop's own function (`keywordFor`), "Für später" becoming `Fuer_spaeter`, since a keyword that the server
+  does not take is a tag that does not stick. A name that comes to a keyword that exists is that tag, in any case.
+- The tags a message has are its keywords that are tags (`isTagKeyword` of the core, so `\Seen` or `$Junk` are not),
+  shown as small marks in their colour under the subject in every list (three, then "+n"), and all of them on the
+  message. A keyword that nobody made a tag of, set by another client, is shown by what it is, in grey.
+- Setting a tag is `setFlags`, like a star, through the queue: on one open message from "Mehr" and on several
+  chosen messages from the bar, where the sheet shows for each tag whether none, some or all of the chosen have it and a
+  tap sets it on all, or takes it off when all have it. A new tag is made and set in one step.
+- The tags are read into the store when the application starts and are given to the screens by a context, so a list does
+  not read them, and a tag made while choosing is in the lists at once.
+
+Two things came up on the way. The sheets from the bottom (the menu of a message and the tags) reached under the buttons
+of the system, which cut off their last line; they are raised by the height of those now. And the sheet for choosing
+tags is the first that has a text field, so it moves up with the keyboard.
+
+Seen on the emulator: a tag made and set from a message ("Wichtig", with the keyword `Wichtig` on the server next to
+`\Seen`), its mark in the list; a message swiped to the right, which was in the archive of the server after, one swiped
+to the left, which was in the trash, and a short swipe that did nothing. The tagging of several chosen messages in a list
+of all accounts, and what a keyword made by another client looks like, are covered by tests only.
+
+Not done: renaming, recolouring and deleting tags, filtering a list by a tag (the search has no `tag:` yet, nor does the
+core's parser), tags in the sidebar, snoozing, and an undo for a swipe.
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was

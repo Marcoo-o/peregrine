@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { TAG_COLORS } from '@peregrine/core/tags'
 import type { Tag } from '../tags'
 import { Chip } from './controls'
@@ -24,6 +25,7 @@ export function TagSheet(props: {
 }) {
   const styles = useStyles()
   const { colors } = useTheme()
+  const { bottom } = useSafeAreaInsets()
   const [name, setName] = useState('')
   const [color, setColor] = useState<string>(TAG_COLORS[props.tags.length % TAG_COLORS.length])
 
@@ -40,7 +42,7 @@ export function TagSheet(props: {
       <KeyboardAvoidingView style={styles.fill} behavior="padding">
         <Pressable style={styles.sheetBackdrop} onPress={props.onClose}>
           {/* A tap inside the sheet is not a tap beside it. */}
-          <Pressable style={styles.sheet} onPress={() => undefined}>
+          <Pressable style={[styles.sheet, { paddingBottom: 24 + bottom }]} onPress={() => undefined}>
             <Text accessibilityRole="header" style={styles.dialogTitle}>
               Tags
             </Text>
