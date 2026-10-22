@@ -806,6 +806,31 @@ Sending a draft and the failure without a connection are covered by tests and we
 Not done: drafts while offline, saving as the user writes, a `Bcc` field, formatted and encrypted drafts, and writing
 on a draft with attached files.
 
+## What suggesting recipients found
+
+Writing a message meant typing every address in full. While one is typed in "An" or "Kopie", the people that match are
+shown under the field, up to four, and a tap puts the name and address in and leaves the field ready for the next one.
+
+- *The phone knows people only as senders.* It keeps who a message is from and not who it was to, so the suggestions are
+  the senders of the messages it has, in every folder of every account. The desktop keeps a table of contacts, filled
+  from what it sends too; the phone has none and does not need one for this, as for the first message from an address
+  (see "What reading like the desktop found"). People written to but never heard from are not suggested. Keeping the
+  recipients would be a change of the database and of what a sync fetches, and is left for when it is wanted.
+- *Order:* the ones that sent most first, then the latest. One person is one address, whatever its spelling and
+  however many names it was written with: the name used most is shown, and the messages of every spelling are counted.
+- *Left out:* the user's own addresses, and an address that has been typed in full already, which has nothing to add.
+- *What is typed* is what follows the last comma or semicolon. A suggestion takes its place and ends with a comma, so
+  the next typing starts after it and what is in front is not touched. A name with a comma in it is written in quotes.
+- The search is `instr` on the lower case text and not a pattern, so that nothing typed means anything but itself, as in
+  the search of the lists.
+
+Seen on the emulator: two suggestions chosen one after the other, the first address still in the field after the second.
+That the suggestions of two accounts are one list, that the user's own address is not among them and what a name with
+a comma is written as are covered by tests.
+
+Not done: people written to, the tab or the keyboard's own way of choosing, and suggestions for the field of an
+account other than the one that is written from (all accounts' senders are suggested for any).
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was
