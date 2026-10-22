@@ -141,3 +141,41 @@ describe('searching the messages that are on the phone', () => {
     expect((await searchMessages(db, 'sender.test', 2)).messages).toHaveLength(2)
   })
 })
+
+describe('searching the text of messages', () => {
+  const withText = async () => {
+    const { db } = await mailboxes()
+    await db.run("UPDATE messages SET body_text = ? WHERE subject = 'Meeting moved to Friday'", 'The review is on Friday at 10, in the big room.')
+    await db.run("UPDATE messages SET body_text = ? WHERE subject = 'Dinner on Saturday?'", 'Bring the quarterly numbers, and 100% of the wine.')
+    return db
+  }
+
+  it('finds a word that is only in the text, in any case', async () => {
+    const db = await withText()
+    expect(await subjects(db, 'BIG room')).toEqual(['Meeting moved to Friday'])
+  })
+
+  it('wants every word, each in the subject, in who wrote or in the text', async () => {
+    const db = await withText()
+    // "friday" is in a subject, "room" is in that message's text: both are of the same message.
+    expect(await subjects(db, 'friday room')).toEqual(['Meeting moved to Friday'])
+    expect(await subjects(db, 'friday wine')).toEqual([])
+  })
+
+  it('still finds what has no text yet by its headers', async () => {
+    const db = await withText()
+    expect(await subjects(db, 'invoice')).toEqual(['Your invoice'])
+  })
+
+  it('takes a percent sign in the text for itself and not for any text', async () => {
+    const db = await withText()
+    expect(await subjects(db, '100%')).toEqual(['Dinner on Saturday?'])
+    expect(await subjects(db, '%')).toEqual(['Dinner on Saturday?'])
+  })
+
+  it('does not look in the text for what is asked of the sender or of the subject', async () => {
+    const db = await withText()
+    expect(await subjects(db, 'betreff:wine')).toEqual([])
+    expect(await subjects(db, 'von:wine')).toEqual([])
+  })
+})

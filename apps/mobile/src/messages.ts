@@ -12,6 +12,8 @@ export interface StoredMessage {
   hasAttachment: boolean
   /** The id of the folder it is waiting to be moved to, or null. */
   pendingMoveTo: string | null
+  /** The first of its text, flattened to a line or two, or empty while the text has not been fetched. */
+  preview: string
 }
 
 /** How many numbers go into one statement. SQLite allows far more, and a short list is easier to read in a log. */
@@ -65,6 +67,7 @@ interface MessageRow {
   size: number
   has_attachment: number
   pending_move_to: string | null
+  preview_text: string | null
 }
 
 export function toStoredMessage(row: MessageRow): StoredMessage {
@@ -76,14 +79,15 @@ export function toStoredMessage(row: MessageRow): StoredMessage {
     flags: JSON.parse(row.flags) as string[],
     size: row.size,
     hasAttachment: row.has_attachment === 1,
-    pendingMoveTo: row.pending_move_to
+    pendingMoveTo: row.pending_move_to,
+    preview: row.preview_text ?? ''
   }
 }
 
 /** The newest messages of a folder first. */
 export async function listMessages(db: SqlDb, folderId: string): Promise<StoredMessage[]> {
   const rows = await db.all<MessageRow>(
-    `SELECT uid, subject, sender, date_ms, flags, size, has_attachment, pending_move_to FROM messages
+    `SELECT uid, subject, sender, date_ms, flags, size, has_attachment, pending_move_to, preview_text FROM messages
      WHERE folder_id = ? ORDER BY uid DESC`,
     folderId
   )

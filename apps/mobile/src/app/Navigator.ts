@@ -1,5 +1,6 @@
 import type { ImapSession } from '@peregrine/core/imapSession'
 import { listAccounts, type Account } from '../accounts'
+import { BodyIndexer } from '../bodyIndex'
 import { explainError } from '../errors'
 import { listFolders, syncFolders, type Folder } from '../folders'
 import { listMessages, unreadCounts } from '../messages'
@@ -19,10 +20,15 @@ const NO_CONNECTION_NOTICE = 'Keine Verbindung. Gezeigt wird, was schon geladen 
  * from the servers after, so that a server that is down costs a line that says so and not the screen.
  */
 export class Navigator {
+  /** Fetches the texts of the messages the lists show, after the lists, so that the previews fill in while they are read. */
+  private readonly indexer: BodyIndexer
+
   constructor(
     private readonly services: Services,
     private readonly store: AppStore
-  ) {}
+  ) {
+    this.indexer = new BodyIndexer(services.db, services.log)
+  }
 
   /** The first screen: the unified inbox when there are accounts to unify, the one account when there is one. */
   async start(): Promise<void> {
@@ -137,7 +143,8 @@ export class Navigator {
     await this.showUnifiedList(options.refresh, [], 'navigating')
     if (!options.refresh) return
 
-    const results = await refreshRole({ db, connections, mail }, await listAccounts(db), role)
+    const context = { db, connections, mail, indexer: this.indexer, onIndexed: () => this.showIndexedUnified(role) }
+    const results = await refreshRole(context, await listAccounts(db), role)
     await this.showUnifiedList(false, results.filter((result) => result.error !== undefined), 'updating')
     this.refreshStatus()
   }
@@ -179,9 +186,24 @@ export class Navigator {
     try {
       await syncFolder(imap, this.services.db, folder)
       await this.showStoredMessages(account, folder, { busy: false })
+      void this.indexer.run(imap, folder).then((stored) => (stored > 0 ? this.showIndexedMessages(account, folder) : undefined))
     } catch (error) {
       await this.showStoredMessages(account, folder, { busy: false, error: explainError(error) })
     }
+  }
+
+  /** The list of a folder again, with the previews that have come in, when it is still the one on the screen. */
+  private async showIndexedMessages(account: Account, folder: Folder): Promise<void> {
+    const shown = this.store.screen
+    if (shown.name !== 'messages' || shown.folder.id !== folder.id) return
+    await this.showStoredMessages(account, folder, { busy: shown.busy, error: shown.error })
+  }
+
+  /** The list of all accounts again, with the previews that have come in, when it is still the one on the screen. */
+  private async showIndexedUnified(role: UnifiedRole): Promise<void> {
+    const shown = this.store.screen
+    if (shown.name !== 'unified' || shown.role !== role) return
+    await this.showUnifiedList(shown.busy, shown.problems, 'updating')
   }
 
   private async showStoredMessages(

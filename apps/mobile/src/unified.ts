@@ -3,6 +3,7 @@ import type { Account } from './accounts'
 import type { Connections } from './connections'
 import { SEEN } from './flags'
 import { explainError } from './errors'
+import type { BodyIndexer } from './bodyIndex'
 import { listFolders, syncFolders, type Folder } from './folders'
 import type { MailActions } from './mailActions'
 import { toStoredMessage, type StoredMessage } from './messages'
@@ -52,7 +53,7 @@ function roleCondition(role: UnifiedRole): { sql: string; params: string[] } {
 }
 
 /** What is read for a message of a list that holds those of several accounts, besides the message itself. */
-export const UNIFIED_COLUMNS = `m.uid, m.subject, m.sender, m.date_ms, m.flags, m.size, m.has_attachment, m.pending_move_to,
+export const UNIFIED_COLUMNS = `m.uid, m.subject, m.sender, m.date_ms, m.flags, m.size, m.has_attachment, m.pending_move_to, m.preview_text,
             m.account_id, m.folder_id, a.display_name AS account_name, a.color AS account_color`
 
 export interface UnifiedRow {
@@ -64,6 +65,7 @@ export interface UnifiedRow {
   size: number
   has_attachment: number
   pending_move_to: string | null
+  preview_text: string | null
   account_id: string
   folder_id: string
   account_name: string
@@ -157,11 +159,19 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  * flags are read back from it.
  */
 export async function refreshRole(
-  context: { db: SqlDb; connections: Connections; mail: MailActions; timeoutMs?: number },
+  context: {
+    db: SqlDb
+    connections: Connections
+    mail: MailActions
+    timeoutMs?: number
+    /** Fetches the texts of what was fetched, after, and says when some have come in. */
+    indexer?: BodyIndexer
+    onIndexed?: () => void
+  },
   accounts: Account[],
   role: UnifiedRole
 ): Promise<RefreshResult[]> {
-  const { db, connections, mail, timeoutMs = 30_000 } = context
+  const { db, connections, mail, indexer, onIndexed, timeoutMs = 30_000 } = context
   return Promise.all(
     accounts.map(async (account): Promise<RefreshResult> => {
       try {
@@ -171,7 +181,10 @@ export async function refreshRole(
             await mail.flush(account.id)
             await syncFolders(db, account.id, await imap.listMailboxes())
             const folder = (await listFolders(db, account.id)).find((candidate) => roleOf(candidate) === role)
-            if (folder) await syncFolder(imap, db, folder)
+            if (folder) {
+              await syncFolder(imap, db, folder)
+              void indexer?.run(imap, folder).then((stored) => (stored > 0 ? onIndexed?.() : undefined))
+            }
           })(),
           timeoutMs
         )

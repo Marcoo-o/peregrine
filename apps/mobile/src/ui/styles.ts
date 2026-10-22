@@ -206,6 +206,8 @@ function createStyles({ colors }: Theme) {
     listBottom: { paddingBottom: 88 },
     accountTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SIZE.gap },
     // The people suggested under an address field, as one block that belongs to the field above it.
+    // The line of text under a subject in a list.
+    preview: { fontSize: 14, lineHeight: 19, color: colors.muted, marginTop: 2 },
     suggestions: {
       backgroundColor: colors.surface,
       borderWidth: 1,

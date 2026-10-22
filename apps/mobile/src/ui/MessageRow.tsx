@@ -62,6 +62,11 @@ export function MessageRow(props: {
             {message.subject || '(ohne Betreff)'}
           </Text>
         </View>
+        {message.preview ? (
+          <Text style={styles.preview} numberOfLines={2}>
+            {message.preview}
+          </Text>
+        ) : null}
         {props.account ? <Text style={styles.itemMeta}>{props.account}</Text> : null}
         {props.pendingNote ? <Text style={styles.pending}>{props.pendingNote}</Text> : null}
       </View>

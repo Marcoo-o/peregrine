@@ -5,6 +5,7 @@ import type { Account } from '../accounts'
 import { getAccount, listAccounts } from '../accounts'
 import { attachmentContent, listAttachments, type AttachmentInfo } from '../attachments'
 import { refusalText } from '../attachmentText'
+import { storeBody } from '../bodyIndex'
 import { describeError, explainError } from '../errors'
 import { FLAGGED, SEEN } from '../flags'
 import { getFolder, getFolderBySpecialUse, listFolders, type Folder } from '../folders'
@@ -81,6 +82,10 @@ export class MessageController {
       const full = await imap.fetchFullMessage(folder.imapPath, summary.uid)
       if (!full) throw new Error('Die Nachricht gibt es auf dem Server nicht mehr')
       const message = readMessage(full.source)
+      // The text is in hand: keeping it costs nothing, and the list shows the first of it from now on.
+      void storeBody(this.services.db, folder.id, summary.uid, message.text).catch((error) =>
+        this.services.log.error(describeError(error))
+      )
       const accounts = await listAccounts(this.services.db)
       const knownDomains = knownDomainsOf(accounts)
       // What the user wrote themselves, a draft or a copy in the sent folder, is not a first message from anybody.
