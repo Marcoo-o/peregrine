@@ -75,6 +75,18 @@ describe('the settings screen', () => {
     expect(t.screen().settings.preview).toBe(true)
   })
 
+  it('has the text under the subjects of the lists switched off and on, and the lists carry it', async () => {
+    const t = await onSettings()
+    expect(t.screen().list).toEqual({ showPreview: true })
+    await t.app.settings.setShowPreview(false)
+    expect(t.screen().list).toEqual({ showPreview: false })
+
+    await t.app.navigator.showUnified({ refresh: false })
+    expect(t.store.screen).toMatchObject({ name: 'unified', showPreview: false })
+    await t.app.navigator.showSearch('x')
+    expect(t.store.screen).toMatchObject({ name: 'search', showPreview: false })
+  })
+
   describe('the quiet hours', () => {
     it('are switched on with the usual night and off with none', async () => {
       const t = await onSettings()

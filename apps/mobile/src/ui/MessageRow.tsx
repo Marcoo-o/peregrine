@@ -16,6 +16,8 @@ export function MessageRow(props: {
   message: StoredMessage
   /** Who it is from. */
   sender: string
+  /** Whether the first of its text is shown under the subject. */
+  showPreview?: boolean
   /** The account it is in, said under the subject when the list holds the mail of several. */
   account?: string
   /** The colour of that account, as a stripe at the edge of the row. */
@@ -62,6 +64,11 @@ export function MessageRow(props: {
             {message.subject || '(ohne Betreff)'}
           </Text>
         </View>
+        {props.showPreview !== false && message.preview ? (
+          <Text style={styles.preview} numberOfLines={2}>
+            {message.preview}
+          </Text>
+        ) : null}
         {props.account ? <Text style={styles.itemMeta}>{props.account}</Text> : null}
         {props.pendingNote ? <Text style={styles.pending}>{props.pendingNote}</Text> : null}
       </View>

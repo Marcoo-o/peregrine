@@ -1,9 +1,11 @@
 import type { ImapSession } from '@peregrine/core/imapSession'
 import { listAccounts, type Account } from '../accounts'
+import { BodyIndexer } from '../bodyIndex'
 import { explainError } from '../errors'
 import { listFolders, syncFolders, type Folder } from '../folders'
 import { listMessages, unreadCounts } from '../messages'
 import { searchMessages } from '../search'
+import { loadListSettings } from '../settings'
 import { loadSidebar, type SidebarData } from '../sidebar'
 import { syncFolder } from '../sync'
 import { listUnified, refreshRole, type RefreshResult, type UnifiedRole } from '../unified'
@@ -19,10 +21,15 @@ const NO_CONNECTION_NOTICE = 'Keine Verbindung. Gezeigt wird, was schon geladen 
  * from the servers after, so that a server that is down costs a line that says so and not the screen.
  */
 export class Navigator {
+  /** Fetches the texts of the messages the lists show, after the lists, so that the previews fill in while they are read. */
+  private readonly indexer: BodyIndexer
+
   constructor(
     private readonly services: Services,
     private readonly store: AppStore
-  ) {}
+  ) {
+    this.indexer = new BodyIndexer(services.db, services.log)
+  }
 
   /** The first screen: the unified inbox when there are accounts to unify, the one account when there is one. */
   async start(): Promise<void> {
@@ -137,7 +144,8 @@ export class Navigator {
     await this.showUnifiedList(options.refresh, [], 'navigating')
     if (!options.refresh) return
 
-    const results = await refreshRole({ db, connections, mail }, await listAccounts(db), role)
+    const context = { db, connections, mail, indexer: this.indexer, onIndexed: () => this.showIndexedUnified(role) }
+    const results = await refreshRole(context, await listAccounts(db), role)
     await this.showUnifiedList(false, results.filter((result) => result.error !== undefined), 'updating')
     this.refreshStatus()
   }
@@ -149,8 +157,10 @@ export class Navigator {
   private async showUnifiedList(busy: boolean, problems: RefreshResult[], reason: 'navigating' | 'updating'): Promise<void> {
     const role = this.unifiedRole
     const messages = await listUnified(this.services.db, undefined, role)
+    // Everything is read before the screen is looked at, so that nothing is waited for between looking and showing.
+    const { showPreview } = await loadListSettings(this.services.db)
     if (reason === 'updating' && this.store.screen.name !== 'unified') return
-    this.store.showScreen({ name: 'unified', role, messages, busy, problems })
+    this.store.showScreen({ name: 'unified', role, messages, showPreview, busy, problems })
   }
 
   /** How many searches there have been, so that the newest is the one that is shown whichever finishes last. */
@@ -164,9 +174,10 @@ export class Navigator {
   async showSearch(query: string, reason: 'opening' | 'typing' = 'opening'): Promise<void> {
     const mine = ++this.searches
     const { messages, unsupported } = await searchMessages(this.services.db, query)
+    const { showPreview } = await loadListSettings(this.services.db)
     if (mine !== this.searches) return
     if (reason === 'typing' && this.store.screen.name !== 'search') return
-    this.store.showScreen({ name: 'search', query, messages, unsupported })
+    this.store.showScreen({ name: 'search', query, messages, showPreview, unsupported })
   }
 
   /** The messages of a folder from the database, and a sync with the server when asked to and there is one. */
@@ -179,9 +190,24 @@ export class Navigator {
     try {
       await syncFolder(imap, this.services.db, folder)
       await this.showStoredMessages(account, folder, { busy: false })
+      void this.indexer.run(imap, folder).then((stored) => (stored > 0 ? this.showIndexedMessages(account, folder) : undefined))
     } catch (error) {
       await this.showStoredMessages(account, folder, { busy: false, error: explainError(error) })
     }
+  }
+
+  /** The list of a folder again, with the previews that have come in, when it is still the one on the screen. */
+  private async showIndexedMessages(account: Account, folder: Folder): Promise<void> {
+    const shown = this.store.screen
+    if (shown.name !== 'messages' || shown.folder.id !== folder.id) return
+    await this.showStoredMessages(account, folder, { busy: shown.busy, error: shown.error })
+  }
+
+  /** The list of all accounts again, with the previews that have come in, when it is still the one on the screen. */
+  private async showIndexedUnified(role: UnifiedRole): Promise<void> {
+    const shown = this.store.screen
+    if (shown.name !== 'unified' || shown.role !== role) return
+    await this.showUnifiedList(shown.busy, shown.problems, 'updating')
   }
 
   private async showStoredMessages(
@@ -192,7 +218,8 @@ export class Navigator {
     const { db } = this.services
     const folderNames = Object.fromEntries((await listFolders(db, account.id)).map((f) => [f.id, f.displayName]))
     const messages = await listMessages(db, folder.id)
-    this.store.showScreen({ name: 'messages', account, folder, messages, folderNames, ...status })
+    const { showPreview } = await loadListSettings(db)
+    this.store.showScreen({ name: 'messages', account, folder, messages, showPreview, folderNames, ...status })
   }
 
   /** Reads what waits in the queue into the store, without making anybody wait for it. */

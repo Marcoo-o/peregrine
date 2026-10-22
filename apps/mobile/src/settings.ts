@@ -108,3 +108,37 @@ export function policyOf(settings: NotificationSettings): NotificationPolicy {
   }
 }
 
+/** What the user has set about the lists of messages. */
+export interface ListSettings {
+  /** The first of the text under a subject. Somebody looking over the shoulder reads it too, so it can be switched off. */
+  showPreview: boolean
+}
+
+export const DEFAULT_LIST_SETTINGS: ListSettings = { showPreview: true }
+
+const LIST = 'list'
+
+/** The settings of the lists as stored, with what is missing or is not a switch taking its default. */
+export async function loadListSettings(db: SqlDb): Promise<ListSettings> {
+  const row = await db.get<{ value: string }>('SELECT value FROM settings WHERE name = ?', LIST)
+  if (!row) return DEFAULT_LIST_SETTINGS
+  try {
+    const given = JSON.parse(row.value) as Record<string, unknown> | null
+    const showPreview = given?.showPreview
+    return { showPreview: typeof showPreview === 'boolean' ? showPreview : DEFAULT_LIST_SETTINGS.showPreview }
+  } catch {
+    return DEFAULT_LIST_SETTINGS
+  }
+}
+
+/** Changes some of the settings of the lists and returns all of them as they are stored now. */
+export async function saveListSettings(db: SqlDb, change: Partial<ListSettings>): Promise<ListSettings> {
+  const next = { ...(await loadListSettings(db)), ...change }
+  await db.run(
+    `INSERT INTO settings (name, value) VALUES (?, ?)
+     ON CONFLICT (name) DO UPDATE SET value = excluded.value`,
+    LIST,
+    JSON.stringify(next)
+  )
+  return next
+}

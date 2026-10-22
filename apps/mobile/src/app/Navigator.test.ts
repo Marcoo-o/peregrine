@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { listAccounts } from '../accounts'
 import { listFolders } from '../folders'
-import { appHarness } from '../testing/appHarness'
+import { appHarness, eventually } from '../testing/appHarness'
 import type { Screen } from './screens'
 
 const day = (n: number) => new Date(Date.UTC(2026, 9, n))
@@ -136,6 +136,19 @@ describe('the unified inbox', () => {
     expect(t.server.sessions).toHaveLength(0)
   })
 
+  it('gets the first of the text of its messages under their subjects once it has been fetched', async () => {
+    const t = await twoAccounts()
+    await t.app.navigator.showUnified({ refresh: true })
+    await eventually(() => {
+      const shown = t.store.screen
+      if (shown.name !== 'unified') throw new Error('not the unified inbox')
+      expect(shown.messages.map((m) => [m.subject, m.preview])).toEqual([
+        ['Dinner', ''],
+        ['Budget', 'Text']
+      ])
+    })
+  })
+
   it('is shown at once from what is stored and then brought up to date, with the accounts that failed named', async () => {
     const t = await twoAccounts()
     t.server.unreachable.add('home')
@@ -216,6 +229,42 @@ describe('the messages of a folder', () => {
     expect(last.messages.map((m) => m.uid)).toEqual([3, 2, 1])
   })
 
+  it('get the first of their text under the subject once it has been fetched, after the list was shown', async () => {
+    const t = await appHarness()
+    const work = await t.givenAccount('work', {
+      INBOX: [
+        { uid: 1, subject: 'One', source: 'Subject: One\r\n\r\nShall we meet on Friday?' },
+        { uid: 2, subject: 'Two' }
+      ],
+      Trash: []
+    })
+    const folder = t.folderOf(await listFolders(t.db, work.id), 'INBOX')
+    await t.app.services.connections.ensure(work)
+
+    await t.app.navigator.showMessages(work, folder, { sync: true })
+    expect(t.store.screen).toMatchObject({ name: 'messages', busy: false })
+
+    await eventually(() => {
+      const shown = t.store.screen
+      if (shown.name !== 'messages') throw new Error('not the messages')
+      expect(shown.messages.map((m) => [m.uid, m.preview])).toEqual([
+        [2, ''],
+        [1, 'Shall we meet on Friday?']
+      ])
+    })
+  })
+
+  it('are not put over a screen the user has moved on to when the previews come in', async () => {
+    const t = await appHarness()
+    const work = await t.givenAccount('work', { INBOX: [{ uid: 1, source: 'Subject: One\r\n\r\nText' }], Trash: [] })
+    const folder = t.folderOf(await listFolders(t.db, work.id), 'INBOX')
+    await t.app.services.connections.ensure(work)
+    await t.app.navigator.showMessages(work, folder, { sync: true })
+    t.store.showScreen({ name: 'login' })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(t.store.screen).toEqual({ name: 'login' })
+  })
+
   it('say that there is no connection, and show what is stored, when asked to sync without one', async () => {
     const t = await inbox()
     await t.app.navigator.showMessages(t.work, t.folder, { sync: true })
@@ -260,7 +309,7 @@ describe('searching', () => {
   it('shows an empty search with nothing found, and not everything', async () => {
     const t = await twoAccounts()
     await t.app.navigator.showSearch('')
-    expect(t.store.screen).toEqual({ name: 'search', query: '', messages: [], unsupported: [] })
+    expect(t.store.screen).toEqual({ name: 'search', query: '', messages: [], showPreview: true, unsupported: [] })
   })
 
   it('says what part of a search the phone cannot do', async () => {

@@ -11,11 +11,11 @@ const account = { id: 'a1' } as Account
 
 describe('where the sidebar says that the user is', () => {
   it('is the role, for a list of all accounts', () => {
-    expect(locationOf({ name: 'unified', role: 'sent', messages: [], busy: false, problems: [] } as Screen)).toEqual({ role: 'sent' })
+    expect(locationOf({ name: 'unified', role: 'sent', messages: [], showPreview: true, busy: false, problems: [] } as Screen)).toEqual({ role: 'sent' })
   })
 
   it('is the folder, for the messages of a folder, and for a message that was opened from it', () => {
-    const state = { name: 'messages', account, folder, messages: [], folderNames: {}, busy: false } as Screen
+    const state = { name: 'messages', account, folder, messages: [], showPreview: true, folderNames: {}, busy: false } as Screen
     expect(locationOf(state)).toEqual({ folderId: 'f1' })
   })
 

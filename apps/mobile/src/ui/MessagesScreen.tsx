@@ -29,7 +29,7 @@ export function MessagesScreen(props: {
   onOpen: (message: StoredMessage) => void
 }) {
   const styles = useStyles()
-  const { account, folder, messages, folderNames, busy, error } = props.state
+  const { account, folder, messages, showPreview, folderNames, busy, error } = props.state
   const [filter, setFilter] = useState(NO_FILTER)
   // What the choice needs of a message: where it is, which the list of one folder does not say of each of them.
   const rows = useMemo(
@@ -70,6 +70,7 @@ export function MessagesScreen(props: {
           <MessageRow
             message={item.message}
             sender={item.message.sender}
+            showPreview={showPreview}
             pendingNote={pendingNote(item.message, folderNames)}
             choosing={selection.selecting}
             chosen={selection.isChosen(item)}

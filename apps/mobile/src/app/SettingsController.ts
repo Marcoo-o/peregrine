@@ -3,7 +3,9 @@ import { listAccounts } from '../accounts'
 import { describeError, explainError } from '../errors'
 import {
   DEFAULT_QUIET_HOURS,
+  loadListSettings,
   loadNotificationSettings,
+  saveListSettings,
   saveNotificationSettings,
   type NotificationSettings
 } from '../settings'
@@ -30,10 +32,17 @@ export class SettingsController {
     this.store.showScreen({
       name: 'settings',
       settings: await loadNotificationSettings(db),
+      list: await loadListSettings(db),
       accounts: await listAccounts(db),
       permitted: await notifications.permitted(),
       notice
     })
+  }
+
+  /** Switches the line of text under the subjects in the lists on or off. */
+  async setShowPreview(showPreview: boolean): Promise<void> {
+    await saveListSettings(this.services.db, { showPreview })
+    await this.show()
   }
 
   back(): Promise<void> {

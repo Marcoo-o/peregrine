@@ -112,7 +112,11 @@ const MIGRATIONS: string[][] = [
   // 5. Where a folder sits, which is what the folder tree is made from. The path of the folder it is in, as
   // the server spells it, or null at the top. A folder that is there already has none until the account's
   // folders are listed again, which they are when the account is opened, so the tree is flat until then.
-  ['ALTER TABLE folders ADD COLUMN parent_path TEXT']
+  ['ALTER TABLE folders ADD COLUMN parent_path TEXT'],
+  // 6. The text of a message, which is what the list shows the first of and what a search looks through. It is null
+  // until the text has been fetched, and empty when it was fetched and there was none or it could not be read, so that
+  // a message that fails is not tried again for ever.
+  ['ALTER TABLE messages ADD COLUMN body_text TEXT', 'ALTER TABLE messages ADD COLUMN preview_text TEXT']
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */

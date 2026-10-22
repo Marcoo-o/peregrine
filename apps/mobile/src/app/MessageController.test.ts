@@ -353,6 +353,15 @@ describe('what is known of a message that is opened', () => {
     expect(state.assessment?.firstContact).toBe(false)
   })
 
+  it('keeps the text of a message it fetched, which is the line the list shows under its subject from then on', async () => {
+    const t = await inboxWith(crlf(['From: Anna <anna@sender.test>', 'Subject: Hi', '', 'Shall we meet on Friday?', '']))
+    await openedFrom(t)
+    await eventually(async () => {
+      const [stored] = await listMessages(t.db, t.folder.id)
+      expect(stored.preview).toBe('Shall we meet on Friday?')
+    })
+  })
+
   it('knows a first message from an address by the messages the phone has of it', async () => {
     const t = await inboxWith(crlf(['From: Anna <anna@sender.test>', 'Subject: Hi', '', 'Hello', '']))
     const state = await openedFrom(t)
