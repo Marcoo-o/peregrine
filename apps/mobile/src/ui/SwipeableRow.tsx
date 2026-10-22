@@ -74,18 +74,18 @@ export function SwipeableRow(props: {
         pointerEvents="none"
         style={[styles.swipeSide, styles.swipeSideLeft, { backgroundColor: colors.success, width: reachedRight }]}
       >
-        <Animated.View style={{ opacity: shown, transform: [{ scale: grown }] }}>
+        <Animated.View style={[styles.swipeContent, { opacity: shown, transform: [{ scale: grown }] }]}>
           <Icon name="archive" size={22} color={colors.onAccent} />
-          <Text style={styles.swipeLabel}>Archivieren</Text>
+          <Text style={styles.swipeLabel} numberOfLines={1}>Archivieren</Text>
         </Animated.View>
       </Animated.View>
       <Animated.View
         pointerEvents="none"
         style={[styles.swipeSide, styles.swipeSideRight, { backgroundColor: colors.danger, width: reachedLeft }]}
       >
-        <Animated.View style={{ opacity: shown, transform: [{ scale: grown }] }}>
+        <Animated.View style={[styles.swipeContent, { opacity: shown, transform: [{ scale: grown }] }]}>
           <Icon name="trash" size={22} color={colors.onAccent} />
-          <Text style={styles.swipeLabel}>Löschen</Text>
+          <Text style={styles.swipeLabel} numberOfLines={1}>Löschen</Text>
         </Animated.View>
       </Animated.View>
       <Animated.View style={[styles.swipeRow, { transform: [{ translateX: x }] }]} {...responder.panHandlers}>

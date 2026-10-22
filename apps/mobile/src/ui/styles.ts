@@ -218,6 +218,8 @@ function createStyles({ colors }: Theme) {
     tagColorChosen: { borderColor: colors.text },
     // A row that is swiped: the pictures that come out from under it, and the row itself, which has to cover them.
     swipeSide: { position: 'absolute', top: 0, bottom: 0, justifyContent: 'center', overflow: 'hidden', paddingHorizontal: 20 },
+    // The picture and its word keep their own width, so that a box that has only begun to come out is cut and does not squeeze them.
+    swipeContent: { width: 96, alignItems: 'center', gap: 2 },
     swipeSideLeft: { left: 0, alignItems: 'flex-start' },
     swipeSideRight: { right: 0, alignItems: 'flex-end' },
     swipeLabel: { color: colors.onAccent, fontSize: 12, fontWeight: '600' },
