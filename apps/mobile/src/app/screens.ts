@@ -149,9 +149,10 @@ export interface ComposeState {
   error?: string
 }
 
-/** The tags of the user, which are shown from the store: this screen is what is open, and holds nothing. */
+/** The tags of the user, which are shown from the store, and how many messages have each, by keyword in lower case. */
 export interface TagsState {
   name: 'tags'
+  counts: Record<string, number>
 }
 
 export type Screen =

@@ -1,6 +1,8 @@
 import { parseSearchQuery } from '@peregrine/core/searchQuery'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import { FLAGGED, SEEN } from './flags'
+import { extractTagTerms, keywordAsked } from './searchTags'
+import { listTags } from './tags'
 import type { Folder } from './folders'
 import { toUnifiedMessage, UNIFIED_COLUMNS, type UnifiedMessage, type UnifiedRow } from './unified'
 
@@ -33,12 +35,14 @@ const FLAG_SET = 'EXISTS (SELECT 1 FROM json_each(m.flags) WHERE lower(json_each
  * Looks through the messages that are stored on the phone, in every folder of every account, newest first.
  *
  * The syntax is the desktop's: words, `von:`, `betreff:`, `hat:anhang`, `ist:ungelesen`, `ist:markiert`, `vor:` and
- * `nach:`. Every word has to be in the subject, in who wrote or in the text, in any case. The text is what has been
+ * `nach:`, and `tag:` for what the phone has that the desktop's search has not: the messages that have a tag, by its
+ * name as the user made it. Several tags narrow it, as every other term does. Every word has to be in the subject, in who wrote or in the text, in any case. The text is what has been
  * fetched so far (see `bodyIndex.ts`), so a message whose text has not come yet is found by its headers only. What the
  * phone does not keep at all, the recipients, cannot be searched, and the search says so and goes on without it.
  */
 export async function searchMessages(db: SqlDb, input: string, limit: number = SEARCH_LIMIT): Promise<SearchResult> {
-  const query = parseSearchQuery(input)
+  const tagTerms = extractTagTerms(input)
+  const query = parseSearchQuery(tagTerms.rest)
   const unsupported: SearchResult['unsupported'] = query.to ? ['to'] : []
 
   const conditions: string[] = []
@@ -58,6 +62,8 @@ export async function searchMessages(db: SqlDb, input: string, limit: number = S
   }
   for (const word of (query.from ?? '').split(/\s+/).filter(Boolean)) needs("m.sender LIKE ? ESCAPE '!'", containing(word))
   for (const word of (query.subject ?? '').split(/\s+/).filter(Boolean)) needs("m.subject LIKE ? ESCAPE '!'", containing(word))
+  const tags = tagTerms.asked.length > 0 ? await listTags(db) : []
+  for (const asked of tagTerms.asked) needs(FLAG_SET, keywordAsked(asked, tags))
   if (query.hasAttachment) needs('m.has_attachment = 1')
   if (query.isUnread) needs(`NOT ${FLAG_SET}`, SEEN)
   if (query.isFlagged) needs(FLAG_SET, FLAGGED)

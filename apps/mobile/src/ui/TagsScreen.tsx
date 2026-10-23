@@ -6,12 +6,17 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { Header } from './Header'
 import { ListRow } from './ListRow'
 import { TagEditor } from './TagEditor'
+import { tagMeta } from './tagMeta'
 import { useTags } from './tags'
 import { useStyles } from './useStyles'
 
 /** The tags of the user, to be renamed, recoloured, forgotten, and made, as the settings of the desktop have them. */
 export function TagsScreen(props: {
+  /** How many messages have each tag, by its keyword in lower case. */
+  counts: Record<string, number>
   onBack: () => void
+  /** Moves a tag one place up or down among the others. */
+  onMove: (tag: Tag, by: -1 | 1) => void
   /** Makes a tag, or changes the one given. */
   onSave: (tag: Tag | null, name: string, color: string) => void
   onDelete: (tag: Tag) => void
@@ -31,7 +36,14 @@ export function TagsScreen(props: {
         data={tags}
         keyExtractor={(tag) => tag.id}
         ListEmptyComponent={<Text style={styles.hint}>Noch keine Tags.</Text>}
-        renderItem={({ item }) => <ListRow title={item.name} meta={item.keyword} color={item.color} onPress={() => setEditing(item)} />}
+        renderItem={({ item }) => (
+          <ListRow
+            title={item.name}
+            meta={tagMeta(item.keyword, props.counts[item.keyword.toLowerCase()] ?? 0)}
+            color={item.color}
+            onPress={() => setEditing(item)}
+          />
+        )}
       />
       <Button label="Neuer Tag" onPress={() => setEditing(null)} />
       {editing !== undefined ? (
@@ -43,6 +55,8 @@ export function TagsScreen(props: {
             setEditing(undefined)
           }}
           onDelete={editing ? () => setDeleting(editing) : undefined}
+          position={editing ? { index: tags.findIndex((tag) => tag.id === editing.id), of: tags.length } : undefined}
+          onMove={editing ? (by) => props.onMove(editing, by) : undefined}
           onClose={() => setEditing(undefined)}
         />
       ) : null}

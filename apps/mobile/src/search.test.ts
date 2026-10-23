@@ -179,3 +179,48 @@ describe('searching the text of messages', () => {
     expect(await subjects(db, 'von:wine')).toEqual([])
   })
 })
+
+describe('searching by tag', () => {
+  async function tagged() {
+    const { db, work } = await mailboxes()
+    const { createTag } = await import('./tags')
+    const bills = (await createTag(db, 'Rechnungen'))!
+    const later = (await createTag(db, 'Für später'))!
+    await db.run("UPDATE messages SET flags = ? WHERE account_id = ? AND subject = 'Your invoice'", JSON.stringify(['\Flagged', bills.keyword]), work.id)
+    await db.run("UPDATE messages SET flags = ? WHERE account_id = ? AND subject LIKE 'Budget%'", JSON.stringify([bills.keyword, later.keyword]), work.id)
+    return { db, bills, later }
+  }
+
+  it('finds the messages that have a tag, by the name the user gave it, in any case', async () => {
+    const { db } = await tagged()
+    expect(await subjects(db, 'tag:rechnungen')).toEqual(['Your invoice', 'Budget for next quarter'])
+  })
+
+  it('takes a name with spaces in quotes, which is a tag of its own and not a word', async () => {
+    const { db } = await tagged()
+    expect(await subjects(db, 'tag:"Für später"')).toEqual(['Budget for next quarter'])
+  })
+
+  it('narrows with every tag asked for, and with the rest of the syntax', async () => {
+    const { db } = await tagged()
+    expect(await subjects(db, 'tag:Rechnungen tag:"Für später"')).toEqual(['Budget for next quarter'])
+    expect(await subjects(db, 'tag:Rechnungen hat:anhang')).toEqual(['Your invoice'])
+    expect(await subjects(db, 'tag:Rechnungen invoice')).toEqual(['Your invoice'])
+  })
+
+  it('is a search of its own though there are no words, and finds nothing for a tag that nothing has', async () => {
+    const { db } = await tagged()
+    expect(await subjects(db, 'tag:Unbekannt')).toEqual([])
+  })
+
+  it('finds a keyword that another client set and the user made no tag of', async () => {
+    const { db, work } = await mailboxes()
+    await db.run("UPDATE messages SET flags = ? WHERE account_id = ? AND subject = 'Your invoice'", JSON.stringify(['Wichtig']), work.id)
+    expect(await subjects(db, 'tag:wichtig')).toEqual(['Your invoice'])
+  })
+
+  it('looks for a tag: with nothing after it as a word', async () => {
+    const { db } = await tagged()
+    expect(await subjects(db, 'tag:')).toEqual([])
+  })
+})

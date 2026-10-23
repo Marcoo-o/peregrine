@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { emptySummary, type PendingSummary } from '@peregrine/core/pendingActions'
+import { emptySummary, MAX_ATTEMPTS, type PendingSummary } from '@peregrine/core/pendingActions'
 import { listFolders } from '../folders'
 import { appHarness } from '../testing/appHarness'
 import { failedText, isOnline, refreshQueueStatus, waitingText } from './queueStatus'
 
-const summary = (total: number, failed = 0): PendingSummary => ({ ...emptySummary(), total, failed })
+/** As the store makes it: what was given up on is in `failed` and not in `total`. */
+const summary = (total: number, failed = 0, drafts = 0): PendingSummary => ({
+  ...emptySummary(),
+  total,
+  failed,
+  byKind: { ...emptySummary().byKind, saveDraft: drafts }
+})
 
 describe('what waits', () => {
   it('is said in the singular and the plural, and not at all when nothing waits', () => {
@@ -14,8 +20,15 @@ describe('what waits', () => {
   })
 
   it('does not count what was given up on, which is said apart', () => {
-    expect(waitingText(summary(2, 2))).toBeNull()
-    expect(waitingText(summary(3, 1))).toBe('2 Aktionen warten')
+    expect(waitingText(summary(0, 2))).toBeNull()
+    expect(waitingText(summary(3, 1))).toBe('3 Aktionen warten')
+  })
+
+  it('names a draft that waits to be kept, and says so alone when nothing else waits', () => {
+    expect(waitingText(summary(1, 0, 1))).toBe('1 Entwurf wartet')
+    expect(waitingText(summary(2, 0, 2))).toBe('2 Entwürfe warten')
+    expect(waitingText(summary(3, 0, 1))).toBe('3 Aktionen warten, davon 1 Entwurf')
+    expect(waitingText(summary(4, 0, 2))).toBe('4 Aktionen warten, davon 2 Entwürfe')
   })
 })
 
@@ -48,6 +61,20 @@ describe('reading the status into the store', () => {
 
     expect(t.store.state.waiting?.summary.total).toBe(2)
     expect(t.store.state.waiting?.problem).toBe('NO [CANNOT] not allowed')
+  })
+
+  it('says what waits without what was given up on, which the store keeps apart', async () => {
+    const t = await withWaitingAction()
+    await t.db.run('UPDATE pending_actions SET attempts = ?', MAX_ATTEMPTS)
+    const folder = t.folderOf(await listFolders(t.db, t.work.id), 'INBOX')
+    await t.app.services.mail.setFlags(folder, [1], ['\Flagged'], [])
+
+    await refreshQueueStatus(t.app.services, t.store)
+
+    const waiting = t.store.state.waiting!.summary
+    expect(waiting).toMatchObject({ total: 1, failed: 1 })
+    expect(waitingText(waiting)).toBe('1 Aktion wartet')
+    expect(failedText(waiting)).toBe('1 Aktion ist fehlgeschlagen.')
   })
 
   it('has no reason when the line speaks of all accounts', async () => {

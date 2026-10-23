@@ -10,6 +10,7 @@ import { AppStore } from '../app/store'
 import type { Files, PickedFile } from '../files'
 import { syncFolders, type Folder } from '../folders'
 import { saveMessages } from '../messages'
+import { FakeTimers } from './fakeTimers'
 import { migratedDatabase } from './testDb'
 
 /** A message on the fake server, with the little it needs to be listed and, when it has a source, read. */
@@ -289,7 +290,8 @@ export async function appHarness() {
     log: { warn: (message) => logs.push(message), error: (message) => logs.push(message) }
   }
   const store = new AppStore()
-  const app: Application = createApplication(db, platform, store)
+  const reconnectTimers = new FakeTimers()
+  const app: Application = createApplication(db, platform, store, reconnectTimers)
 
   /** An account with the mail it has on the server, fetched into the database as if it had been opened. */
   async function givenAccount(name: string, mailbox: Mailbox, over: Partial<NewAccount> = {}): Promise<Account> {
@@ -305,7 +307,7 @@ export async function appHarness() {
 
   const folderOf = (folders: Folder[], path: string): Folder => folders.find((f) => f.imapPath === path) as Folder
 
-  return { app, store, db, raw, server, files, smtp, notifications, syncSchedule, logs, givenAccount, folderOf }
+  return { app, store, db, raw, server, files, smtp, notifications, syncSchedule, logs, reconnectTimers, givenAccount, folderOf }
 }
 
 /**

@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest'
+import type { FetchedMessage } from '@peregrine/core/imapSession'
 import { TAG_COLORS } from '@peregrine/core/tags'
-import { createTag, deleteTag, listTags, shownTags, tagCoverage, UNKNOWN_TAG_COLOR, updateTag, type Tag } from './tags'
+import { addAccount } from './accounts'
+import { syncFolders } from './folders'
+import { saveMessages } from './messages'
+import {
+  createTag,
+  deleteTag,
+  listTags,
+  moveTag,
+  shownTags,
+  tagCounts,
+  tagCoverage,
+  UNKNOWN_TAG_COLOR,
+  updateTag,
+  type Tag
+} from './tags'
 import { migratedDatabase } from './testing/testDb'
 
 const tag = (keyword: string, name = keyword, color = '#2f5d9f', sortOrder = 0): Tag => ({ id: keyword, name, keyword, color, sortOrder })
@@ -129,5 +144,82 @@ describe('forgetting a tag', () => {
     const first = (await createTag(db, 'Work'))!
     await deleteTag(db, first.id)
     expect(await createTag(db, 'Work')).toMatchObject({ keyword: 'Work', name: 'Work' })
+  })
+})
+
+describe('moving a tag', () => {
+  async function three() {
+    const { db } = await migratedDatabase()
+    const [one, two, three] = [await createTag(db, 'One'), await createTag(db, 'Two'), await createTag(db, 'Three')]
+    return { db, one: one!, two: two!, three: three! }
+  }
+  const names = async (db: Awaited<ReturnType<typeof three>>['db']) => (await listTags(db)).map((made) => made.name)
+
+  it('puts it one place up or down, in front of the one it passes', async () => {
+    const { db, two } = await three()
+    expect(await moveTag(db, two.id, -1)).toBe(true)
+    expect(await names(db)).toEqual(['Two', 'One', 'Three'])
+    expect(await moveTag(db, two.id, 1)).toBe(true)
+    expect(await moveTag(db, two.id, 1)).toBe(true)
+    expect(await names(db)).toEqual(['One', 'Three', 'Two'])
+  })
+
+  it('does nothing at either end, and for a tag that is not there', async () => {
+    const { db, one, three: last } = await three()
+    expect(await moveTag(db, one.id, -1)).toBe(false)
+    expect(await moveTag(db, last.id, 1)).toBe(false)
+    expect(await moveTag(db, 'gone', 1)).toBe(false)
+    expect(await names(db)).toEqual(['One', 'Two', 'Three'])
+  })
+
+  it('numbers the places again from the first, so that a tag that was forgotten leaves no gap', async () => {
+    const { db, one, two, three: last } = await three()
+    await deleteTag(db, two.id)
+    await moveTag(db, last.id, -1)
+    expect((await listTags(db)).map((made) => made.sortOrder)).toEqual([0, 1])
+    expect(await names(db)).toEqual(['Three', 'One'])
+    expect(one.id).toBeDefined()
+  })
+
+  it('keeps a tag that was made after it at the end', async () => {
+    const { db, two } = await three()
+    await moveTag(db, two.id, -1)
+    await createTag(db, 'Four')
+    expect(await names(db)).toEqual(['Two', 'One', 'Three', 'Four'])
+  })
+})
+
+describe('how many messages have each tag', () => {
+  it('counts the messages with a keyword, in any case, and leaves out what has none', async () => {
+    const { db } = await migratedDatabase()
+    const added = await addAccount(
+      db,
+      {
+        displayName: 'Work',
+        emailAddress: 'work@example.org',
+        imapHost: 'imap.example.org',
+        imapPort: 993,
+        imapSecure: 'tls',
+        imapUsername: 'work',
+        smtpHost: null,
+        smtpPort: null,
+        smtpSecure: null,
+        smtpUsername: null,
+        password: 'secret',
+        smtpPassword: null
+      },
+      { now: 1 }
+    )
+    const [inbox] = await syncFolders(db, added.id, [{ path: 'INBOX', name: 'INBOX', parentPath: null, flags: [], specialUse: '\Inbox' }])
+    const fetched = (uid: number, flags: string[]): FetchedMessage => ({
+      uid,
+      flags,
+      size: 1,
+      hasAttachment: false,
+      envelope: { subject: 's', date: new Date(2026, 9, 1), from: [{ address: 'x@sender.test' }] }
+    })
+    await saveMessages(db, inbox, [fetched(1, ['Work', '\Seen']), fetched(2, ['work']), fetched(3, ['Other']), fetched(4, [])])
+    expect(await tagCounts(db)).toMatchObject({ work: 2, other: 1 })
+    expect((await tagCounts(db)).missing).toBeUndefined()
   })
 })

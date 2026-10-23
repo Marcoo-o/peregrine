@@ -1,4 +1,4 @@
-import { createTag, deleteTag, listTags, updateTag, type Tag } from '../tags'
+import { createTag, deleteTag, listTags, moveTag, tagCounts, updateTag, type Tag } from '../tags'
 import type { Services } from './services'
 import type { AppStore } from './store'
 
@@ -14,9 +14,9 @@ export class TagController {
     this.store.setTags(await listTags(this.services.db))
   }
 
-  /** Shows the tags, to be renamed, recoloured or forgotten, and made. */
-  show(): void {
-    this.store.showScreen({ name: 'tags' })
+  /** Shows the tags, with how many messages have each, to be renamed, recoloured, moved or forgotten, and made. */
+  async show(): Promise<void> {
+    this.store.showScreen({ name: 'tags', counts: await tagCounts(this.services.db) })
   }
 
   /** Renames a tag or recolours it, and says whether it did: a name that is nothing is no name. */
@@ -24,6 +24,13 @@ export class TagController {
     const changed = await updateTag(this.services.db, id, name, color)
     await this.load()
     return changed
+  }
+
+  /** Moves a tag one place up or down among the others, and says whether it moved. */
+  async move(id: string, by: -1 | 1): Promise<boolean> {
+    const moved = await moveTag(this.services.db, id, by)
+    await this.load()
+    return moved
   }
 
   /** Forgets a tag. The messages keep its keyword. */

@@ -44,7 +44,7 @@ export default function App() {
     let started: Application | undefined
     // A tap on a notification arrives here when the application is running already and comes forward.
     const watching = AppState.addEventListener('change', (next) => {
-      if (next === 'active') void started?.openLaunchTarget()
+      if (next === 'active') void started?.comeToFront()
     })
     ;(async () => {
       try {

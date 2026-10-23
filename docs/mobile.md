@@ -1070,6 +1070,52 @@ keeping), there is no timer, which is as true for a message that waits to be sen
 kept the draft, and the server then held one draft (the latest revision) and not the first one. Not seen: files attached to
 a draft that waits, sending or throwing away a message with a draft that waits, and the draft being kept after the screen was left.
 
+## What connecting again and the smaller gaps found
+
+What was decided without a connection waited until the user opened an account or a folder: nothing else made a
+connection come up. That was true of messages and changes since the queue exists, and became plain with drafts, which
+wait as well now.
+
+- *Connecting again by itself* (`Reconnector`, in `src/app`). It looks for the accounts that have something waiting in the
+  queue and no connection, connects them and runs their queue (`connectAndRun`). It is started by what could leave
+  something waiting: a change put into the queue, and a connection that ended. A try that fails is repeated after
+  5, 15, 45 seconds, 2 and 5 minutes, and from then on every 5; one that works, or a queue with nothing in it, ends it.
+  An account that nothing waits for is not kept connected, as before: the battery is not for that.
+- *Coming to the front tries at once* (`Application.comeToFront`, called by the app state change) and from the shortest
+  pause again. It also opens the message of a notification that was tapped, as before.
+- *No timer outlives the application.* `stop()` removes it, and a stopped reconnector ignores what asks it later, which
+  includes the connections being let go of by `stop()` itself.
+- *Not done:* a wrong password is tried again every five minutes for as long as something waits for that account. A refusal
+  that no waiting helps (authentication) could be told apart and given up on, and has not been.
+- *`tag:` in the search* (`searchTags.ts`). The syntax of the search is shared with the desktop's, whose parser would take
+  `tag:x` away from the words and then not look for it. So the phone reads the tags out of the text first and gives the
+  rest to the shared parser. `tag:Rechnungen`, `tag:"Für später"`, several of them, together with every other term; by the
+  name the user gave, or by the keyword, in any case; a keyword that another client set and the user made no tag of is
+  found as well. The help line of the search says so.
+- *The tags with how many messages have each, and in an order of one's own.* The list of tags says "12 Nachrichten" under a
+  tag (the messages that are stored on the phone, which is what the filter and the search look through as well) and the
+  editor has "Weiter nach oben / unten", which numbers the places again from the first. The lists and sheets that show tags
+  show them in that order.
+- *A moment of one's own to put a message aside until* (`CustomSnooze`, `snoozeCustom.ts`): a day of the next two weeks
+  as chips and a time as it is typed (`8`, `8:30`, `14.15`, `0830`), said in words as it is typed, and not offered when it
+  is not ahead of now. There is no date picker: it needs a native module, and the presets are what is used. The first
+  offer is the next full hour, or the morning of tomorrow late in the evening.
+- *The status line names drafts that wait* ("1 Entwurf wartet", "3 Aktionen warten, davon 1 Entwurf"). The Drafts folder
+  does not show them as rows: a row of the list would be a message that is not on the server, and every action of a row
+  (swipe, choose, move) would have to know of it.
+- *A mistake that was found on the way:* the status line took the actions that were given up on from the ones that wait,
+  though the store counts them apart, so three waiting and one given up said two. Fixed, with a test against the
+  real summary.
+
+Seen on the emulator: with the server stopped, a message opened offline put a change into the queue ("Keine Verbindung ·
+1 Aktion wartet"); with the server started again and the phone left alone, the line went away and the server had a
+session of the phone a short while later. The change itself could not be seen on the server, since the messages the phone
+had stored were from an older state of the demo server. `tag:dringend` found the one message with that tag, and
+"Eigener Zeitpunkt …" in the sheet showed the days, the time ("11:00", the next full hour) and "Zurück am Fr., 23. Okt.,
+11:00"; with tomorrow chosen and "Erinnern" the message left the list. Covered by tests only: the order and the counts of
+the tags on their screen, a time that is no time or past, "tomorrow morning" when it is late in the evening, and the
+status line for drafts.
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was

@@ -18,11 +18,20 @@ export async function discardFailedActions(services: Pick<Services, 'mail'>, sto
   await refreshQueueStatus(services, store)
 }
 
-/** The sentence about the actions that wait, or null when none does. */
+/**
+ * The sentence about the actions that wait, or null when none does. A draft that waits to be kept is named, since it is
+ * the one thing that is not decided yet and not on its way to somebody: when all that waits are drafts it says that,
+ * and otherwise how many of the actions are.
+ */
 export function waitingText(summary: PendingSummary): string | null {
-  const open = summary.total - summary.failed
+  // `total` is what waits: what was given up on is counted apart, in `failed`, and is not in it.
+  const open = summary.total
   if (open <= 0) return null
-  return open === 1 ? '1 Aktion wartet' : `${open} Aktionen warten`
+  const drafts = Math.min(summary.byKind.saveDraft, open)
+  if (drafts === open) return open === 1 ? '1 Entwurf wartet' : `${open} Entwürfe warten`
+  const base = open === 1 ? '1 Aktion wartet' : `${open} Aktionen warten`
+  if (drafts === 0) return base
+  return drafts === 1 ? `${base}, davon 1 Entwurf` : `${base}, davon ${drafts} Entwürfe`
 }
 
 /** The sentence about the actions that were given up on, or null when none was. */
