@@ -13,7 +13,8 @@ class PeregrinePackage : ReactPackage {
       PeregrineKeystoreModule(context),
       PeregrineFilesModule(context),
       PeregrineNotificationsModule(context),
-      PeregrineSyncModule(context)
+      PeregrineSyncModule(context),
+      PeregrinePushModule(context)
     )
 
   override fun createViewManagers(context: ReactApplicationContext): List<ViewManager<*, *>> =

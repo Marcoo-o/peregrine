@@ -1,5 +1,6 @@
 import { DeviceEventEmitter, NativeModules } from 'react-native'
 import { RnNotifications, RnSyncSchedule } from './background/RnNotifications'
+import { RnPush } from './background/RnPush'
 import { RnFiles } from './RnFiles'
 import { RnTransport } from './RnTransport'
 
@@ -25,6 +26,11 @@ export function createNotifications(): RnNotifications {
 /** The platform's schedule for looking for new mail while the application is closed. */
 export function createSyncSchedule(): RnSyncSchedule {
   return new RnSyncSchedule(NativeModules.PeregrineSync)
+}
+
+/** The push service of the system, where there is one. */
+export function createPush(): RnPush {
+  return new RnPush(NativeModules.PeregrinePush)
 }
 
 /** The passphrase of the database, 64 hexadecimal characters, made on the first call. */

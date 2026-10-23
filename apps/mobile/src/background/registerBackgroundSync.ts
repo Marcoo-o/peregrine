@@ -24,13 +24,15 @@ export function registerBackgroundSync(): void {
         connectionsChanged: () => undefined,
         queueChanged: async () => undefined
       })
-      await runBackgroundSync({
+      const result = await runBackgroundSync({
         services,
         notifier: platform.notifications,
         // Whether the application is on the screen, which looks after its own mail. Not when the user asked.
         isForeground: () => data?.force !== true && AppState.currentState === 'active',
         log: platform.log
       })
+      // What a look came to, for whoever wonders why a notification did not come.
+      console.info(`the look for new mail: ${JSON.stringify(result)}`)
     } catch (error) {
       platform.log.error(`the look for new mail failed: ${describeError(error)}`)
     }

@@ -1116,6 +1116,44 @@ had stored were from an older state of the demo server. `tag:dringend` found the
 the tags on their screen, a time that is no time or past, "tomorrow morning" when it is late in the evening, and the
 status line for drafts.
 
+## What push found
+
+New mail reached the phone at the next run of the platform's schedule, at best every 15 minutes. It reaches it at once now, on
+a device that has a push service, and as before on one that has not.
+
+- *The phone does not keep a connection open itself, and no server of ours does.* The system has a service for it
+  (FroggerPush of FroggerOS, `docs/push_service_design.md` in that project) that keeps IMAP IDLE open for every application that
+  registered a source, and wakes the application when the server says that something happened. The phone talks to the mail
+  server only. Where the device has no such service, `available()` is false, nothing is sent, and the schedule is all there is.
+- *What the application does* (`background/push.ts`, `PeregrinePushModule`, `SystemPush.kt`): it registers the inbox of every
+  account that notifications are on for and that is not muted (login data included, which the service keeps sealed in its own
+  store), takes an account out when it is muted, when it is removed, and all of them when notifications go off. `applyPush` is
+  idempotent and runs at every start and after each of those changes; a registration that is the same again changes nothing
+  in the service. An account whose connection is not encrypted is not registered.
+- *The wake* (`PushWakeReceiver`) starts the look for mail that the scheduler starts, with the same force and the same
+  notifications (`SyncScheduler.runForPush`: expedited from Android 12, and put behind a look that is under way instead of
+  dropped, since that one may have fetched before the message came). Quiet hours and muting decide what is shown, as before.
+  The receiver is protected by a permission only the service holds, and where there is no service the permission is not defined
+  and nobody can wake it. The schedule stays as the fallback.
+- *What was found on the way to making it work:* the system names the sender of a broadcast only when the sender shares its
+  identity (`BroadcastOptions.setShareIdentityEnabled`), so a registration without it is ignored by the service; a service can see
+  only the applications it is told of, so the receiver declares an intent filter for the wake action; a service that was just
+  installed is stopped and needs `FLAG_INCLUDE_STOPPED_PACKAGES` to get its first registration. All three are in the design
+  document of the service.
+- *A line is written for each look* (`the look for new mail: {"synced":1,"failed":0,"notified":1}`), since the first two wakes
+  of the first test on the emulator led to no notification and nothing said why. They have not been seen since.
+
+Seen on the emulator, with the service and the phone as ordinary applications of one user against the test Dovecot: the account
+registers at the start and the service shows it as `idle`; a message delivered with the application in the background was
+notified within about a second of the delivery, three times, and once with the application's process ended (about two seconds);
+after the server was stopped and started again the service connected again by itself and woke once. Covered by tests only:
+registering, taking out and muting, an account without encryption, a service that does not answer, the order of the settings
+and the registration. Not seen: a device that has no service (the receiver and the queries are inert, as designed), Doze, the
+service as a part of the system image (it is not built yet), and more than one application using it.
+
+Not done: a foreground service with IDLE inside Peregrine for devices without a push service, which was the first plan. Android
+before 14 is treated as having no service, since the sender is not named there.
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was

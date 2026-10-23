@@ -3,7 +3,7 @@ import type { QueueRunner } from '@peregrine/core/offlineQueue'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { Transport } from '@peregrine/imap/transport'
 import { sweepCopies } from '../attachmentCopies'
-import type { Notifications, SyncSchedule } from '../background/devices'
+import type { Notifications, PushDevice, SyncSchedule } from '../background/devices'
 import { Connections } from '../connections'
 import { describeError } from '../errors'
 import type { Files } from '../files'
@@ -27,6 +27,8 @@ export interface Platform {
   notifications: Notifications
   /** When the platform looks for new mail while the application is closed. */
   syncSchedule: SyncSchedule
+  /** The push service of the system, which tells when something happened without waiting for that schedule. */
+  push: PushDevice
   log: Log
 }
 
@@ -39,6 +41,7 @@ export interface Services {
   files: Files
   notifications: Notifications
   syncSchedule: SyncSchedule
+  push: PushDevice
   log: Log
   /** A connection that belongs to no account yet, to find out whether a login works. */
   connectImap(login: ImapLogin): Promise<ImapSession>
@@ -61,7 +64,7 @@ export interface ServiceListeners {
  * and sends what was written, and the actions the screens ask for, which go through the queue.
  */
 export function createServices(db: SqlDb, platform: Platform, listeners: ServiceListeners): Services {
-  const { log, files, notifications, syncSchedule } = platform
+  const { log, files, notifications, syncSchedule, push } = platform
   const connections = new Connections(
     (account) => platform.connectImap(imapLoginOf(account)),
     listeners.connectionsChanged
@@ -80,6 +83,7 @@ export function createServices(db: SqlDb, platform: Platform, listeners: Service
     files,
     notifications,
     syncSchedule,
+    push,
     log,
     connectImap: (login) => platform.connectImap(login),
     sweepCopies: async () => {

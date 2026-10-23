@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getAccount, listAccounts } from '../accounts'
+import { saveNotificationSettings } from '../settings'
 import { appHarness } from '../testing/appHarness'
 import type { AccountForm } from './accountForm'
 
@@ -87,5 +88,32 @@ describe('removing an account', () => {
     await t.app.accounts.remove(work)
 
     expect(t.store.screen).toMatchObject({ name: 'accounts', accounts: [{ id: home.id }] })
+  })
+})
+
+describe('the push service and the accounts', () => {
+  it('is told of an account that is signed in, when notifications are on', async () => {
+    const t = await withServer()
+    await saveNotificationSettings(t.db, { enabled: true })
+    await t.app.accounts.signIn(form())
+    const [account] = await listAccounts(t.db)
+    expect([...t.push.sources.keys()]).toEqual([account.id])
+    expect(t.push.sources.get(account.id)).toMatchObject({ host: 'imap.example.org', username: 'work', password: 'secret', mailbox: 'INBOX' })
+  })
+
+  it('is told nothing of an account that is signed in while notifications are off', async () => {
+    const t = await withServer()
+    await t.app.accounts.signIn(form())
+    expect(t.push.sources.size).toBe(0)
+  })
+
+  it('loses an account that is removed', async () => {
+    const t = await withServer()
+    await saveNotificationSettings(t.db, { enabled: true })
+    await t.app.accounts.signIn(form())
+    const [account] = await listAccounts(t.db)
+    await t.app.accounts.remove(account)
+    expect(t.push.sources.size).toBe(0)
+    expect(t.push.calls).toContain(`unregister ${account.id}`)
   })
 })
