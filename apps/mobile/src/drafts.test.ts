@@ -80,6 +80,13 @@ describe('keeping a message as a draft', () => {
     expect(appended[0].source).not.toMatch(/^To:/m)
   })
 
+  it('keeps a draft that has nobody to go to yet, which is how one begins when the subject comes first', async () => {
+    const { db, added, imap, appended } = await account()
+    await saveDraft(db, undefined, imap, input(added.id, { to: [], subject: 'Not yet', textBody: 'Start' }))
+    expect(appended[0].source).toContain('Subject: Not yet')
+    expect(appended[0].source).not.toMatch(/^To:/m)
+  })
+
   it('keeps what it needs of a thread', async () => {
     const { db, added, imap, appended } = await account()
     await saveDraft(db, undefined, imap, input(added.id, { inReplyTo: '<one@example.net>', references: '<zero@example.net> <one@example.net>' }))

@@ -129,6 +129,16 @@ describe('the headers of a message', () => {
     expect(headers.get('bcc')).toBe('carl@example.org')
   })
 
+  it('makes a draft that has nobody to go to yet, which a message that is sent cannot be', () => {
+    const draft = composeMessage({ ...base, to: [], subject: 'Not yet' }, { ...fixed, draft: true })
+    const { headers } = split(draft.source)
+    expect(headers.has('to')).toBe(false)
+    expect(headers.get('subject')).toBe('Not yet')
+    expect(draft.envelope.to).toEqual([])
+    expect(() => composeMessage({ ...base, to: [] }, fixed)).toThrow('There is no recipient')
+    expect(() => composeMessage({ ...base, to: [] }, { ...fixed, draft: false })).toThrow('There is no recipient')
+  })
+
   it('writes a Reply-To when there is one', () => {
     expect(split(compose({ replyTo: 'office@example.org' }).source).headers.get('reply-to')).toBe('office@example.org')
   })

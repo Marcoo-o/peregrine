@@ -46,7 +46,8 @@ export interface ComposeOptions {
   random?: () => number
   /**
    * The message is one that is kept to be written on, and not sent: a blind copy is written into its headers, since
-   * it is all the draft has to remember who it is for. A message that goes out never has one.
+   * it is all the draft has to remember who it is for, and it may have nobody to go to yet. A message that goes out
+   * never has a blind copy, and always has somebody it goes to.
    */
   draft?: boolean
 }
@@ -83,7 +84,8 @@ export function composeMessage(input: ComposeInput, options: ComposeOptions = {}
   const cc = (input.cc ?? []).map(checkedAddress)
   const bcc = (input.bcc ?? []).map(checkedAddress)
   const replyTo = input.replyTo === undefined ? undefined : checkedAddress(input.replyTo)
-  if (to.length + cc.length + bcc.length === 0) throw new SmtpError('invalid', 'There is no recipient')
+  // A message that is sent has to go to somebody. A draft is kept to be written on, and often begins with a subject.
+  if (options.draft !== true && to.length + cc.length + bcc.length === 0) throw new SmtpError('invalid', 'There is no recipient')
 
   const domain = from.address.slice(from.address.lastIndexOf('@') + 1)
   const messageId = `<${now.getTime().toString(36)}.${token(random, 12)}@${domain}>`
