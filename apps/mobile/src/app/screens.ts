@@ -121,14 +121,26 @@ export interface SettingsState {
   notice?: string
 }
 
+/** What the automatic keeping of a draft has done last, which the compose screen says in a line. */
+export type AutosaveStatus = { status: 'saving' } | { status: 'saved'; at: number } | { status: 'failed'; error: string }
+
 export interface ComposeState {
   name: 'compose'
+  /** Which writing of a message this is, so that what finishes later is put on it and not on another that began since. */
+  session: string
   account: Account
   /** The screen that is shown again when the message has gone into the queue or is given up. */
   returnTo: Screen
   draft: Draft
-  /** Where the server keeps an earlier revision of this message, when it was opened from a draft: sending or saving replaces it. */
+  /** The drafts folder this message was opened from, when it was opened from a draft: leaving it shows that folder again. */
+  fromDraft?: Folder
+  /** Where the server keeps the last revision of this message that was kept: sending or keeping it again replaces it. */
   saved?: { folder: Folder; uid: number }
+  /** The message as it was last kept, which is what has been changed since when the user has written on. */
+  savedDraft?: Draft
+  autosave?: AutosaveStatus
+  /** The server did not say where it put the draft, so a later revision cannot replace it: nothing more is kept by itself. */
+  noAutosave?: boolean
   busy: boolean
   error?: string
 }
