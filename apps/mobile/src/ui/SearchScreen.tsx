@@ -13,7 +13,7 @@ const TYPING_PAUSE_MS = 250
 
 const HELP =
   'Wörter suchen im Betreff, beim Absender und im Text der Nachrichten, die schon geladen sind. Dazu geht von:, betreff:, hat:anhang, ist:ungelesen, ist:markiert, ' +
-  'vor:2026-10-01 und nach:2026-09-01. Mehrere Angaben grenzen weiter ein.'
+  'tag:Name, vor:2026-10-01 und nach:2026-09-01. Mehrere Angaben grenzen weiter ein.'
 
 const UNSUPPORTED: Record<SearchState['unsupported'][number], string> = {
   to: 'Nach Empfängern (an:) lässt sich auf dem Handy noch nicht suchen. Die Suche lief ohne diese Angabe.'

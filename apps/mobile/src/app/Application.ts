@@ -5,6 +5,7 @@ import { ComposeController } from './ComposeController'
 import { MessageController } from './MessageController'
 import { Navigator } from './Navigator'
 import { discardFailedActions, refreshQueueStatus } from './queueStatus'
+import { accountsNeedingConnection, connectAndRun, Reconnector, type ReconnectTimers } from './Reconnector'
 import { SelectionController } from './SelectionController'
 import { createServices, type Platform, type Services } from './services'
 import { SettingsController } from './SettingsController'
@@ -26,7 +27,8 @@ export class Application {
 
   constructor(
     readonly services: Services,
-    readonly store: AppStore
+    readonly store: AppStore,
+    private readonly reconnector: Reconnector
   ) {
     this.navigator = new Navigator(services, store)
     this.messages = new MessageController(services, store, this.navigator)
@@ -64,24 +66,52 @@ export class Application {
     }
   }
 
+  /**
+   * The application came to the front: what waits for a connection is tried at once, and not after the pause that a
+   * failed try would have been followed by.
+   */
+  async comeToFront(): Promise<void> {
+    await this.openLaunchTarget()
+    await this.reconnector.wake()
+  }
+
   /** Gives up on the actions that failed too often, and with them the files they carried. */
   async discardFailedActions(): Promise<void> {
     await discardFailedActions(this.services, this.store)
     await this.services.sweepCopies()
   }
 
-  /** Lets go of what is open: the queue's timer and every connection. */
+  /** Lets go of what is open: the timers of the queue and of connecting again, and every connection. */
   stop(): void {
+    this.reconnector.stop()
     this.services.queue.stop()
     this.services.connections.dropAll()
   }
 }
 
 /** Builds the application on a database that is open, and wires what the services report into the store. */
-export function createApplication(db: SqlDb, platform: Platform, store: AppStore): Application {
-  const services: Services = createServices(db, platform, {
-    connectionsChanged: (connectedIds) => store.setConnected(connectedIds),
-    queueChanged: () => refreshQueueStatus(services, store)
+export function createApplication(
+  db: SqlDb,
+  platform: Platform,
+  store: AppStore,
+  /** What waits between two tries to connect again: the platform's timers, unless a test holds them. */
+  timers?: ReconnectTimers
+): Application {
+  const reconnector = new Reconnector({
+    needing: () => accountsNeedingConnection(db, services.connections),
+    connect: (account) => connectAndRun(services.connections, services.mail)(account),
+    log: platform.log,
+    timers
   })
-  return new Application(services, store)
+  const services: Services = createServices(db, platform, {
+    connectionsChanged: (connectedIds) => {
+      store.setConnected(connectedIds)
+      reconnector.schedule()
+    },
+    queueChanged: async () => {
+      await refreshQueueStatus(services, store)
+      reconnector.schedule()
+    }
+  })
+  return new Application(services, store, reconnector)
 }

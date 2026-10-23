@@ -140,7 +140,9 @@ export function ScreenView(props: { application: Application; screen: Screen }):
     case 'tags':
       return (
         <TagsScreen
+          counts={screen.counts}
           onBack={() => settings.show()}
+          onMove={(tag, by) => void tags.move(tag.id, by)}
           onSave={(tag, name, color) => void (tag ? tags.update(tag.id, name, color) : tags.create(name, color))}
           onDelete={(tag) => void tags.remove(tag.id)}
         />
@@ -153,7 +155,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onEnabled={(enabled) => settings.setEnabled(enabled)}
           onPreview={(preview) => settings.setPreview(preview)}
           onShowPreview={(show) => settings.setShowPreview(show)}
-          onTags={() => tags.show()}
+          onTags={() => void tags.show()}
           onQuietHours={(on) => settings.setQuietHours(on)}
           onQuietTime={(end, value) => settings.setQuietTime(end, value)}
           onMuted={(accountId) => settings.toggleMuted(accountId)}

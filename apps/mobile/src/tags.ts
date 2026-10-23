@@ -57,6 +57,37 @@ export async function updateTag(db: SqlDb, id: string, name: string, color: stri
 }
 
 /**
+ * Moves a tag one place up or down in the order the user keeps them in, which is the order of the lists and sheets
+ * that show them. The places are numbered again from the first, so that tags that were made with a gap, or that
+ * were forgotten in between, do not leave one: moving past the end changes nothing. Returns whether it moved.
+ */
+export async function moveTag(db: SqlDb, id: string, by: -1 | 1): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const rows = await tx.all<{ id: string }>('SELECT id FROM tags ORDER BY sort_order, name')
+    const from = rows.findIndex((row) => row.id === id)
+    const to = from + by
+    if (from < 0 || to < 0 || to >= rows.length) return false
+    const order = rows.map((row) => row.id)
+    ;[order[from], order[to]] = [order[to], order[from]]
+    for (const [place, tagId] of order.entries()) await tx.run('UPDATE tags SET sort_order = ? WHERE id = ?', place, tagId)
+    return true
+  })
+}
+
+/**
+ * How many messages carry each keyword, by the keyword in lower case: the keywords are compared without regard to
+ * case, as IMAP does. It counts the messages that are stored on the phone, which are those fetched so far.
+ */
+export async function tagCounts(db: SqlDb): Promise<Record<string, number>> {
+  const rows = await db.all<{ keyword: string; n: number }>(
+    `SELECT lower(j.value) AS keyword, COUNT(*) AS n
+     FROM messages m, json_each(m.flags) j
+     GROUP BY lower(j.value)`
+  )
+  return Object.fromEntries(rows.map((row) => [row.keyword, row.n]))
+}
+
+/**
  * Forgets a tag, as the desktop does: the definition goes, and the keyword stays on the messages that have it, which
  * then show it by its keyword, in grey. Taking it off every message would mean rewriting mail that this phone has not
  * all fetched, and the keyword may be in use by another client under a name of its own.

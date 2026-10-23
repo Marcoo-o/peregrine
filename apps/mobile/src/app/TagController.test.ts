@@ -33,10 +33,19 @@ describe('the tags of the user', () => {
     expect(t.store.state.tags).toHaveLength(1)
   })
 
-  it('are shown on a screen of their own', async () => {
+  it('are shown on a screen of their own, with how many messages have each', async () => {
     const t = await appHarness()
-    t.app.tags.show()
-    expect(t.store.screen).toEqual({ name: 'tags' })
+    await t.app.tags.show()
+    expect(t.store.screen).toEqual({ name: 'tags', counts: {} })
+  })
+
+  it('are moved one place, and the store has the order at once', async () => {
+    const t = await appHarness()
+    await t.app.tags.create('One')
+    const two = (await t.app.tags.create('Two'))!
+    expect(await t.app.tags.move(two.id, -1)).toBe(true)
+    expect(t.store.state.tags.map((tag) => tag.name)).toEqual(['Two', 'One'])
+    expect(await t.app.tags.move(two.id, -1)).toBe(false)
   })
 
   it('are renamed and recoloured, and the store has the change at once', async () => {

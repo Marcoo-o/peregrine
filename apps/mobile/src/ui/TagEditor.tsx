@@ -17,6 +17,10 @@ export function TagEditor(props: {
   /** The tag that is changed, or null for one that is made. */
   tag: Tag | null
   onSave: (name: string, color: string) => void
+  /** Where the tag is among the tags: there is none for a tag that is made. */
+  position?: { index: number; of: number }
+  /** Moves the tag one place up or down; there is none for a tag that is made. */
+  onMove?: (by: -1 | 1) => void
   /** Asks to forget the tag; there is none for a tag that is made. */
   onDelete?: () => void
   onClose: () => void
@@ -51,6 +55,17 @@ export function TagEditor(props: {
               </Text>
             ) : null}
             <Button label="Speichern" disabled={name.trim() === ''} onPress={() => props.onSave(name, color)} />
+            {props.onMove && props.position ? (
+              <>
+                <Button label="Weiter nach oben" variant="secondary" disabled={props.position.index <= 0} onPress={() => props.onMove?.(-1)} />
+                <Button
+                  label="Weiter nach unten"
+                  variant="secondary"
+                  disabled={props.position.index >= props.position.of - 1}
+                  onPress={() => props.onMove?.(1)}
+                />
+              </>
+            ) : null}
             {props.onDelete ? <Button label="Löschen" variant="danger" onPress={props.onDelete} /> : null}
           </Pressable>
         </Pressable>
