@@ -1,7 +1,7 @@
 import { listAccounts, type Account } from '../accounts'
 import { suggestContacts, type Contact } from '../contacts'
 import { editableDraft, emptyDraft, forwardDraft, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
-import { saveDraft } from '../drafts'
+import { draftsFolderOf } from '../drafts'
 import { newId } from '../ids'
 import { explainError } from '../errors'
 import { smtpSettingsOf } from '../send'
@@ -20,11 +20,27 @@ export function senderProblem(account: Account): string | null {
 
 /** Writing a message: starting one, sending it into the queue, or giving it up. */
 export class ComposeController {
+  /** The draft that was last handed to the queue for each writing of a message, which is what is kept once the queue has run. */
+  private readonly keeping = new Map<string, Draft>()
+
   constructor(
     private readonly services: Services,
     private readonly store: AppStore,
     private readonly navigator: Navigator
-  ) {}
+  ) {
+    // A draft that waited for a connection is kept when the queue runs, which can be while the message is still on the screen.
+    services.mail.onDraftKept((session, kept) => {
+      const shown = this.store.screen
+      if (shown.name !== 'compose' || shown.session !== session) return
+      this.store.showScreen({
+        ...shown,
+        saved: kept.uid === null ? undefined : { folder: kept.folder, uid: kept.uid },
+        savedDraft: this.keeping.get(session) ?? shown.savedDraft,
+        autosave: { status: 'saved', at: Date.now() },
+        noAutosave: kept.uid === null
+      })
+    })
+  }
 
   /** An empty message from an account, and the screen to show again when it is done with. */
   startNew(account: Account, returnTo: Screen): void {
@@ -100,6 +116,8 @@ export class ComposeController {
     this.store.showScreen({ ...state, draft, busy: true, error: undefined })
     try {
       await this.services.mail.send(toComposeInput(state.account.id, draft))
+      // The message is on its way, and a draft of it is not wanted any more: not the one that waits, and not the one kept.
+      await this.services.mail.forgetDraft(state.account.id, state.session)
       await this.dropSavedRevision(state)
       await this.leave(state)
       this.navigator.refreshStatus()
@@ -109,29 +127,33 @@ export class ComposeController {
   }
 
   /**
-   * Keeps the message as a draft on the server, in place of the revision it was opened from, and leaves. It needs a
-   * connection, which it does not wait for: a draft that is only half kept is worse than one that was not, so the
-   * screen stays, with the reason, and the message is still there to send or to give up.
+   * Keeps the message as a draft on the server, in place of the revision kept before, and leaves. Without a connection
+   * the draft waits in the queue and is kept when there is one, as the rest of what is decided does, so the message is not
+   * lost by the phone being offline. The files that were attached stay until it is kept: the draft carries them.
+   * A refusal that no connection would change, such as an account that has no folder for drafts, keeps the screen, with
+   * the reason.
    */
   async saveDraft(given: ComposeState, draft: Draft): Promise<void> {
     const state = await this.settled(given)
     this.store.showScreen({ ...state, draft, busy: true, error: undefined })
     try {
-      const imap = await this.services.connections.ensure(state.account)
-      const input = toComposeInput(state.account.id, draft)
-      await saveDraft(this.services.db, this.services.files, imap, input)
-      await this.dropSavedRevision(state)
-      await this.services.files.remove(draft.attachments.map((attached) => attached.path)).catch(() => undefined)
+      if ((await this.keepOnServer(state, draft)) === 'kept') {
+        await this.services.files.remove(draft.attachments.map((attached) => attached.path)).catch(() => undefined)
+      }
       await this.leave(state)
     } catch (error) {
       this.store.showScreen({ ...state, draft, busy: false, error: explainError(error) })
     }
   }
 
-  /** Leaves without sending, and keeps what was kept. What was attached was copied for this message, and goes with it. */
+  /**
+   * Leaves without sending, and keeps what was kept. What was attached was copied for this message, and goes with it,
+   * unless a draft that waits for a connection carries it: that one needs the files until it is kept.
+   */
   async cancel(state: ComposeState, draft: Draft): Promise<void> {
-    const copies = draft.attachments.map((attached) => attached.path)
-    await this.services.files.remove(copies).catch(() => undefined)
+    const { waiting } = await this.services.mail.draftState(state.account.id, state.session)
+    if (!waiting) await this.services.files.remove(draft.attachments.map((attached) => attached.path)).catch(() => undefined)
+    this.keeping.delete(state.session)
     await this.leave(state)
   }
 
@@ -141,6 +163,7 @@ export class ComposeController {
    */
   async discard(given: ComposeState, draft: Draft): Promise<void> {
     const state = await this.settled(given)
+    await this.services.mail.forgetDraft(state.account.id, state.session)
     await this.dropSavedRevision(state)
     await this.cancel(state, draft)
   }
@@ -164,18 +187,32 @@ export class ComposeController {
     if (!autosaveDue(state, draft)) return
     this.mark(state, { autosave: { status: 'saving' } })
     try {
-      const imap = await this.services.connections.ensure(state.account)
-      const kept = await saveDraft(this.services.db, this.services.files, imap, toComposeInput(state.account.id, draft))
-      await this.dropSavedRevision(this.latest(state))
-      this.mark(state, {
-        saved: kept.uid === null ? undefined : { folder: kept.folder, uid: kept.uid },
-        savedDraft: draft,
-        autosave: { status: 'saved', at: Date.now() },
-        noAutosave: kept.uid === null
-      })
+      // When it was kept at once the queue has said so already, and the screen has it. When it waits, that is what is said.
+      if ((await this.keepOnServer(state, draft)) === 'waiting') this.mark(state, { savedDraft: draft, autosave: { status: 'waiting' } })
     } catch (error) {
       this.mark(state, { autosave: { status: 'failed', error: explainError(error) } })
     }
+  }
+
+  /**
+   * Hands the draft to the queue, in place of the one that waits and of the revision kept before, and runs it when there is a
+   * connection. Says whether it was kept or waits; raises why not when it was tried and failed, or cannot be, so that the
+   * screen can say it, and the next pause or the next try is not a surprise.
+   */
+  private async keepOnServer(state: ComposeState, draft: Draft): Promise<'kept' | 'waiting'> {
+    const { db, mail } = this.services
+    if (!(await draftsFolderOf(db, state.account.id))) throw new Error('Dieses Konto hat keinen Ordner für Entwürfe.')
+    // A connection is made when there is none yet, as the account does for anything it is asked: only one that cannot be
+    // made leaves the draft in the queue.
+    await this.services.connections.ensure(state.account).catch(() => undefined)
+    this.keeping.set(state.session, draft)
+    const before = state.saved ? { folderId: state.saved.folder.id, uid: state.saved.uid } : undefined
+    await mail.keepDraft(toComposeInput(state.account.id, draft), state.session, before)
+    const after = await mail.draftState(state.account.id, state.session)
+    if (!after.waiting) return 'kept'
+    // Still there after the queue ran: it is waiting for a connection, unless an attempt was made, which failed.
+    if (after.error !== null) throw new Error(after.error)
+    return 'waiting'
   }
 
   /** The state it was given with what has been kept since, which is on the screen while the writing of it is. */

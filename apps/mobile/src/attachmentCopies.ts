@@ -1,17 +1,18 @@
 import { listAllActions } from '@peregrine/core/pendingActionsStore'
-import type { PendingSendPayload } from '@peregrine/core/pendingActions'
+import type { PendingSaveDraftPayload, PendingSendPayload } from '@peregrine/core/pendingActions'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { Files } from './files'
 
 /**
  * The copies of attached files that a message in the queue still needs, those of messages given up on
- * included: they are kept until somebody discards the message, and then they are not needed.
+ * included: they are kept until somebody discards the message, and then they are not needed. A draft that waits to be
+ * kept needs them too, since it carries its files.
  */
 export async function referencedCopies(db: SqlDb): Promise<string[]> {
   const actions = await listAllActions(db)
   return actions
-    .filter((action) => action.kind === 'send')
-    .flatMap((action) => (action.payload as PendingSendPayload).input.attachments.map((attached) => attached.path))
+    .filter((action) => action.kind === 'send' || action.kind === 'saveDraft')
+    .flatMap((action) => (action.payload as PendingSendPayload | PendingSaveDraftPayload).input.attachments.map((attached) => attached.path))
 }
 
 /**

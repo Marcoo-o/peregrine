@@ -122,7 +122,11 @@ export interface SettingsState {
 }
 
 /** What the automatic keeping of a draft has done last, which the compose screen says in a line. */
-export type AutosaveStatus = { status: 'saving' } | { status: 'saved'; at: number } | { status: 'failed'; error: string }
+export type AutosaveStatus =
+  | { status: 'saving' }
+  | { status: 'waiting' }
+  | { status: 'saved'; at: number }
+  | { status: 'failed'; error: string }
 
 export interface ComposeState {
   name: 'compose'

@@ -4,6 +4,7 @@ import type {
   PendingDeletePayload,
   PendingFlagsPayload,
   PendingMovePayload,
+  PendingSaveDraftPayload,
   PendingSendPayload
 } from './pendingActions'
 import type { ComposeInput } from './types'
@@ -99,6 +100,8 @@ export class QueueRunner {
    * than known. Without it a queued message simply waits.
    */
   private send: ((input: ComposeInput, imap: ImapSession) => Promise<unknown>) | null = null
+  /** Keeping a draft is also done by a module that is registered after this one exists, for the same reason. */
+  private saveDraft: ((payload: PendingSaveDraftPayload, imap: ImapSession) => Promise<unknown>) | null = null
   /** Fires when the next scheduled message becomes due. */
   private dueTimer: unknown = null
   private readonly timers: QueueTimers
@@ -119,6 +122,11 @@ export class QueueRunner {
    */
   setSendHandler(send: (input: ComposeInput, imap: ImapSession) => Promise<unknown>): void {
     this.send = send
+  }
+
+  /** What keeps a draft that was written without a connection: it is handed the whole of the action and the connection of the run. */
+  setSaveDraftHandler(saveDraft: (payload: PendingSaveDraftPayload, imap: ImapSession) => Promise<unknown>): void {
+    this.saveDraft = saveDraft
   }
 
   /**
@@ -217,6 +225,13 @@ export class QueueRunner {
       // disappear. The price is the reverse window. A crash after the server accepted the mail
       // but before the row is gone would send it twice on the next start.
       await this.send({ ...payload.input, sendNow: true }, imap)
+      return true
+    }
+
+    if (action.kind === 'saveDraft') {
+      // Raised, as for sending: a draft that cannot be kept yet waits and is not dropped as if there were nothing to do.
+      if (!this.saveDraft) throw new Error('nothing to keep drafts with yet: no draft handler registered')
+      await this.saveDraft(action.payload as PendingSaveDraftPayload, imap)
       return true
     }
 

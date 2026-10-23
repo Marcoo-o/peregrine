@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { ImapSession } from '@peregrine/core/imapSession'
+import type { FetchedMessage, ImapSession } from '@peregrine/core/imapSession'
 import type { ComposeInput } from '@peregrine/core/types'
 import { addAccount } from './accounts'
-import { saveDraft } from './drafts'
+import { draftsFolderOf, keepQueuedDraft, saveDraft } from './drafts'
 import { syncFolders } from './folders'
+import { listMessages, saveMessages } from './messages'
 import { migratedDatabase } from './testing/testDb'
 
 const input = (accountId: string, over: Partial<ComposeInput> = {}): ComposeInput => ({
@@ -116,5 +117,48 @@ describe('keeping a message as a draft', () => {
   it('says so when the account is gone', async () => {
     const { db, imap } = await account()
     await expect(saveDraft(db, undefined, imap, input('gone'))).rejects.toThrow('gibt es nicht mehr')
+  })
+})
+
+describe('keeping a draft that waited in the queue', () => {
+  it('appends the new revision first and deletes the one it replaces after, from the server and from the phone', async () => {
+    const { db, added, imap, appended } = await account()
+    const deleted: Array<{ path: string; uids: number[] }> = []
+    ;(imap as unknown as { deleteMessages: unknown }).deleteMessages = async (path: string, uids: number[]) => void deleted.push({ path, uids })
+    const drafts = (await draftsFolderOf(db, added.id))!
+    await saveMessages(db, drafts, [
+      { uid: 7, envelope: { subject: 'Plan' }, flags: ['\\Draft'], size: 10, hasAttachment: false } as unknown as FetchedMessage
+    ])
+    const kept = await keepQueuedDraft(db, undefined, imap, {
+      draftKey: 'writing-1',
+      input: input(added.id),
+      replace: { folderId: drafts.id, uid: 7 }
+    })
+    expect(kept.uid).toBe(42)
+    expect(appended).toHaveLength(1)
+    expect(deleted).toEqual([{ path: 'Entwuerfe', uids: [7] }])
+    expect(await listMessages(db, drafts.id)).toEqual([])
+  })
+
+  it('deletes nothing when it replaces nothing', async () => {
+    const { db, added, imap } = await account()
+    const deleted: unknown[] = []
+    ;(imap as unknown as { deleteMessages: unknown }).deleteMessages = async () => void deleted.push(1)
+    await keepQueuedDraft(db, undefined, imap, { draftKey: 'writing-1', input: input(added.id) })
+    expect(deleted).toEqual([])
+  })
+
+  it('keeps nothing of the old one when the new one could not be appended', async () => {
+    const { db, added, imap } = await account()
+    const deleted: unknown[] = []
+    ;(imap as unknown as { appendMessage: unknown }).appendMessage = async () => {
+      throw new Error('no space')
+    }
+    ;(imap as unknown as { deleteMessages: unknown }).deleteMessages = async () => void deleted.push(1)
+    const drafts = (await draftsFolderOf(db, added.id))!
+    await expect(
+      keepQueuedDraft(db, undefined, imap, { draftKey: 'k', input: input(added.id), replace: { folderId: drafts.id, uid: 7 } })
+    ).rejects.toThrow('no space')
+    expect(deleted).toEqual([])
   })
 })

@@ -6,6 +6,10 @@ describe('what the compose screen says about the draft kept by itself', () => {
     expect(autosaveText({ status: 'saving' })).toBe('Entwurf wird gespeichert …')
   })
 
+  it('says that it waits for a connection', () => {
+    expect(autosaveText({ status: 'waiting' })).toBe('Entwurf wartet auf eine Verbindung')
+  })
+
   it('says when it was kept, to the minute', () => {
     const at = new Date(2026, 9, 23, 14, 3, 30).getTime()
     expect(autosaveText({ status: 'saved', at })).toBe('Entwurf gespeichert um 14:03')

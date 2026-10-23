@@ -8,6 +8,7 @@ import { Connections } from '../connections'
 import { describeError } from '../errors'
 import type { Files } from '../files'
 import { MailActions } from '../mailActions'
+import { keepQueuedDraft } from '../drafts'
 import { createQueue } from '../queue'
 import { sendAndFile } from '../send'
 import { imapLoginOf, type ImapLogin } from './accountForm'
@@ -70,6 +71,7 @@ export function createServices(db: SqlDb, platform: Platform, listeners: Service
     sendAndFile(db, { makeTransport: () => platform.makeTransport(), files }, input, imap, log)
   )
   const mail = new MailActions({ db, queue, session: (accountId) => connections.get(accountId), log })
+  queue.setSaveDraftHandler(async (payload, imap) => mail.draftKept(payload.draftKey, await keepQueuedDraft(db, files, imap, payload)))
   return {
     db,
     connections,
