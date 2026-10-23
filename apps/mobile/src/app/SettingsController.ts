@@ -1,5 +1,6 @@
 import { parseTimeOfDay } from '@peregrine/core/notificationPolicy'
 import { listAccounts } from '../accounts'
+import { applyPush } from '../background/push'
 import { describeError, explainError } from '../errors'
 import {
   DEFAULT_QUIET_HOURS,
@@ -59,11 +60,13 @@ export class SettingsController {
     if (enabled && !(await notifications.ensurePermission())) {
       await saveNotificationSettings(db, { enabled: false })
       await this.applySchedule()
+      await this.applyPush()
       await this.show(NOT_ALLOWED)
       return
     }
     await saveNotificationSettings(db, { enabled })
     await this.applySchedule()
+    await this.applyPush()
     if (!enabled) await this.attempt(() => notifications.clearAll())
     await this.show()
   }
@@ -92,6 +95,7 @@ export class SettingsController {
     await this.change({
       mutedAccountIds: muted ? mutedAccountIds.filter((id) => id !== accountId) : [...mutedAccountIds, accountId]
     })
+    await this.applyPush()
   }
 
   async setInterval(intervalMinutes: number): Promise<void> {
@@ -124,6 +128,15 @@ export class SettingsController {
     const { db, syncSchedule } = this.services
     const settings = await loadNotificationSettings(db)
     await this.attempt(() => (settings.enabled ? syncSchedule.schedule(settings.intervalMinutes) : syncSchedule.cancel()))
+  }
+
+  /**
+   * Tells the push service of the system what to watch, which is what the settings say: the inbox of each account that is
+   * not muted when notifications are on. Idempotent, like the schedule, and run at every start.
+   */
+  async applyPush(): Promise<void> {
+    const { db, push, log } = this.services
+    await applyPush({ db, push, log })
   }
 
   private async change(change: Partial<NotificationSettings>): Promise<void> {

@@ -187,3 +187,54 @@ describe('the settings screen', () => {
     })
   })
 })
+
+describe('telling the push service what to watch', () => {
+  it('registers the accounts when notifications are switched on, and takes them out when they are switched off', async () => {
+    const t = await onSettings()
+    t.notifications.allowed = true
+    await t.app.settings.setEnabled(true)
+    expect([...t.push.sources.keys()].sort()).toEqual([t.work.id, t.home.id].sort())
+
+    await t.app.settings.setEnabled(false)
+    expect(t.push.sources.size).toBe(0)
+    expect(t.push.calls).toContain('unregisterAll')
+  })
+
+  it('does not register what is not allowed to be shown: notifications that the system refuses stay off, and nothing is watched', async () => {
+    const t = await onSettings()
+    t.notifications.allowed = false
+    t.notifications.willAllow = false
+    await t.app.settings.setEnabled(true)
+    expect(t.push.sources.size).toBe(0)
+  })
+
+  it('takes a muted account out and puts it back when it is not muted any more', async () => {
+    const t = await onSettings()
+    t.notifications.allowed = true
+    await t.app.settings.setEnabled(true)
+
+    await t.app.settings.toggleMuted(t.home.id)
+    expect([...t.push.sources.keys()]).toEqual([t.work.id])
+
+    await t.app.settings.toggleMuted(t.home.id)
+    expect(t.push.sources.size).toBe(2)
+  })
+
+  it('is told again at every start, which is how it is right after a reinstall or an update of the system', async () => {
+    const t = await onSettings()
+    t.notifications.allowed = true
+    await t.app.settings.setEnabled(true)
+    t.push.sources.clear()
+    await t.app.start()
+    expect(t.push.sources.size).toBe(2)
+  })
+
+  it('goes on without the service when the device has none', async () => {
+    const t = await onSettings()
+    t.notifications.allowed = true
+    t.push.present = false
+    await t.app.settings.setEnabled(true)
+    expect(t.push.calls).toEqual([])
+    expect((await loadNotificationSettings(t.db)).enabled).toBe(true)
+  })
+})

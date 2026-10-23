@@ -1,4 +1,5 @@
 import { addAccount, removeAccount, type Account } from '../accounts'
+import { applyPush, forgetPush } from '../background/push'
 import { explainError } from '../errors'
 import { newAccountFrom, type AccountForm } from './accountForm'
 import type { Navigator } from './Navigator'
@@ -27,6 +28,7 @@ export class AccountSetup {
       const session = await this.services.connectImap(form)
       const account = await addAccount(this.services.db, newAccountFrom(form))
       this.services.connections.adopt(account.id, session)
+      await applyPush(this.services)
       await this.navigator.showFolders(account, session)
     } catch (error) {
       this.store.showScreen({ name: 'login', error: explainError(error) })
@@ -36,6 +38,7 @@ export class AccountSetup {
   /** Removes an account with its mail and its queue and the files its queue carried, and lets go of its connection. */
   async remove(account: Account): Promise<void> {
     this.services.connections.drop(account.id)
+    await forgetPush(this.services, account.id)
     await removeAccount(this.services.db, account.id)
     await this.services.sweepCopies()
     await this.navigator.showAccounts()

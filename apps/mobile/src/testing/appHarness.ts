@@ -2,7 +2,7 @@ import type { FetchedMessage, ImapSession, MailboxEntry } from '@peregrine/core/
 import { FakeSmtpServer } from '../../../../packages/smtp/test-support/fakeServer'
 import { addAccount, type Account, type NewAccount } from '../accounts'
 import { Application, createApplication } from '../app/Application'
-import type { Notifications, SyncSchedule } from '../background/devices'
+import type { Notifications, PushDevice, PushSource, SyncSchedule } from '../background/devices'
 import type { MailNotification, MessageTarget } from '../background/notifications'
 import type { ImapLogin } from '../app/accountForm'
 import type { Platform } from '../app/services'
@@ -229,6 +229,41 @@ export class FakeNotifications implements Notifications {
   }
 }
 
+/** The push service of the system, which keeps what was registered and writes down what it was told. */
+export class FakePush implements PushDevice {
+  readonly calls: string[] = []
+  /** What is registered now, by source id. */
+  readonly sources = new Map<string, PushSource>()
+  /** Whether the device has a push service. */
+  present = true
+  failWith: Error | null = null
+
+  private record(call: string): Promise<void> {
+    if (this.failWith) return Promise.reject(this.failWith)
+    this.calls.push(call)
+    return Promise.resolve()
+  }
+
+  available(): Promise<boolean> {
+    return Promise.resolve(this.present)
+  }
+
+  async register(source: PushSource): Promise<void> {
+    await this.record(`register ${source.sourceId}`)
+    this.sources.set(source.sourceId, source)
+  }
+
+  async unregister(sourceId: string): Promise<void> {
+    await this.record(`unregister ${sourceId}`)
+    this.sources.delete(sourceId)
+  }
+
+  async unregisterAll(): Promise<void> {
+    await this.record('unregisterAll')
+    this.sources.clear()
+  }
+}
+
 /** The platform's schedule, which writes down what it was told. */
 export class FakeSyncSchedule implements SyncSchedule {
   readonly calls: string[] = []
@@ -280,6 +315,7 @@ export async function appHarness() {
   const smtp = new FakeSmtpServer()
   const notifications = new FakeNotifications()
   const syncSchedule = new FakeSyncSchedule()
+  const push = new FakePush()
   const logs: string[] = []
   const platform: Platform = {
     connectImap: async (login) => server.connect(login) as unknown as ImapSession,
@@ -287,6 +323,7 @@ export async function appHarness() {
     files,
     notifications,
     syncSchedule,
+    push,
     log: { warn: (message) => logs.push(message), error: (message) => logs.push(message) }
   }
   const store = new AppStore()
@@ -307,7 +344,7 @@ export async function appHarness() {
 
   const folderOf = (folders: Folder[], path: string): Folder => folders.find((f) => f.imapPath === path) as Folder
 
-  return { app, store, db, raw, server, files, smtp, notifications, syncSchedule, logs, reconnectTimers, givenAccount, folderOf }
+  return { app, store, db, raw, server, files, smtp, notifications, syncSchedule, push, logs, reconnectTimers, givenAccount, folderOf }
 }
 
 /**

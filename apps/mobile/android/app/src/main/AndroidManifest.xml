@@ -3,6 +3,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- From Android 13 on, the user is asked for it, when notifications are switched on. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Where the system has a push service, this is what lets the application register what it should watch. Where it has none the
+         permission is not defined, and asking for it does nothing. -->
+    <uses-permission android:name="org.frogger.permission.PUSH_REGISTER" />
+
+    <!-- Whether there is a push service is asked of the package manager, which only answers for packages it is told of here. -->
+    <queries>
+        <package android:name="org.frogger.push" />
+    </queries>
 
     <application
       android:name=".MainApplication"
@@ -25,6 +33,17 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
+      <!-- The push service wakes this when something happened on a mailbox it watches for the application. Only it holds the
+           permission, so nothing else can. Where the system has no such service the permission is not defined and nobody can. -->
+      <receiver
+        android:name=".PushWakeReceiver"
+        android:exported="true"
+        android:permission="org.frogger.permission.PUSH_DELIVER">
+        <!-- What makes this receiver known to the push service, which only sees applications that have one. -->
+        <intent-filter>
+          <action android:name="org.frogger.push.action.WAKE" />
+        </intent-filter>
+      </receiver>
       <!-- Hands a file to another application for as long as that one application needs it, by a content address and never a path. -->
       <provider
         android:name="androidx.core.content.FileProvider"

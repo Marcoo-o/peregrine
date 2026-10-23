@@ -47,6 +47,7 @@ export class Application {
   async start(): Promise<void> {
     await this.services.sweepCopies()
     await this.settings.applySchedule()
+    await this.settings.applyPush()
     await this.tags.load()
     await this.navigator.start()
     await this.openLaunchTarget()
