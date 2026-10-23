@@ -1154,6 +1154,32 @@ service as a part of the system image (it is not built yet), and more than one a
 Not done: a foreground service with IDLE inside Peregrine for devices without a push service, which was the first plan. Android
 before 14 is treated as having no service, since the sender is not named there.
 
+## What the launcher icon found
+
+The phone app had the icon of the template. It has the falcon of the desktop's icon now, as the phone is the desktop's
+application made for the phone.
+
+- *One drawing, made for every use.* The falcon is the one of `resources/icon.svg`, unchanged, on the same violet gradient.
+  The sources are two SVG layers in `apps/mobile/android/icon/` (`foreground.svg`, `monochrome.svg`) and `npm run icon:android`
+  makes everything from them (Chromium by way of Electron, as `npm run icon` does for the desktop): the three vector drawables
+  of the adaptive icon and the two XML files that put them together, and the PNGs for Android 7, which has no adaptive icons
+  (a rounded square and a circle, five sizes each). The vector drawables are made from the SVG layers and not drawn a second
+  time, so that the two cannot drift apart. `--preview=<folder>` also writes how the icon looks under a circle and a square
+  mask.
+- *Sized for the mask.* An adaptive icon is 108 units of which a launcher shows the middle 72 and keeps the middle 66 safe.
+  The falcon first filled nearly all of it and sat high, with the beak near the edge of the circle; it is 16 percent smaller
+  and centred, which leaves air all round.
+- *The monochrome layer* (the themed icon of Android 13 and later: the system colours it and uses only its shape) is the
+  falcon in one colour: the eye is a hole in the body, the dark feathers and the beak are filled. The dark feathers reach beyond
+  the body, so making them a hole as well (the first try, with the even-odd rule) cut the silhouette in two.
+- The small icon of the notifications is the envelope as before: it has to be one colour and small, and the falcon is
+  neither at 24 pixels (the desktop's own icon drops the eye and the stripe below 32 for the same reason).
+
+Seen: the rendered layers under both masks and in one colour, and the resources compile (`processDebugResources`), and the
+release APK has the adaptive icon as its icon. Not seen on a device: the launcher, the dock, the themed icon. The image
+that has the phone app in it has to be built for that; the quick way (`dev_push_app.py peregrine` in FroggerOS) stops at
+`adb remount` on a fresh image and at fs-verity for an update of a system app.
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was

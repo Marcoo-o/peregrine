@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+  <!--
+    The same falcon in one colour, for the themed icon of Android 13 and later: the system colours it and uses only the
+    shape. The eye is a hole in the body (one path with the even-odd rule); the dark feathers and the beak are filled, which is
+    what the dark feathers are in the coloured icon where they reach beyond the body.
+  -->
+  <g transform="translate(5.5,4.6) scale(0.192)">
+    <g transform="translate(6,4)">
+      <path fill="#ffffff" fill-rule="evenodd" d="M196 132c78-26 156 16 168 96 10 66-26 128-88 152-16-52-10-104 6-150-30 14-62 12-88-8-24-18-34-46-28-74z M236 176a26 22 0 1 0 52 0a26 22 0 1 0 -52 0z"/>
+      <path fill="#ffffff" d="M250 200c14 10 28 14 42 12-6 42-24 76-50 100-14-38-12-78 8-112z"/>
+      <path fill="#ffffff" d="M196 132l-70 34 72 20c-6-18-6-36-2-54z"/>
+    </g>
+  </g>
+</svg>
