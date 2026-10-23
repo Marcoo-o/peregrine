@@ -1009,8 +1009,8 @@ why it could not be.
   the line says it was kept; keeping by hand still works.
 - *Nothing is kept for a message that is as it was.* The decision is a plain function (`autosaveDue`): not while the
   message is being sent or kept by hand, not when it is as it was when it began or when it was last kept.
-- *When it cannot,* because there is no connection or the account has no folder for drafts, the line says so and the
-  message is written on; the next pause tries again. Nothing is lost that was not lost before.
+- *When it cannot,* because the account has no folder for drafts, the line says so and the message is written on; the next
+  pause tries again. Without a connection the draft waits in the queue, see "What keeping drafts without a connection found".
 - *One thing at a time.* Keeping, sending, keeping by hand and throwing away are done one after the other, and the last
   three wait for one that is running and then take the newest revision's place, so that a draft is never left behind by
   a send that did not know of it. What finishes after the user has left is put on no other screen: every writing of a
@@ -1033,7 +1033,42 @@ replaced it (the old UID gone, one draft left); "Abbrechen" left without a quest
 away, sending after keeping, a failed connection, and the server that gives no UID are covered by tests only.
 
 Not done: keeping while the application is in the background or being closed (it waits for a pause in writing and does
-not run when there is none), and keeping drafts without a connection.
+not run when there is none).
+
+## What keeping drafts without a connection found
+
+A draft needed a connection, because it was appended to the server directly: by hand it stayed on the screen with
+"nicht erreichbar", by itself it said that it could not. It goes through the queue now, as everything else that is decided
+does, so a message written in a train is kept when the train has a signal.
+
+- *A new kind of queued action,* `saveDraft`, in `@peregrine/core` (the desktop's queue is the same code and does not use it
+  yet). It carries the message as it is written, a `draftKey` that says which writing of a message it is of, and the
+  revision it replaces. The phone registers what keeps it (`keepQueuedDraft`: append first, delete the old revision after,
+  from the server and from the phone's own copy) the way it registers the sender, and a queue without that handler lets
+  the draft wait and does not drop it as if there were nothing to do.
+- *Once per writing of a message.* A newer revision takes the place of one that still waits (`dropQueuedDraftSaves`) and
+  inherits the revision it was to replace, so a message changed ten times offline is kept once, as it was last, and the
+  old revision on the server is deleted once.
+- *A connection is made when there is none,* as before, and only a connection that cannot be made leaves the draft
+  in the queue. The line then says "Entwurf wartet auf eine Verbindung"; when the queue has run, the screen is told
+  where the draft is (`onDraftKept`), and the line says when it was kept. Keeping by hand without a connection leaves
+  the screen at once, the draft behind it in the queue.
+- *Files travel with it.* Attached files are copies the phone made; a draft that waits carries them, so they are neither
+  removed when the screen is left nor swept (`referencedCopies` counts `saveDraft` as it counts `send`) until the draft
+  is kept.
+- *Sending or throwing away the message takes the waiting draft out,* before it can be kept as the draft of a message that
+  nobody wants. The queue runs in order, so a draft kept earlier than the send of the same message is a case the send's
+  own deletion of the kept revision covers.
+- *An attempt that fails with a connection* (the server refuses, a timeout) is the queue's failure like any other: counted,
+  retried at the next connection, given up after the limit and then reported. By hand the screen stays with the reason; the
+  action stays queued and is replaced by the next revision or taken out by throwing the message away.
+
+Seen on the emulator: with the server stopped (an open connection survives taking away the port forwarding, so the server
+itself had to go), changing the subject showed "Entwurf wartet auf eine Verbindung". With the server back the line stayed
+as it was: the phone makes a connection again only when something asks for one (opening an account or a folder, the next
+keeping), there is no timer, which is as true for a message that waits to be sent. The next pause in writing connected,
+kept the draft, and the server then held one draft (the latest revision) and not the first one. Not seen: files attached to
+a draft that waits, sending or throwing away a message with a draft that waits, and the draft being kept after the screen was left.
 
 ## What stage 4 found
 

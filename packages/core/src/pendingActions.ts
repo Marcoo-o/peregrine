@@ -38,13 +38,27 @@ export interface PendingSendPayload {
   input: ComposeInput
 }
 
-export type PendingActionKind = 'flags' | 'move' | 'delete' | 'send'
+/**
+ * A message that is not finished, to be kept in the drafts folder when there is a connection.
+ *
+ * `draftKey` says which writing of a message it belongs to: a newer revision of the same writing replaces one that is still
+ * waiting, so that a message written without a connection is kept once, as it is when the connection comes, and not
+ * as many times as it was changed. `replace` is the revision that was kept before, which goes once the new one is kept.
+ */
+export interface PendingSaveDraftPayload {
+  draftKey: string
+  input: ComposeInput
+  replace?: { folderId: string; uid: number }
+}
+
+export type PendingActionKind = 'flags' | 'move' | 'delete' | 'send' | 'saveDraft'
 
 export type PendingPayload =
   | PendingFlagsPayload
   | PendingMovePayload
   | PendingDeletePayload
   | PendingSendPayload
+  | PendingSaveDraftPayload
 
 export interface PendingAction {
   id: number
@@ -131,5 +145,5 @@ export function movePayloadWithout(
 }
 
 export function emptySummary(): PendingSummary {
-  return { total: 0, byKind: { flags: 0, move: 0, delete: 0, send: 0 }, failed: 0, scheduled: 0 }
+  return { total: 0, byKind: { flags: 0, move: 0, delete: 0, send: 0, saveDraft: 0 }, failed: 0, scheduled: 0 }
 }

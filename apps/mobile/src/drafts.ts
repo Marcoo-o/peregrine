@@ -3,7 +3,9 @@ import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { ComposeInput } from '@peregrine/core/types'
 import { getAccount } from './accounts'
 import type { FileAccess } from './files'
-import { getFolderBySpecialUse, type Folder } from './folders'
+import type { PendingSaveDraftPayload } from '@peregrine/core/pendingActions'
+import { getFolder, getFolderBySpecialUse, type Folder } from './folders'
+import { deleteMessages } from './messages'
 import { composeFromInput } from './send'
 
 /** Where a draft is kept: the account's Drafts folder, or nothing when the account has none. */
@@ -33,4 +35,26 @@ export async function saveDraft(
   // A draft is written with its blind copy, which is all it has to remember who it was for.
   const composed = await composeFromInput(account, input, files, { draft: true })
   return { folder, uid: await imap.appendMessage(folder.imapPath, composed.source, ['\\Draft', '\\Seen']) }
+}
+
+/**
+ * Keeps a draft that waited in the queue, once there is a connection: the new revision is appended first, and the one that
+ * it replaces is deleted after, as for a draft that is kept at once, so that a connection that ends in between leaves
+ * two drafts and not none. Returns where the new one is.
+ */
+export async function keepQueuedDraft(
+  db: SqlDb,
+  files: FileAccess | undefined,
+  imap: ImapSession,
+  payload: PendingSaveDraftPayload
+): Promise<{ folder: Folder; uid: number | null }> {
+  const kept = await saveDraft(db, files, imap, payload.input)
+  if (payload.replace) {
+    const before = await getFolder(db, payload.replace.folderId)
+    if (before) {
+      await imap.deleteMessages(before.imapPath, [payload.replace.uid])
+      await deleteMessages(db, before.id, [payload.replace.uid])
+    }
+  }
+  return kept
 }

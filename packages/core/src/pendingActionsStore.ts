@@ -6,6 +6,7 @@ import {
   type PendingAction,
   type PendingActionKind,
   type PendingMovePayload,
+  type PendingSaveDraftPayload,
   type PendingPayload,
   type PendingSummary
 } from './pendingActions'
@@ -195,6 +196,49 @@ export async function cancelPendingAction(db: SqlDb, id: number, clearMoveMark: 
  * given up on is still sitting in the table and still reported to the user, and leaving it
  * there would keep announcing a move that no longer reflects anything.
  */
+/**
+ * Takes the draft of one writing of a message out of the queue, when it is still waiting there, and gives back what it was
+ * to keep. A newer revision of the draft takes its place, so it carries the revision that was to be replaced; sending or
+ * throwing the message away needs it gone altogether.
+ */
+export async function dropQueuedDraftSaves(
+  db: SqlDb,
+  accountId: string,
+  draftKey: string
+): Promise<PendingSaveDraftPayload | undefined> {
+  return db.transaction(async (tx) => {
+    const rows = await tx.all<PendingRow>(
+      "SELECT * FROM pending_actions WHERE account_id = ? AND kind = 'saveDraft' ORDER BY id",
+      accountId
+    )
+    let last: PendingSaveDraftPayload | undefined
+    for (const row of rows) {
+      const payload = JSON.parse(row.payload) as PendingSaveDraftPayload
+      if (payload.draftKey !== draftKey) continue
+      await tx.run('DELETE FROM pending_actions WHERE id = ?', row.id)
+      last = payload
+    }
+    return last
+  })
+}
+
+/** What waits to keep the draft of one writing of a message: the action, with why its last attempt failed, or nothing. */
+export async function queuedDraftSave(
+  db: SqlDb,
+  accountId: string,
+  draftKey: string
+): Promise<{ payload: PendingSaveDraftPayload; lastError: string | null } | undefined> {
+  const rows = await db.all<PendingRow>(
+    "SELECT * FROM pending_actions WHERE account_id = ? AND kind = 'saveDraft' ORDER BY id",
+    accountId
+  )
+  for (const row of rows) {
+    const payload = JSON.parse(row.payload) as PendingSaveDraftPayload
+    if (payload.draftKey === draftKey) return { payload, lastError: row.last_error }
+  }
+  return undefined
+}
+
 export async function dropQueuedMoves(
   db: SqlDb,
   accountId: string,

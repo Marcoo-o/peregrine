@@ -2,16 +2,21 @@ import type { ImapSession } from '@peregrine/core/imapSession'
 import type { QueueRunner } from '@peregrine/core/offlineQueue'
 import {
   discardFailedActions,
+  dropQueuedDraftSaves,
   dropQueuedMoves,
   enqueueAction,
   listPendingActions,
-  pendingSummary
+  pendingSummary,
+  queuedDraftSave
 } from '@peregrine/core/pendingActionsStore'
 import type { PendingSummary } from '@peregrine/core/pendingActions'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { ComposeInput } from '@peregrine/core/types'
 import { getFolderBySpecialUse, type Folder } from './folders'
 import { applyFlags, deleteMessages, setPendingMove } from './messages'
+
+/** What is told when a draft that waited in the queue has been kept: which writing of a message it is of, and where it is. */
+export type DraftKeptListener = (draftKey: string, kept: { folder: Folder; uid: number | null }) => void
 
 export interface MailContext {
   db: SqlDb
@@ -38,6 +43,7 @@ export interface MailContext {
 export class MailActions {
   /** One run of the queue after another per account, see `flush`. */
   private chains = new Map<string, Promise<void>>()
+  private readonly keptListeners = new Set<DraftKeptListener>()
 
   constructor(private readonly context: MailContext) {}
 
@@ -97,6 +103,43 @@ export class MailActions {
   async send(input: ComposeInput): Promise<void> {
     await enqueueAction(this.context.db, input.accountId, 'send', { input })
     await this.settle(input.accountId)
+  }
+
+  /**
+   * Keeps the draft of a writing of a message on the server, now when there is a connection and when there is one when
+   * there is not. A revision that is still waiting from before is taken out: it is the older of the two, and the draft
+   * is kept once, as it is when the connection comes. `replace` is the revision that was kept before.
+   */
+  async keepDraft(input: ComposeInput, draftKey: string, replace?: { folderId: string; uid: number }): Promise<void> {
+    const waiting = await dropQueuedDraftSaves(this.context.db, input.accountId, draftKey)
+    await enqueueAction(this.context.db, input.accountId, 'saveDraft', { draftKey, input, replace: waiting?.replace ?? replace })
+    await this.settle(input.accountId)
+  }
+
+  /**
+   * Takes the draft of a writing of a message out of the queue, for a message that is sent or thrown away and has
+   * nothing to be kept for. The revision it would have replaced is still on the server, and the caller knows where, and
+   * has it deleted.
+   */
+  async forgetDraft(accountId: string, draftKey: string): Promise<void> {
+    await dropQueuedDraftSaves(this.context.db, accountId, draftKey)
+  }
+
+  /** Whether the draft of a writing of a message waits to be kept, and why its last attempt failed, if it did. */
+  async draftState(accountId: string, draftKey: string): Promise<{ waiting: boolean; error: string | null }> {
+    const queued = await queuedDraftSave(this.context.db, accountId, draftKey)
+    return { waiting: queued !== undefined, error: queued?.lastError ?? null }
+  }
+
+  /** Calls the listener whenever a draft that was in the queue has been kept, with where it is. */
+  onDraftKept(listener: DraftKeptListener): () => void {
+    this.keptListeners.add(listener)
+    return () => this.keptListeners.delete(listener)
+  }
+
+  /** Said by the handler that keeps queued drafts, once one is kept. */
+  draftKept(draftKey: string, kept: { folder: Folder; uid: number | null }): void {
+    for (const listener of this.keptListeners) listener(draftKey, kept)
   }
 
   /** What waits, for a line on a screen: how many, and how many were given up on. */

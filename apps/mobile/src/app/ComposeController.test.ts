@@ -299,20 +299,33 @@ describe('drafts', () => {
     expect(t.store.screen).toMatchObject({ name: 'messages', folder: { imapPath: 'Drafts' } })
   })
 
-  it('stays, with the reason, when there is no connection to keep it on, and keeps the message', async () => {
+  it('waits in the queue when there is no connection to keep it on, and leaves all the same', async () => {
     const t = await composing()
     t.server.unreachable.add('work')
     await t.app.compose.saveDraft(t.state, t.draft)
-    expect(t.store.screen).toMatchObject({
-      name: 'compose',
-      busy: false,
-      draft: t.draft,
-      error: expect.stringContaining('nicht erreichbar')
-    })
-    expect(t.files.removed).toEqual([])
+    expect(t.store.screen).toBe(returnTo)
+    expect(await listPendingActions(t.db, t.work.id)).toMatchObject([{ kind: 'saveDraft' }])
   })
 
-  it('does not drop the old revision when the new one could not be kept', async () => {
+  it('keeps the files of a draft that waits, which carries them, and keeps the draft when the connection comes', async () => {
+    const t = await composing()
+    t.files.stored.set('/store/a', new TextEncoder().encode('attached'))
+    const draft: Draft = {
+      ...t.draft,
+      attachments: [{ filename: 'a.txt', path: '/store/a', contentType: 'text/plain', size: 8 }]
+    }
+    t.server.unreachable.add('work')
+    await t.app.compose.saveDraft(t.state, draft)
+    expect(t.files.removed).toEqual([])
+
+    t.server.unreachable.delete('work')
+    await t.app.services.connections.ensure(t.work)
+    await t.app.services.mail.flush(t.work.id)
+    expect(t.server.calls).toContain('append Drafts')
+    expect(await listPendingActions(t.db, t.work.id)).toEqual([])
+  })
+
+  it('does not drop the old revision while the new one could not be kept, and does when it is', async () => {
     const t = await withDraft()
     t.app.compose.startFromDraft(t.message)
     const state = t.store.screen as ComposeState
@@ -320,7 +333,14 @@ describe('drafts', () => {
     t.server.calls.length = 0
     await t.app.compose.saveDraft(state, state.draft)
     expect(t.server.calls.some((call) => call.startsWith('delete'))).toBe(false)
-    expect(t.store.screen).toMatchObject({ name: 'compose', error: expect.any(String) })
+    expect(t.store.screen).toMatchObject({ name: 'messages' })
+
+    t.server.unreachable.delete('draftsman')
+    await t.app.services.connections.ensure(state.account)
+    await t.app.services.mail.flush(state.account.id)
+    expect(t.server.calls).toContain('append Drafts')
+    await eventually(() => expect(t.server.calls).toContain('delete Drafts 7'))
+    expect(t.server.calls.indexOf('append Drafts')).toBeLessThan(t.server.calls.indexOf('delete Drafts 7'))
   })
 
   it('takes the attached files to the server with it, and removes the copies once the server has them', async () => {
@@ -413,16 +433,40 @@ describe('keeping a message as a draft by itself', () => {
     expect(shown(t).savedDraft?.body).toBe('Two')
   })
 
-  it('says why it could not, keeps nothing and writes on, and keeps it at the next pause when it can', async () => {
+  it('says that it waits when there is no connection, writes on, and has it kept once there is one', async () => {
     const t = await composing()
     t.server.unreachable.add('work')
     await t.app.compose.autosave(t.state, written(t))
-    expect(shown(t)).toMatchObject({ autosave: { status: 'failed', error: expect.stringContaining('nicht erreichbar') } })
+    expect(shown(t)).toMatchObject({ autosave: { status: 'waiting' } })
     expect(shown(t).saved).toBeUndefined()
 
     t.server.unreachable.delete('work')
-    await t.app.compose.autosave(shown(t), written(t))
+    await t.app.services.connections.ensure(t.work)
+    await t.app.services.mail.flush(t.work.id)
     expect(shown(t)).toMatchObject({ saved: { uid: 1 }, autosave: { status: 'saved' } })
+    expect(shown(t).savedDraft?.body).toBe(written(t).body)
+  })
+
+  it('keeps one draft of a message that was changed twice without a connection, the last as it was written', async () => {
+    const t = await composing()
+    t.server.unreachable.add('work')
+    await t.app.compose.autosave(t.state, written(t, 'One'))
+    await t.app.compose.autosave(shown(t), written(t, 'Two'))
+    expect(await listPendingActions(t.db, t.work.id)).toHaveLength(1)
+
+    t.server.unreachable.delete('work')
+    await t.app.services.connections.ensure(t.work)
+    await t.app.services.mail.flush(t.work.id)
+    expect(t.server.calls.filter((call) => call === 'append Drafts')).toHaveLength(1)
+    expect(shown(t).savedDraft?.body).toBe('Two')
+  })
+
+  it('takes a draft that waits out of the queue when the message is sent or thrown away', async () => {
+    const t = await composing()
+    t.server.unreachable.add('work')
+    await t.app.compose.autosave(t.state, written(t))
+    await t.app.compose.discard(shown(t), written(t))
+    expect(await listPendingActions(t.db, t.work.id)).toEqual([])
   })
 
   it('says so when the account has no folder for drafts', async () => {

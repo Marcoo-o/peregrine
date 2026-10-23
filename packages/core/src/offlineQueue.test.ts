@@ -416,3 +416,53 @@ describe('the timer for scheduled messages', () => {
     expect(t.timers.pending.size).toBe(0)
   })
 })
+
+describe('keeping a draft', () => {
+  const draft = (over: Partial<{ draftKey: string; replace: { folderId: string; uid: number } }> = {}, a: Partial<PendingAction> = {}): PendingAction =>
+    action('saveDraft', { draftKey: 'writing-1', input: { subject: 'Not yet' } as ComposeInput, ...over }, a)
+
+  it('is handed to the handler with the connection of the run, and leaves the queue once it is kept', async () => {
+    const waiting = draft({ replace: { folderId: 'inbox', uid: 4 } })
+    const t = setup([waiting])
+    const seen: Array<{ key: string; replace: unknown; imap: ImapSession }> = []
+    t.runner.setSaveDraftHandler(async (payload, imap) => void seen.push({ key: payload.draftKey, replace: payload.replace, imap }))
+    await t.runner.flush('a', t.imap)
+    expect(seen).toEqual([{ key: 'writing-1', replace: { folderId: 'inbox', uid: 4 }, imap: t.imap }])
+    expect(t.calls).toEqual([`remove ${waiting.id}`, 'changed'])
+  })
+
+  it('waits, and is not dropped as if there were nothing to do, while no handler is registered', async () => {
+    const waiting = draft()
+    const t = setup([waiting])
+    await t.runner.flush('a', t.imap)
+    expect(t.calls.some((c) => c.includes('fail') && c.includes('no draft handler'))).toBe(true)
+    expect(t.calls).not.toContain(`remove ${waiting.id}`)
+  })
+
+  it('stops the run when it fails, as every action does, and keeps the draft with the reason', async () => {
+    const waiting = draft()
+    const behind = flags()
+    const t = setup([waiting, behind])
+    t.runner.setSaveDraftHandler(async () => {
+      throw new Error('the server said no')
+    })
+    await t.runner.flush('a', t.imap)
+    expect(t.calls).toEqual([`fail ${waiting.id}: the server said no`, 'changed'])
+  })
+
+  it('runs in its place among the other actions of the account', async () => {
+    const first = flags()
+    const second = draft()
+    const third = del()
+    const t = setup([first, second, third])
+    t.runner.setSaveDraftHandler(async () => void t.calls.push('kept'))
+    await t.runner.flush('a', t.imap)
+    expect(t.calls.filter((c) => !c.startsWith('add') && c !== 'changed')).toEqual([
+      `remove ${first.id}`,
+      'kept',
+      `remove ${second.id}`,
+      'delete Trash 9',
+      `remove ${third.id}`
+    ])
+  })
+})
