@@ -1063,7 +1063,12 @@ does, so a message written in a train is kept when the train has a signal.
   retried at the next connection, given up after the limit and then reported. By hand the screen stays with the reason; the
   action stays queued and is replaced by the next revision or taken out by throwing the message away.
 
-Covered by tests only (core queue, drafts, controller); not yet seen on the emulator.
+Seen on the emulator: with the server stopped (an open connection survives taking away the port forwarding, so the server
+itself had to go), changing the subject showed "Entwurf wartet auf eine Verbindung". With the server back the line stayed
+as it was: the phone makes a connection again only when something asks for one (opening an account or a folder, the next
+keeping), there is no timer, which is as true for a message that waits to be sent. The next pause in writing connected,
+kept the draft, and the server then held one draft (the latest revision) and not the first one. Not seen: files attached to
+a draft that waits, sending or throwing away a message with a draft that waits, and the draft being kept after the screen was left.
 
 ## What stage 4 found
 
