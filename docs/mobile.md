@@ -790,8 +790,7 @@ one is there on the other.
 - *A revision replaces the one before it the way the desktop does it:* the new one is appended first and the old one is
   deleted after, and the deletion goes through the queue, which already knows how to delete for good. A failure in
   between leaves two drafts and not none.
-- *Sending a draft deletes the draft;* giving up a draft that was opened leaves it as it was on the server, and goes
-  to the Drafts folder.
+- *Sending a draft deletes the draft;* what giving up one does is changed by "What keeping drafts by itself found".
 - *Which drafts can be written on.* A draft is opened only when saving it again would keep all of it. One with attached
   files is not (the phone would write a new copy without them), nor one with a formatted text (it writes plain text), nor one
   with recipients in `Bcc` (it has no such field). The reason is said on the message. Saving a new message with
@@ -996,6 +995,45 @@ header on the server, and the buttons of the dialog for leaving a message by wei
 a blind copy and sending one are covered by tests only.
 
 Not done: ordering the tags, the number of messages of a tag, deleting the keyword from the messages, a tag in the search.
+
+## What keeping drafts by itself found
+
+A message that is written was lost if the application was closed, or the battery ran out, before it was kept by hand. It
+is kept by itself now, as the desktop does it: once writing has paused for four seconds, in the Drafts folder, in place
+of the revision kept before, with a line under "Von" that says "Entwurf gespeichert um 14:03", or that it is being kept, or
+why it could not be.
+
+- *Appended first, deleted after,* as for a draft kept by hand: the new revision is on the server before the old one goes,
+  and the deletion is the queue's. The UID the server gives the draft is what the next revision replaces. A server
+  that does not say (no UIDPLUS) would get a second draft at every pause, so keeping by itself stops after the first and
+  the line says it was kept; keeping by hand still works.
+- *Nothing is kept for a message that is as it was.* The decision is a plain function (`autosaveDue`): not while the
+  message is being sent or kept by hand, not when it is as it was when it began or when it was last kept.
+- *When it cannot,* because there is no connection or the account has no folder for drafts, the line says so and the
+  message is written on; the next pause tries again. Nothing is lost that was not lost before.
+- *One thing at a time.* Keeping, sending, keeping by hand and throwing away are done one after the other, and the last
+  three wait for one that is running and then take the newest revision's place, so that a draft is never left behind by
+  a send that did not know of it. What finishes after the user has left is put on no other screen: every writing of a
+  message has its own `session`.
+- *Leaving.* When all that was written is kept, "Abbrechen" and the back key leave without a question and leave the draft
+  where it is. When something is written that is not kept, the question of the three answers is still asked.
+- *Throwing away deletes the draft,* as the desktop does ("Verwerfen"): the draft kept of the message, by hand or by
+  itself, is removed too, and does not turn up as the draft of a message that nobody wants. For a draft that was opened and
+  thrown away this is a change from before, when the original was left: with a revision kept by itself there is no original
+  to leave. A message that was never kept has nothing to delete.
+- Where a message goes after it was sent, kept by hand or left is where it began, or the Drafts folder when it came from
+  one (`fromDraft`), as before; the draft kept by itself does not change that.
+
+The first time on the emulator it showed a real mistake: a draft with nobody to go to, which is how a draft begins when
+the subject comes first, was refused with "There is no recipient", because `composeMessage` wants a recipient. A draft needs none
+now (a message that is sent still does), with tests in the smtp package and for saving.
+
+Seen on the emulator: a subject typed, "Entwurf gespeichert um 00:09" four seconds after, the draft on the server; typing on
+replaced it (the old UID gone, one draft left); "Abbrechen" left without a question and the draft stayed. Throwing a message
+away, sending after keeping, a failed connection, and the server that gives no UID are covered by tests only.
+
+Not done: keeping while the application is in the background or being closed (it waits for a pause in writing and does
+not run when there is none), and keeping drafts without a connection.
 
 ## What stage 4 found
 

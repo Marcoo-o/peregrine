@@ -4,6 +4,7 @@ import type { ComposeState } from '../app/screens'
 import { formatSize } from '../attachmentText'
 import { withContact, type Contact } from '../contacts'
 import { hasRecipient, isChanged, type Draft } from '../draft'
+import { autosaveText } from './autosaveText'
 import type { Files } from '../files'
 import { Button, Chip, Spinner } from './controls'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -11,6 +12,7 @@ import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
 import { SuggestionList } from './SuggestionList'
 import { useStyles } from './useStyles'
+import { useAutosave } from './useAutosave'
 import { useComposeForm } from './useComposeForm'
 import { useSuggestions } from './useSuggestions'
 
@@ -21,7 +23,11 @@ export function ComposeScreen(props: {
   suggest: (typed: string) => Promise<Contact[]>
   onSend: (draft: Draft) => void
   onSaveDraft: (draft: Draft) => void
+  /** Keeps the message as a draft without leaving, which is done once writing has paused. */
+  onAutosave: (draft: Draft) => void
   onCancel: (draft: Draft) => void
+  /** Throws the message away, with the draft that was kept of it. */
+  onDiscard: (draft: Draft) => void
 }) {
   const styles = useStyles()
   const { account, busy, error } = props.state
@@ -33,8 +39,11 @@ export function ComposeScreen(props: {
   const forCc = useSuggestions(props.suggest, draft.cc, typing === 'cc')
   const forBcc = useSuggestions(props.suggest, draft.bcc, typing === 'bcc')
 
-  // Leaving with something written asks first, whether it is the button or the back key of the phone.
-  const leave = () => (isChanged(props.state.draft, draft) ? setDiscarding(true) : props.onCancel(draft))
+  useAutosave(props.state, draft, props.onAutosave)
+
+  // Leaving with something written that has not been kept asks first, whether it is the button or the back key of the
+  // phone. What has been kept, by hand or by itself, stays where it is kept, and nothing needs asking.
+  const leave = () => (isChanged(props.state.savedDraft ?? props.state.draft, draft) ? setDiscarding(true) : props.onCancel(draft))
   const leaving = useRef(leave)
   leaving.current = leave
   useEffect(() => {
@@ -67,12 +76,13 @@ export function ComposeScreen(props: {
             variant: 'danger',
             onPress: () => {
               setDiscarding(false)
-              props.onCancel(draft)
+              props.onDiscard(draft)
             }
           }
         ]}
       />
       <Text style={styles.subtitle}>Von {account.emailAddress || account.displayName}</Text>
+      {props.state.autosave ? <Text style={styles.hint}>{autosaveText(props.state.autosave)}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FormInput
         placeholder="An"

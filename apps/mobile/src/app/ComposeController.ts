@@ -2,8 +2,10 @@ import { listAccounts, type Account } from '../accounts'
 import { suggestContacts, type Contact } from '../contacts'
 import { editableDraft, emptyDraft, forwardDraft, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
 import { saveDraft } from '../drafts'
+import { newId } from '../ids'
 import { explainError } from '../errors'
 import { smtpSettingsOf } from '../send'
+import { autosaveDue } from './autosave'
 import type { Navigator } from './Navigator'
 import type { ComposeState, MessageState, Screen } from './screens'
 import type { Services } from './services'
@@ -77,7 +79,9 @@ export class ComposeController {
       account: state.account,
       returnTo: state,
       draft: found.draft,
-      saved: { folder: state.folder, uid: state.summary.uid }
+      fromDraft: state.folder,
+      saved: { folder: state.folder, uid: state.summary.uid },
+      savedDraft: found.draft
     })
   }
 
@@ -86,7 +90,8 @@ export class ComposeController {
    * again when there is not. An account that cannot send is told so before anything is queued: a message
    * that would fail five times in the queue has nobody looking at it.
    */
-  async send(state: ComposeState, draft: Draft): Promise<void> {
+  async send(given: ComposeState, draft: Draft): Promise<void> {
+    const state = await this.settled(given)
     const problem = senderProblem(state.account)
     if (problem) {
       this.store.showScreen({ ...state, draft, error: problem })
@@ -108,7 +113,8 @@ export class ComposeController {
    * connection, which it does not wait for: a draft that is only half kept is worse than one that was not, so the
    * screen stays, with the reason, and the message is still there to send or to give up.
    */
-  async saveDraft(state: ComposeState, draft: Draft): Promise<void> {
+  async saveDraft(given: ComposeState, draft: Draft): Promise<void> {
+    const state = await this.settled(given)
     this.store.showScreen({ ...state, draft, busy: true, error: undefined })
     try {
       const imap = await this.services.connections.ensure(state.account)
@@ -122,11 +128,73 @@ export class ComposeController {
     }
   }
 
-  /** Leaves without sending. What was attached was copied for this message, and goes with it. */
+  /** Leaves without sending, and keeps what was kept. What was attached was copied for this message, and goes with it. */
   async cancel(state: ComposeState, draft: Draft): Promise<void> {
     const copies = draft.attachments.map((attached) => attached.path)
     await this.services.files.remove(copies).catch(() => undefined)
     await this.leave(state)
+  }
+
+  /**
+   * Throws the message away, as the desktop does: the draft that was kept of it, by hand or by itself, is deleted too,
+   * and not left to turn up in the drafts of a message that nobody wants.
+   */
+  async discard(given: ComposeState, draft: Draft): Promise<void> {
+    const state = await this.settled(given)
+    await this.dropSavedRevision(state)
+    await this.cancel(state, draft)
+  }
+
+  /** Runs one thing at a time that keeps a draft, so that one that began later is never overtaken by one that began before. */
+  private inflight: Promise<void> = Promise.resolve()
+
+  /**
+   * Keeps the message as a draft without anybody waiting for it, as the desktop does once writing pauses: in the
+   * drafts folder, in place of the revision kept before. It says what it is doing in a line of the screen, and when it
+   * cannot, because there is no connection or no folder for drafts, it says that and writes the message on: nothing
+   * is lost that was not lost before, and the next pause tries again.
+   */
+  autosave(state: ComposeState, draft: Draft): Promise<void> {
+    this.inflight = this.inflight.then(() => this.keep(state, draft))
+    return this.inflight
+  }
+
+  private async keep(given: ComposeState, draft: Draft): Promise<void> {
+    const state = this.latest(given)
+    if (!autosaveDue(state, draft)) return
+    this.mark(state, { autosave: { status: 'saving' } })
+    try {
+      const imap = await this.services.connections.ensure(state.account)
+      const kept = await saveDraft(this.services.db, this.services.files, imap, toComposeInput(state.account.id, draft))
+      await this.dropSavedRevision(this.latest(state))
+      this.mark(state, {
+        saved: kept.uid === null ? undefined : { folder: kept.folder, uid: kept.uid },
+        savedDraft: draft,
+        autosave: { status: 'saved', at: Date.now() },
+        noAutosave: kept.uid === null
+      })
+    } catch (error) {
+      this.mark(state, { autosave: { status: 'failed', error: explainError(error) } })
+    }
+  }
+
+  /** The state it was given with what has been kept since, which is on the screen while the writing of it is. */
+  private latest(state: ComposeState): ComposeState {
+    const shown = this.store.screen
+    if (shown.name !== 'compose' || shown.session !== state.session) return state
+    return { ...state, saved: shown.saved, savedDraft: shown.savedDraft, autosave: shown.autosave, noAutosave: shown.noAutosave }
+  }
+
+  /** Waits for what is being kept, and then gives the newest state, which says where the last revision is. */
+  private async settled(state: ComposeState): Promise<ComposeState> {
+    await this.inflight
+    return this.latest(state)
+  }
+
+  /** Puts something on the screen of this writing of a message, when it is still the screen: not over another. */
+  private mark(state: ComposeState, patch: Partial<ComposeState>): void {
+    const shown = this.store.screen
+    if (shown.name === 'compose' && shown.session === state.session) this.store.showScreen({ ...shown, ...patch })
   }
 
   /** The earlier revision of a draft is for good once the new one is kept or sent, as the desktop does it. */
@@ -136,11 +204,11 @@ export class ComposeController {
 
   /** Back to where the message was started, or to the drafts when it came from one, which show what was done to it. */
   private async leave(state: ComposeState): Promise<void> {
-    if (state.saved) await this.navigator.showMessages(state.account, state.saved.folder, { sync: true })
+    if (state.fromDraft) await this.navigator.showMessages(state.account, state.fromDraft, { sync: true })
     else this.store.showScreen(state.returnTo)
   }
 
-  private show(start: { account: Account; returnTo: Screen; draft: Draft; saved?: ComposeState['saved'] }): void {
-    this.store.showScreen({ name: 'compose', ...start, busy: false })
+  private show(start: Pick<ComposeState, 'account' | 'returnTo' | 'draft' | 'fromDraft' | 'saved' | 'savedDraft'>): void {
+    this.store.showScreen({ name: 'compose', session: newId(), ...start, busy: false })
   }
 }

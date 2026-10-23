@@ -56,8 +56,9 @@ async function account(over: { drafts: boolean; emailAddress?: string } = { draf
 describe('keeping a message as a draft', () => {
   it('puts it in the drafts folder of the account, marked as a draft and as read, and returns the UID it got', async () => {
     const { db, added, imap, appended } = await account()
-    const uid = await saveDraft(db, undefined, imap, input(added.id))
-    expect(uid).toBe(42)
+    const kept = await saveDraft(db, undefined, imap, input(added.id))
+    expect(kept.uid).toBe(42)
+    expect(kept.folder.imapPath).toBe('Entwuerfe')
     expect(appended).toHaveLength(1)
     expect(appended[0].path).toBe('Entwuerfe')
     expect(appended[0].flags).toEqual(['\\Draft', '\\Seen'])
@@ -76,6 +77,13 @@ describe('keeping a message as a draft', () => {
     const { db, added, imap, appended } = await account()
     await saveDraft(db, undefined, imap, input(added.id, { to: [], bcc: [{ name: '', address: 'carl@example.net' }] }))
     expect(appended[0].source).toMatch(/^Bcc: carl@example\.net/m)
+    expect(appended[0].source).not.toMatch(/^To:/m)
+  })
+
+  it('keeps a draft that has nobody to go to yet, which is how one begins when the subject comes first', async () => {
+    const { db, added, imap, appended } = await account()
+    await saveDraft(db, undefined, imap, input(added.id, { to: [], subject: 'Not yet', textBody: 'Start' }))
+    expect(appended[0].source).toContain('Subject: Not yet')
     expect(appended[0].source).not.toMatch(/^To:/m)
   })
 

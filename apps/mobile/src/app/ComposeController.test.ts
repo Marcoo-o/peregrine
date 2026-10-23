@@ -40,7 +40,7 @@ describe('who can send', () => {
 describe('starting a message', () => {
   it('starts an empty one that goes back to where it was started from', async () => {
     const t = await composing()
-    expect(t.state).toEqual({ name: 'compose', account: t.work, returnTo, draft: emptyDraft, busy: false })
+    expect(t.state).toEqual({ name: 'compose', session: expect.any(String), account: t.work, returnTo, draft: emptyDraft, busy: false })
   })
 
   it('starts an empty one from the first account where there is no account to start it from', async () => {
@@ -374,5 +374,154 @@ describe('suggesting who to write to', () => {
     await t.givenAccount('work', { INBOX: [{ uid: 1 }, { uid: 2 }] })
     expect(await t.app.compose.suggest('SENDER@')).toEqual([{ name: '', address: 'sender@example.net' }])
     expect(await t.app.compose.suggest('nobody')).toEqual([])
+  })
+})
+
+describe('keeping a message as a draft by itself', () => {
+  const written = (t: Awaited<ReturnType<typeof composing>>, body = 'Hello') => ({ ...t.draft, body })
+  const shown = (t: { store: { screen: Screen } }) => t.store.screen as ComposeState
+
+  it('keeps what was written in the drafts folder, stays on the screen, and says when', async () => {
+    const t = await composing()
+    await t.app.compose.autosave(t.state, written(t))
+    expect(t.server.calls).toContain('append Drafts')
+    expect(shown(t)).toMatchObject({
+      name: 'compose',
+      saved: { uid: 1 },
+      savedDraft: { body: 'Hello' },
+      autosave: { status: 'saved', at: expect.any(Number) }
+    })
+  })
+
+  it('keeps nothing for a message that is as it was when it began, or as it was when it was last kept', async () => {
+    const t = await composing()
+    await t.app.compose.autosave(t.state, t.state.draft)
+    expect(t.server.calls).not.toContain('append Drafts')
+
+    await t.app.compose.autosave(t.state, written(t))
+    await t.app.compose.autosave(shown(t), written(t))
+    expect(t.server.calls.filter((call) => call === 'append Drafts')).toHaveLength(1)
+  })
+
+  it('replaces the revision kept before with the new one: it is appended first and the old one is deleted after', async () => {
+    const t = await composing()
+    await t.app.compose.autosave(t.state, written(t, 'One'))
+    t.server.calls.length = 0
+    await t.app.compose.autosave(shown(t), written(t, 'Two'))
+    await eventually(() => expect(t.server.calls).toContain('delete Drafts 1'))
+    expect(t.server.calls.indexOf('append Drafts')).toBeLessThan(t.server.calls.indexOf('delete Drafts 1'))
+    expect(shown(t).savedDraft?.body).toBe('Two')
+  })
+
+  it('says why it could not, keeps nothing and writes on, and keeps it at the next pause when it can', async () => {
+    const t = await composing()
+    t.server.unreachable.add('work')
+    await t.app.compose.autosave(t.state, written(t))
+    expect(shown(t)).toMatchObject({ autosave: { status: 'failed', error: expect.stringContaining('nicht erreichbar') } })
+    expect(shown(t).saved).toBeUndefined()
+
+    t.server.unreachable.delete('work')
+    await t.app.compose.autosave(shown(t), written(t))
+    expect(shown(t)).toMatchObject({ saved: { uid: 1 }, autosave: { status: 'saved' } })
+  })
+
+  it('says so when the account has no folder for drafts', async () => {
+    const t = await appHarness()
+    const work = await t.givenAccount('work', { INBOX: [], Trash: [], Sent: [] })
+    t.app.compose.startNew(work, returnTo)
+    await t.app.compose.autosave(shown(t), { ...emptyDraft, body: 'Hello' })
+    expect(shown(t)).toMatchObject({ autosave: { status: 'failed', error: expect.stringContaining('keinen Ordner für Entwürfe') } })
+  })
+
+  it('stops keeping by itself when the server does not say where it put the draft, so that there are not two', async () => {
+    const t = await composing()
+    await t.app.services.connections.ensure(t.work)
+    for (const session of t.server.sessions) session.appendMessage = async () => null as never
+    await t.app.compose.autosave(t.state, written(t))
+    expect(shown(t)).toMatchObject({ noAutosave: true, autosave: { status: 'saved' } })
+    expect(shown(t).saved).toBeUndefined()
+    t.server.calls.length = 0
+    await t.app.compose.autosave(shown(t), written(t, 'More'))
+    expect(t.server.calls).toEqual([])
+  })
+
+  it('puts nothing on a screen that is not the writing of this message any more', async () => {
+    const t = await composing()
+    const pending = t.app.compose.autosave(t.state, written(t))
+    t.store.showScreen(returnTo)
+    await pending
+    expect(t.store.screen).toBe(returnTo)
+  })
+
+  it('is waited for by sending, which then deletes the draft that was kept and goes back to where it began', async () => {
+    const t = await composing()
+    await t.app.services.connections.ensure(t.work)
+    const pending = t.app.compose.autosave(t.state, written(t))
+    await t.app.compose.send(t.state, written(t))
+    await pending
+    await eventually(() => expect(t.server.calls).toContain('delete Drafts 1'))
+    expect(t.store.screen).toBe(returnTo)
+    expect(t.smtp.messages).toHaveLength(1)
+  })
+
+  it('is replaced by keeping it by hand, which leaves for where the message began', async () => {
+    const t = await composing()
+    await t.app.compose.autosave(t.state, written(t))
+    t.server.calls.length = 0
+    await t.app.compose.saveDraft(shown(t), written(t, 'Final'))
+    await eventually(() => expect(t.server.calls).toContain('delete Drafts 1'))
+    expect(t.store.screen).toBe(returnTo)
+  })
+
+  it('stays when the writing is left, which keeps the message where it was kept', async () => {
+    const t = await composing()
+    await t.app.compose.autosave(t.state, written(t))
+    t.server.calls.length = 0
+    await t.app.compose.cancel(shown(t), written(t))
+    expect(t.store.screen).toBe(returnTo)
+    expect(t.server.calls.some((call) => call.startsWith('delete'))).toBe(false)
+  })
+})
+
+describe('throwing a message away', () => {
+  it('deletes the draft that was kept of it, and goes back to where it began', async () => {
+    const t = await composing()
+    await t.app.compose.autosave(t.state, { ...t.draft, body: 'Hello' })
+    t.server.calls.length = 0
+    await t.app.compose.discard(t.store.screen as ComposeState, t.draft)
+    await eventually(() => expect(t.server.calls).toContain('delete Drafts 1'))
+    expect(t.store.screen).toBe(returnTo)
+  })
+
+  it('deletes nothing for a message that was never kept', async () => {
+    const t = await composing()
+    await t.app.compose.discard(t.state, t.draft)
+    expect(t.server.calls.some((call) => call.startsWith('delete'))).toBe(false)
+    expect(t.store.screen).toBe(returnTo)
+  })
+
+  it('takes a draft that was opened with it, as the desktop does, and shows the drafts', async () => {
+    const t = await composing()
+    const crlf = String.fromCharCode(13, 10)
+    const work = await t.givenAccount('draftsman', {
+      INBOX: [],
+      Drafts: [{ uid: 7, subject: 'Plan', source: ['From: a@example.org', 'To: b@example.net', 'Subject: Plan', '', 'Text', ''].join(crlf) }]
+    })
+    const folder = t.folderOf(await listFolders(t.db, work.id), 'Drafts')
+    const message: MessageState = {
+      name: 'message',
+      account: work,
+      folder,
+      summary: { uid: 7 } as StoredMessage,
+      origin: 'folder',
+      message: readable({ to: 'b@example.net', subject: 'Plan', text: 'Text', html: null }),
+      attachments: []
+    }
+    t.app.compose.startFromDraft(message)
+    await t.app.services.connections.ensure(work)
+    t.server.calls.length = 0
+    await t.app.compose.discard(t.store.screen as ComposeState, (t.store.screen as ComposeState).draft)
+    await eventually(() => expect(t.server.calls).toContain('delete Drafts 7'))
+    expect(t.store.screen).toMatchObject({ name: 'messages', folder: { imapPath: 'Drafts' } })
   })
 })

@@ -132,7 +132,9 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSend={(draft) => compose.send(screen, draft)}
           suggest={(typed) => compose.suggest(typed)}
           onSaveDraft={(draft) => compose.saveDraft(screen, draft)}
+          onAutosave={(draft) => compose.autosave(screen, draft)}
           onCancel={(draft) => compose.cancel(screen, draft)}
+          onDiscard={(draft) => compose.discard(screen, draft)}
         />
       )
     case 'tags':
