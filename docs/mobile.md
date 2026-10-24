@@ -1121,10 +1121,11 @@ status line for drafts.
 New mail reached the phone at the next run of the platform's schedule, at best every 15 minutes. It reaches it at once now, on
 a device that has a push service, and as before on one that has not.
 
-- *The phone does not keep a connection open itself, and no server of ours does.* The system has a service for it
-  (FroggerPush of FroggerOS, `docs/push_service_design.md` in that project) that keeps IMAP IDLE open for every application that
-  registered a source, and wakes the application when the server says that something happened. The phone talks to the mail
-  server only. Where the device has no such service, `available()` is false, nothing is sent, and the schedule is all there is.
+- *The phone does not keep a connection open itself, and no server of ours does.* A device may have a push service of the
+  system for it: a service that keeps IMAP IDLE open for every application that registered a source, and wakes the application
+  when the server says that something happened. The application finds out whether there is one by asking the package manager,
+  and talks to it by broadcasts (the action names are in `SystemPush.kt` and the manifest). The phone talks to the mail server
+  only. Where the device has no such service, `available()` is false, nothing is sent, and the schedule is all there is.
 - *What the application does* (`background/push.ts`, `PeregrinePushModule`, `SystemPush.kt`): it registers the inbox of every
   account that notifications are on for and that is not muted (login data included, which the service keeps sealed in its own
   store), takes an account out when it is muted, when it is removed, and all of them when notifications go off. `applyPush` is
@@ -1143,13 +1144,13 @@ a device that has a push service, and as before on one that has not.
 - *A line is written for each look* (`the look for new mail: {"synced":1,"failed":0,"notified":1}`), since the first two wakes
   of the first test on the emulator led to no notification and nothing said why. They have not been seen since.
 
-Seen on the emulator, with the service and the phone as ordinary applications of one user against the test Dovecot: the account
+Seen on the emulator, with a push service installed next to the application, against the test Dovecot: the account
 registers at the start and the service shows it as `idle`; a message delivered with the application in the background was
 notified within about a second of the delivery, three times, and once with the application's process ended (about two seconds);
 after the server was stopped and started again the service connected again by itself and woke once. Covered by tests only:
 registering, taking out and muting, an account without encryption, a service that does not answer, the order of the settings
 and the registration. Not seen: a device that has no service (the receiver and the queries are inert, as designed), Doze, the
-service as a part of the system image (it is not built yet), and more than one application using it.
+service as a part of the system, and more than one application using it.
 
 Not done here: a foreground service with IDLE inside Peregrine for devices without a push service, which was the first plan (see
 "What the foreground service found"). Android before 14 is treated as having no system service, since the sender is not named there.
@@ -1176,9 +1177,7 @@ application made for the phone.
   neither at 24 pixels (the desktop's own icon drops the eye and the stripe below 32 for the same reason).
 
 Seen: the rendered layers under both masks and in one colour, and the resources compile (`processDebugResources`), and the
-release APK has the adaptive icon as its icon. Not seen on a device: the launcher, the dock, the themed icon. The image
-that has the phone app in it has to be built for that; the quick way (`dev_push_app.py peregrine` in FroggerOS) stops at
-`adb remount` on a fresh image and at fs-verity for an update of a system app.
+release APK has the adaptive icon as its icon. Not seen on a device: the launcher, the dock, the themed icon.
 
 ## What the foreground service found
 
@@ -1195,7 +1194,7 @@ minutes at best. There is a switch now that has the application keep the connect
   notifications are the ones of the schedule and the system service.
 - *`IdleService`* is a foreground service of the type special use (nothing else fits a connection that waits for mail, and the
   other types are ended by the system after hours on Android 15), with a quiet notification that opens the application. One
-  watcher thread for each account (`IdleWatchers`, `IdleSession`: the same design and the same fixes as FroggerPush: EXAMINE and
+  watcher thread for each account (`IdleWatchers`, `IdleSession`: the same design as the push service of the system: EXAMINE and
   not SELECT, a change that comes while IDLE ends is not lost, the exists count of the open is no change, a refused login is
   tried again only after 30 minutes and a network that comes back does not cut that short, pauses of 5 s to 5 min after a failed
   connection). IDLE is begun again every ten minutes and not every 25: a mobile network forgets a quiet connection sooner. A
