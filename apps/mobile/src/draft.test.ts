@@ -265,7 +265,7 @@ describe('a draft that is written on again', () => {
     })
 
   it('is what was kept: who it is to, the subject, the text and the thread', () => {
-    expect(editableDraft(kept(), 0)).toEqual({
+    expect(editableDraft(kept())).toEqual({
       draft: {
         to: 'Anna <anna@example.net>',
         cc: 'Ben <ben@example.net>',
@@ -280,20 +280,20 @@ describe('a draft that is written on again', () => {
   })
 
   it('leaves out a thread that there is none of', () => {
-    const found = editableDraft(readable({ html: null, headers: {}, references: '' }), 0)
+    const found = editableDraft(readable({ html: null, headers: {}, references: '' }))
     expect(found).toMatchObject({ draft: { inReplyTo: undefined, references: undefined } })
   })
 
-  it('is refused, with the reason, when saving it again would lose attached files', () => {
-    expect(editableDraft(kept(), 2)).toMatchObject({ refusal: expect.stringContaining('Anhänge') })
+  it('has no files in the draft it gives: they are made files of the phone and put on it, which takes the files', () => {
+    expect(editableDraft(kept())).toMatchObject({ draft: { attachments: [] } })
   })
 
   it('is refused when it has a formatting that the phone does not write', () => {
-    expect(editableDraft({ ...kept(), html: '<p>Not finished</p>' }, 0)).toMatchObject({ refusal: expect.stringContaining('Formatierung') })
+    expect(editableDraft({ ...kept(), html: '<p>Not finished</p>' })).toMatchObject({ refusal: expect.stringContaining('Formatierung') })
   })
 
   it('keeps its blind copy, which the phone shows and writes now, and has none where there was none', () => {
-    expect(editableDraft({ ...kept(), bcc: '' }, 0)).toMatchObject({ draft: { bcc: '' } })
+    expect(editableDraft({ ...kept(), bcc: '' })).toMatchObject({ draft: { bcc: '' } })
   })
 })
 

@@ -1,6 +1,7 @@
 import { listAccounts, type Account } from '../accounts'
 import { suggestContacts, type Contact } from '../contacts'
 import { editableDraft, emptyDraft, forwardDraft, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
+import { bringAttachments, notBroughtText } from '../draftAttachments'
 import { draftsFolderOf } from '../drafts'
 import { newId } from '../ids'
 import { explainError } from '../errors'
@@ -75,29 +76,68 @@ export class ComposeController {
   }
 
   /** The open message, to be passed on to somebody. */
-  startForward(state: MessageState): void {
+  /**
+   * A message to be passed on, with the attachments of the original: each is a file of the phone on the new message and can be
+   * taken off before it is sent. What cannot be carried (too large for a message, or not readable) is said on the screen.
+   */
+  async startForward(state: MessageState): Promise<void> {
     if (!state.message) return
-    this.show({ account: state.account, returnTo: state, draft: forwardDraft(state.message) })
+    const draft = forwardDraft(state.message)
+    const infos = state.attachments ?? []
+    if (infos.length === 0) {
+      this.show({ account: state.account, returnTo: state, draft })
+      return
+    }
+    try {
+      const brought = await bringAttachments(state.source, infos, this.services.files)
+      this.show({
+        account: state.account,
+        returnTo: state,
+        draft: { ...draft, attachments: brought.attachments },
+        error: notBroughtText(brought)
+      })
+    } catch (error) {
+      this.store.showScreen({ ...state, notice: `Die Anhänge konnten nicht übernommen werden: ${explainError(error)}` })
+    }
   }
 
   /**
-   * A message kept as a draft, to be written on. Opened only when saving it again would keep all of it: the reason
-   * it cannot be is said on the message, where the user asked for it.
+   * A message kept as a draft, to be written on, with the files that are attached to it. Opened only when saving it again would
+   * keep all of it: the reason it cannot be is said on the message, where the user asked for it. That is a formatting the phone
+   * cannot write, and attachments it cannot take over whole, since saving would then drop them from the server's copy.
    */
-  startFromDraft(state: MessageState): void {
+  async startFromDraft(state: MessageState): Promise<void> {
     if (!state.message) return
-    const found = editableDraft(state.message, state.attachments?.length ?? 0)
+    const found = editableDraft(state.message)
     if ('refusal' in found) {
       this.store.showScreen({ ...state, notice: found.refusal })
       return
     }
+    let draft = found.draft
+    const infos = state.attachments ?? []
+    if (infos.length > 0) {
+      try {
+        const brought = await bringAttachments(state.source, infos, this.services.files)
+        const left = notBroughtText(brought)
+        if (left) {
+          // Not all of them are here: the copies that were made go, and the draft stays as it is on the server.
+          await this.services.files.remove(brought.attachments.map((file) => file.path)).catch(() => undefined)
+          this.store.showScreen({ ...state, notice: `Dieser Entwurf hat Anhänge, die sich nicht alle übernehmen lassen. ${left}` })
+          return
+        }
+        draft = { ...draft, attachments: brought.attachments }
+      } catch (error) {
+        this.store.showScreen({ ...state, notice: `Die Anhänge des Entwurfs konnten nicht übernommen werden: ${explainError(error)}` })
+        return
+      }
+    }
     this.show({
       account: state.account,
       returnTo: state,
-      draft: found.draft,
+      draft,
       fromDraft: state.folder,
       saved: { folder: state.folder, uid: state.summary.uid },
-      savedDraft: found.draft
+      savedDraft: draft
     })
   }
 
@@ -245,7 +285,7 @@ export class ComposeController {
     else this.store.showScreen(state.returnTo)
   }
 
-  private show(start: Pick<ComposeState, 'account' | 'returnTo' | 'draft' | 'fromDraft' | 'saved' | 'savedDraft'>): void {
+  private show(start: Pick<ComposeState, 'account' | 'returnTo' | 'draft' | 'fromDraft' | 'saved' | 'savedDraft' | 'error'>): void {
     this.store.showScreen({ name: 'compose', session: newId(), ...start, busy: false })
   }
 }

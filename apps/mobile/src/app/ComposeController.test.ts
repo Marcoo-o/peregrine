@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { listPendingActions } from '@peregrine/core/pendingActionsStore'
 import { getAccount } from '../accounts'
+import { listAttachments } from '../attachments'
 import { listFolders } from '../folders'
 import type { StoredMessage } from '../messages'
 import { emptyDraft, type Draft } from '../draft'
@@ -104,7 +105,7 @@ describe('starting a message', () => {
       origin: 'folder',
       message: readable()
     }
-    t.app.compose.startForward(message)
+    await t.app.compose.startForward(message)
     const screen = t.store.screen as ComposeState
     expect(screen.draft).toMatchObject({ to: '', subject: 'Fwd: Lunch' })
     expect(screen.draft.body).toContain('Weitergeleitete Nachricht')
@@ -116,7 +117,7 @@ describe('starting a message', () => {
     const message = { name: 'message', account: t.work, origin: 'folder' } as unknown as MessageState
     const before = t.store.screen
     t.app.compose.startReplyAll(message)
-    t.app.compose.startForward(message)
+    await t.app.compose.startForward(message)
     expect(t.store.screen).toBe(before)
   })
 
@@ -253,7 +254,7 @@ describe('drafts', () => {
 
   it('can be written on, and sending or saving it replaces the revision it was opened from', async () => {
     const t = await withDraft()
-    t.app.compose.startFromDraft(t.message)
+    await t.app.compose.startFromDraft(t.message)
     expect(t.store.screen).toMatchObject({
       name: 'compose',
       draft: { to: 'Anna <anna@example.net>', subject: 'Plan', body: 'Not finished' },
@@ -262,16 +263,16 @@ describe('drafts', () => {
     })
   })
 
-  it('is not opened when saving it again would lose something, and says why on the message', async () => {
-    const t = await withDraft({ attachments: [{ filename: 'a.txt', contentType: 'text/plain', size: 1, partId: '2' } as never] })
-    t.app.compose.startFromDraft(t.message)
-    expect(t.store.screen).toMatchObject({ name: 'message', notice: expect.stringContaining('Anhänge') })
+  it('is not opened when it has a formatting that cannot be written, and says why on the message', async () => {
+    const t = await withDraft({ message: readable({ to: 'Anna <anna@example.net>', subject: 'Plan', text: 'x', html: '<p>x</p>' }) })
+    await t.app.compose.startFromDraft(t.message)
+    expect(t.store.screen).toMatchObject({ name: 'message', notice: expect.stringContaining('Formatierung') })
   })
 
   it('is not opened before its text has arrived', async () => {
     const t = await withDraft({ message: undefined })
     const before = t.store.screen
-    t.app.compose.startFromDraft(t.message)
+    await t.app.compose.startFromDraft(t.message)
     expect(t.store.screen).toBe(before)
   })
 
@@ -286,7 +287,7 @@ describe('drafts', () => {
 
   it('replaces the revision it was opened from and goes to the drafts', async () => {
     const t = await withDraft()
-    t.app.compose.startFromDraft(t.message)
+    await t.app.compose.startFromDraft(t.message)
     const state = t.store.screen as ComposeState
     t.server.calls.length = 0
 
@@ -327,7 +328,7 @@ describe('drafts', () => {
 
   it('does not drop the old revision while the new one could not be kept, and does when it is', async () => {
     const t = await withDraft()
-    t.app.compose.startFromDraft(t.message)
+    await t.app.compose.startFromDraft(t.message)
     const state = t.store.screen as ComposeState
     t.server.unreachable.add('draftsman')
     t.server.calls.length = 0
@@ -358,7 +359,7 @@ describe('drafts', () => {
 
   it('is removed from the folder when its sending was queued', async () => {
     const t = await withDraft()
-    t.app.compose.startFromDraft(t.message)
+    await t.app.compose.startFromDraft(t.message)
     const state = t.store.screen as ComposeState
     await t.app.services.connections.ensure(state.account)
     t.server.calls.length = 0
@@ -371,7 +372,7 @@ describe('drafts', () => {
 
   it('stays as it was when it is given up, and goes to the drafts', async () => {
     const t = await withDraft()
-    t.app.compose.startFromDraft(t.message)
+    await t.app.compose.startFromDraft(t.message)
     const state = t.store.screen as ComposeState
     t.server.calls.length = 0
     await t.app.compose.cancel(state, state.draft)
@@ -561,11 +562,130 @@ describe('throwing a message away', () => {
       message: readable({ to: 'b@example.net', subject: 'Plan', text: 'Text', html: null }),
       attachments: []
     }
-    t.app.compose.startFromDraft(message)
+    await t.app.compose.startFromDraft(message)
     await t.app.services.connections.ensure(work)
     t.server.calls.length = 0
     await t.app.compose.discard(t.store.screen as ComposeState, (t.store.screen as ComposeState).draft)
     await eventually(() => expect(t.server.calls).toContain('delete Drafts 7'))
     expect(t.store.screen).toMatchObject({ name: 'messages', folder: { imapPath: 'Drafts' } })
+  })
+})
+
+/** A message with a text and the files attached to it, as source, the way a mail program makes one. */
+function withFiles(files: Array<{ name: string; text: string; type?: string }>): Uint8Array {
+  const eol = String.fromCharCode(13, 10)
+  const lines = [
+    'From: work@example.org',
+    'To: Anna <anna@example.net>',
+    'Subject: Plan',
+    'MIME-Version: 1.0',
+    'Content-Type: multipart/mixed; boundary="b"',
+    '',
+    '--b',
+    'Content-Type: text/plain; charset=utf-8',
+    '',
+    'Not finished',
+    ...files.flatMap((file) => [
+      '--b',
+      `Content-Type: ${file.type ?? 'text/plain'}; name="${file.name}"`,
+      `Content-Disposition: attachment; filename="${file.name}"`,
+      'Content-Transfer-Encoding: base64',
+      '',
+      btoa(file.text),
+      ''
+    ]),
+    '--b--',
+    ''
+  ]
+  return new TextEncoder().encode(lines.join(eol))
+}
+
+describe('the attachments of a message that is written on again or passed on', () => {
+  async function onMessage(files: Array<{ name: string; text: string; type?: string }>) {
+    const t = await composing()
+    const source = withFiles(files)
+    const message: MessageState = {
+      name: 'message',
+      account: t.work,
+      folder: undefined as never,
+      summary: { uid: 7 } as StoredMessage,
+      origin: 'folder',
+      message: readable({ to: 'Anna <anna@example.net>', subject: 'Plan', text: 'Not finished', html: null }),
+      source,
+      attachments: listAttachments(source)
+    }
+    return { ...t, message }
+  }
+
+  it('go along with a message that is passed on, as files of the new message', async () => {
+    const t = await onMessage([
+      { name: 'notes.txt', text: 'hello' },
+      { name: 'plan.csv', text: 'a,b', type: 'text/csv' }
+    ])
+    await t.app.compose.startForward(t.message)
+    const screen = t.store.screen as ComposeState
+    expect(screen.name).toBe('compose')
+    expect(screen.draft.attachments).toMatchObject([
+      { filename: 'notes.txt', contentType: 'text/plain', size: 5 },
+      { filename: 'plan.csv', contentType: 'text/csv', size: 3 }
+    ])
+    expect(screen.error).toBeUndefined()
+    expect(new TextDecoder().decode(t.files.stored.get(screen.draft.attachments[0].path))).toBe('hello')
+  })
+
+  it('are put on a message that is passed on, and can be taken off like any attached file', async () => {
+    const t = await onMessage([{ name: 'notes.txt', text: 'hello' }])
+    await t.app.compose.startForward(t.message)
+    const screen = t.store.screen as ComposeState
+    const path = screen.draft.attachments[0].path
+    await t.app.compose.cancel(screen, screen.draft)
+    expect(t.files.removed).toContain(path)
+  })
+
+  it('are not there for a message that has none, and nothing is copied', async () => {
+    const t = await onMessage([])
+    await t.app.compose.startForward(t.message)
+    expect((t.store.screen as ComposeState).draft.attachments).toEqual([])
+    expect(t.files.stashed).toEqual([])
+  })
+
+  it('say what could not go along with a message that is passed on, and the rest does', async () => {
+    const t = await onMessage([{ name: 'notes.txt', text: 'hello' }])
+    t.message.attachments = [...t.message.attachments!, { id: '9', filename: 'gone.bin', originalName: null, contentType: 'application/octet-stream', size: 1, findings: [] }]
+    await t.app.compose.startForward(t.message)
+    const screen = t.store.screen as ComposeState
+    expect(screen.draft.attachments.map((file) => file.filename)).toEqual(['notes.txt'])
+    expect(screen.error).toContain('gone.bin')
+  })
+
+  it('stay on the message, with the reason, when they cannot be copied, and no copy is left', async () => {
+    const t = await onMessage([{ name: 'notes.txt', text: 'hello' }])
+    t.files.failWith = new Error('disk full')
+    await t.app.compose.startForward(t.message)
+    expect(t.store.screen).toMatchObject({ name: 'message', notice: expect.stringContaining('disk full') })
+  })
+
+  it('are in a draft that is written on again, which is not changed by having them', async () => {
+    const t = await onMessage([{ name: 'notes.txt', text: 'hello' }])
+    await t.app.compose.startFromDraft(t.message)
+    const screen = t.store.screen as ComposeState
+    expect(screen.name).toBe('compose')
+    expect(screen.draft.attachments).toHaveLength(1)
+    expect(screen.savedDraft).toEqual(screen.draft)
+  })
+
+  it('keep a draft from being opened when not all of them can be taken over, and the copies made are removed', async () => {
+    const t = await onMessage([{ name: 'notes.txt', text: 'hello' }])
+    t.message.attachments = [...t.message.attachments!, { id: '9', filename: 'gone.bin', originalName: null, contentType: 'application/octet-stream', size: 1, findings: [] }]
+    await t.app.compose.startFromDraft(t.message)
+    expect(t.store.screen).toMatchObject({ name: 'message', notice: expect.stringContaining('gone.bin') })
+    expect(t.files.removed).toContain(t.files.stashed[0].path)
+  })
+
+  it('keep a draft from being opened when they cannot be copied, with the reason', async () => {
+    const t = await onMessage([{ name: 'notes.txt', text: 'hello' }])
+    t.files.failWith = new Error('disk full')
+    await t.app.compose.startFromDraft(t.message)
+    expect(t.store.screen).toMatchObject({ name: 'message', notice: expect.stringContaining('disk full') })
   })
 })

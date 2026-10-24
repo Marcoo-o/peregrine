@@ -4,6 +4,7 @@ import type { Files, PickedFile } from './files'
 /** What the native module `PeregrineFiles` offers, in the shapes that cross the bridge. */
 export interface NativeFiles {
   pick(): Promise<{ path: string; name: string; size: number; mimeType: string }[]>
+  stash(name: string, mimeType: string, base64: string): Promise<{ path: string; name: string; size: number; mimeType: string }>
   read(path: string): Promise<string>
   remove(paths: string[]): Promise<void>
   keepOnly(paths: string[]): Promise<void>
@@ -26,6 +27,11 @@ export class RnFiles implements Files {
       size: file.size,
       contentType: file.mimeType || 'application/octet-stream'
     }))
+  }
+
+  async stash(name: string, contentType: string, content: Uint8Array): Promise<PickedFile> {
+    const file = await this.native.stash(name, contentType, encodeBase64(content))
+    return { path: file.path, name: file.name, size: file.size, contentType: file.mimeType || contentType || 'application/octet-stream' }
   }
 
   async read(path: string): Promise<Uint8Array> {

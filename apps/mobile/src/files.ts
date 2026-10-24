@@ -24,6 +24,11 @@ export interface Files extends FileAccess {
   /** Lets the user pick files and copies them into the application's storage. No pick gives an empty list. */
   pick(): Promise<PickedFile[]>
   /**
+   * Copies content the application has into its storage, as a picked file is: the attachments of a draft that is written on
+   * again, and of a message that is passed on. What comes back is what `pick` gives.
+   */
+  stash(name: string, contentType: string, content: Uint8Array): Promise<PickedFile>
+  /**
    * Removes every copy made by `pick` that is not in the list, which is what the queue still refers to.
    * Not to be called while a message is being written, whose copies are not in the queue yet.
    */

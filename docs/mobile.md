@@ -1217,6 +1217,31 @@ file. Covered by tests only: the session and the watchers against a server of th
 registrations that follow them. Not seen: the start after a reboot, Doze, STARTTLS against a real server, the button for the
 battery settings, and a phone with Android before 8.
 
+## What attachments in drafts and in a message passed on found
+
+A draft that had attached files could not be written on again: it was refused, since saving it would have dropped them from the
+copy on the server. A message that was passed on carried only the text of the original, as the desktop's does.
+
+- *The files of a message become files of the phone* (`bringAttachments`, in `draftAttachments.ts`). Each attachment of the open
+  message is copied into the application's storage as a picked file is (`Files.stash`, native `stash`, the same directory as the
+  picked ones) and attached like one, under the same limit for the message as a whole (`attachPicked`). What does not fit is
+  refused and its copy removed; what has no readable content is said. If copying one fails, the copies made so far are removed
+  and the failure is shown.
+- *A draft is opened with its files.* `startFromDraft` takes them over before it opens the compose screen. If not all can be
+  taken over, the draft is not opened and the copies made are removed, with the reason on the message: writing on it would
+  lose the rest from the server's copy. The draft that is opened counts the files as part of what was kept, so opening it and
+  leaving it is not a change. Saving it again by hand or by itself keeps them, as for any message with files. A formatted
+  text is still refused.
+- *Passing a message on carries its attachments*, each of which can be taken off before sending, like any attached file. This is
+  more than the desktop does (it carries the quoted text only), and it is what most people expect of passing a message on. What
+  cannot be carried (too large for a message, or not readable) is said in the line over the message.
+- Both starts are asynchronous now, since the files are copied first, which takes a moment for large ones.
+
+Seen on the emulator: a message with a PDF passed on shows the file on the new message, with "Entfernen"; typing keeps it as a
+draft by itself, which the server has as a multipart message; opening that draft and "Weiterschreiben" shows the file again; a
+change replaces the draft on the server with one that still has it. Covered by tests only: the limit, files without content,
+a failing copy and the clean-up of the copies, for both starts.
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was
