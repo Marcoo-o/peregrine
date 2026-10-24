@@ -28,13 +28,11 @@ export const emptyDraft: Draft = { to: '', cc: '', bcc: '', subject: '', body: '
 
 /**
  * The draft of a message that was kept as one, to be written on, or the reason it cannot be: saving it again would
- * leave out what the phone cannot show or write, and the server's copy would lose it. That is attached files and a
- * formatted text (the phone writes plain text only). The blind copy is shown and written, and is kept in a draft.
+ * leave out what the phone cannot show or write, and the server's copy would lose it. That is a formatted text (the phone
+ * writes plain text only). The blind copy is shown and written, and is kept in a draft. The attached files are not in the
+ * draft this gives: they are made files of the phone (`bringAttachments`) and put on it, since that takes the files.
  */
-export function editableDraft(message: ReadableMessage, attachmentCount: number): { draft: Draft } | { refusal: string } {
-  if (attachmentCount > 0) {
-    return { refusal: 'Dieser Entwurf hat Anhänge. Auf dem Handy lässt er sich noch nicht weiterschreiben, ohne sie zu verlieren.' }
-  }
+export function editableDraft(message: ReadableMessage): { draft: Draft } | { refusal: string } {
   if (message.html !== null) {
     return { refusal: 'Dieser Entwurf hat eine Formatierung, die das Handy noch nicht bearbeiten kann, ohne sie zu verlieren.' }
   }
@@ -165,7 +163,7 @@ export function replyAllDraft(message: ReadableMessage, ownAddress: string): Dra
 /**
  * A message to be passed on: no recipient yet, "Fwd:" once in front of the subject, and the message under a
  * line that says what it is, with who wrote it and when. It is not part of the thread it came from. Its
- * attachments are not passed on yet.
+ * attachments are not in the draft this gives: they are made files of the phone and put on it (`bringAttachments`).
  */
 export function forwardDraft(message: ReadableMessage): Draft {
   const subject = /^\s*(fwd?|wg):/i.test(message.subject) ? message.subject.trim() : `Fwd: ${message.subject.trim()}`.trim()

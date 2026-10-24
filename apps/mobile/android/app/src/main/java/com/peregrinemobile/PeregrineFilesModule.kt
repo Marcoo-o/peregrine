@@ -128,6 +128,33 @@ class PeregrineFilesModule(context: ReactApplicationContext) : ReactContextBaseJ
     }
   }
 
+  /**
+   * Makes a copy of content JavaScript has, in the same directory the picked ones are in: the attachments of a draft that is
+   * written on again, and of a message that is passed on, are files of the phone like any other once they are attached.
+   */
+  @ReactMethod
+  fun stash(name: String, mimeType: String, base64: String, promise: Promise) {
+    Thread {
+        try {
+          val safe = ConfinedFiles.safeName(name, "datei")
+          val directory = File(outgoing, UUID.randomUUID().toString()).apply { mkdirs() }
+          val copy = File(directory, safe)
+          copy.writeBytes(Base64.decode(base64, Base64.DEFAULT))
+          promise.resolve(
+            Arguments.createMap().apply {
+              putString("path", copy.path)
+              putString("name", safe)
+              putDouble("size", copy.length().toDouble())
+              putString("mimeType", mimeType)
+            }
+          )
+        } catch (e: IOException) {
+          promise.reject("E_COPY", e.message ?: "The file could not be copied", e)
+        }
+      }
+      .start()
+  }
+
   /** The content of a copy, as base64. */
   @ReactMethod
   fun read(path: String, promise: Promise) {

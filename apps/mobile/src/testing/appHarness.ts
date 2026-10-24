@@ -171,6 +171,18 @@ export class FakeFiles implements Files {
     return [...this.picked]
   }
 
+  /** What was stashed, by the path of its copy. */
+  readonly stashed: PickedFile[] = []
+  private copies = 0
+
+  async stash(name: string, contentType: string, content: Uint8Array): Promise<PickedFile> {
+    if (this.failWith) throw this.failWith
+    const file: PickedFile = { path: `/store/stash-${++this.copies}/${name}`, name, size: content.length, contentType }
+    this.stored.set(file.path, content)
+    this.stashed.push(file)
+    return file
+  }
+
   async read(path: string): Promise<Uint8Array> {
     const content = this.stored.get(path)
     if (!content) throw new Error(`No such file: ${path}`)

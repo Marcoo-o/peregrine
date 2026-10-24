@@ -12,6 +12,10 @@ function fakeNative(over: Partial<NativeFiles> = {}) {
         { path: '/store/2/b', name: 'b', size: 1, mimeType: '' }
       ]
     },
+    stash: async (name, type, base64) => {
+      calls.push(`stash ${name} ${type} ${base64}`)
+      return { path: `/store/3/${name}`, name, size: 5, mimeType: type }
+    },
     read: async (path) => {
       calls.push(`read ${path}`)
       return 'aGVsbG8='
@@ -84,5 +88,19 @@ describe('sweeping the copies', () => {
     await files.keepOnly(['/store/1/a.pdf'])
     await files.keepOnly([])
     expect(calls).toEqual(['keepOnly /store/1/a.pdf', 'keepOnly '])
+  })
+})
+
+describe('copying content into the storage', () => {
+  it('gives content to the native side as base64 and returns the copy as a picked file is', async () => {
+    const { files, calls } = fakeNative()
+    const copy = await files.stash('notes.txt', 'text/plain', new TextEncoder().encode('hello'))
+    expect(calls).toEqual(['stash notes.txt text/plain aGVsbG8='])
+    expect(copy).toEqual({ path: '/store/3/notes.txt', name: 'notes.txt', size: 5, contentType: 'text/plain' })
+  })
+
+  it('has octet-stream for a copy that has no type', async () => {
+    const { files } = fakeNative({ stash: async (name) => ({ path: `/store/4/${name}`, name, size: 1, mimeType: '' }) })
+    expect((await files.stash('x', '', new Uint8Array([1]))).contentType).toBe('application/octet-stream')
   })
 })
