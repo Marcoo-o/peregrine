@@ -51,7 +51,7 @@ import type {
 } from '@peregrine/core/pendingActions'
 import { persistAttachments } from '../attachments/persist'
 import { headersJson, headersJsonOf } from '../mail/headers'
-import { parsePgpMime } from '../pgp/pgpMimeParser'
+import { parsePgpMime } from '@peregrine/core/pgpMimeParser'
 import { readPgpMessage } from '../pgp/readPgp'
 import type { AccountManager } from '../accounts/AccountManager'
 import { asBuffer } from '../util/buffer'

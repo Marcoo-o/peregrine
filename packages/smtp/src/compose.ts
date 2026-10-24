@@ -76,6 +76,37 @@ const MESSAGE_ID = /^<[\x21-\x3b\x3d\x3f-\x7e]+@[\x21-\x3b\x3d\x3f-\x7e]+>$/
  * the message, which this does not make.
  */
 export function composeMessage(input: ComposeInput, options: ComposeOptions = {}): Composed {
+  return assemble(input, options, structure(input, options.random ?? Math.random))
+}
+
+/** What a message is made of below its headers: the headers that describe it, and its body. */
+export interface MessageBody {
+  headers: string[]
+  text: string
+}
+
+/** What `composeProtected` hands over to be signed or encrypted: the content of the message, as an entity of its own. */
+export interface ContentEntity {
+  /** Content-Type and the headers that go with it, then an empty line, then the body, with no line end after it. */
+  source: string
+}
+
+/**
+ * Builds the source of a message whose content is signed or encrypted. The addressing stays outside, readable by every
+ * server on the way, and the content, as `composeMessage` would have made it, is handed over as an entity of its own; the
+ * body that comes back is what goes below the headers in its place.
+ */
+export async function composeProtected(
+  input: ComposeInput,
+  options: ComposeOptions,
+  protect: (entity: ContentEntity) => Promise<MessageBody>
+): Promise<Composed> {
+  const content = structure(input, options.random ?? Math.random)
+  const source = `${content.headers.join(CRLF)}${CRLF}${CRLF}${content.text}`
+  return assemble(input, options, await protect({ source: source.endsWith(CRLF) ? source.slice(0, -CRLF.length) : source }))
+}
+
+function assemble(input: ComposeInput, options: ComposeOptions, body: MessageBody): Composed {
   const now = options.now ?? new Date()
   const random = options.random ?? Math.random
 
@@ -103,7 +134,6 @@ export function composeMessage(input: ComposeInput, options: ComposeOptions = {}
   if (references.length > 0) headers.push(`References: ${references.map(checkedMessageId).join(`${CRLF} `)}`)
   headers.push('MIME-Version: 1.0')
 
-  const body = structure(input, random)
   const source = encodeAscii(`${headers.join(CRLF)}${CRLF}${body.headers.join(CRLF)}${CRLF}${CRLF}${body.text}`)
 
   const recipients = [...new Set([...to, ...cc, ...bcc].map((a) => a.address))]
@@ -111,7 +141,7 @@ export function composeMessage(input: ComposeInput, options: ComposeOptions = {}
 }
 
 /** The body of the message and the headers that describe it: one part, or parts inside parts. */
-function structure(input: ComposeInput, random: () => number): { headers: string[]; text: string } {
+function structure(input: ComposeInput, random: () => number): MessageBody {
   const text = input.text ?? ''
   const html = input.html
   const attachments = input.attachments ?? []
@@ -182,7 +212,7 @@ function part(content: { headers: string[]; text: string }): string {
  * It still checks, and when a try does fail the next one is told apart by a counter, so that this
  * ends even for a random source that keeps giving the same answer.
  */
-function unique(random: () => number, texts: string[]): string {
+export function unique(random: () => number, texts: string[]): string {
   for (let attempt = 0; ; attempt++) {
     const boundary = `=_peregrine_${token(random, 24)}${attempt === 0 ? '' : `_${attempt}`}`
     if (!texts.some((text) => text.includes(boundary))) return boundary

@@ -8,7 +8,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@renderer': resolve('src/renderer/src'),
-      '@shared': resolve('src/shared')
+      '@shared': resolve('src/shared'),
+      // A native module of the phone's. Node has the random numbers it provides.
+      'react-native-get-random-values': resolve('apps/mobile/src/testing/emptyModule.ts')
     }
   },
   test: {

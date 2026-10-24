@@ -8,7 +8,7 @@ import {
   verifyDetachedSignature,
   type GeneratedKeyPair
 } from '../pgp/pgpService'
-import { parsePgpMime } from '../pgp/pgpMimeParser'
+import { parsePgpMime } from '@peregrine/core/pgpMimeParser'
 import { buildContentEntity, buildEncryptedMessage, buildSignedMessage } from './pgpMime'
 import type { OutgoingMessage } from './messageBuilder'
 

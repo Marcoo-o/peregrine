@@ -107,10 +107,10 @@ describe('keeping a message as a draft', () => {
     await expect(saveDraft(db, undefined, imap, input(added.id))).rejects.toThrow('keine Absenderadresse')
   })
 
-  it('refuses what it would keep in the clear that was meant not to be', async () => {
+  it('refuses what it would keep in the clear that was meant not to be, which it cannot encrypt without a key', async () => {
     const { db, added, imap, appended } = await account()
-    await expect(saveDraft(db, undefined, imap, input(added.id, { encrypt: true }))).rejects.toThrow('Verschlüsseln und Signieren')
-    await expect(saveDraft(db, undefined, imap, input(added.id, { sign: true }))).rejects.toThrow('Verschlüsseln und Signieren')
+    await expect(saveDraft(db, undefined, imap, input(added.id, { encrypt: true }))).rejects.toThrow('keinen Schlüssel')
+    await expect(saveDraft(db, undefined, imap, input(added.id, { sign: true }))).rejects.toThrow('keinen Schlüssel')
     expect(appended).toEqual([])
   })
 

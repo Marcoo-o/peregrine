@@ -12,7 +12,16 @@ const config = {
   resolver: {
     nodeModulesPaths: [path.join(root, 'node_modules')],
     // @peregrine/core and @peregrine/imap say where their files are in `exports`
-    unstable_enablePackageExports: true
+    unstable_enablePackageExports: true,
+    // OpenPGP has a build for Node, which `exports` would give here and which needs Node's modules, and a build for browsers
+    // (all in one file, the cryptography in JavaScript) that does not. The second is the one for this runtime, in its module
+    // form: the file for browsers that is not one exports nothing to anything but a page.
+    resolveRequest: (context, moduleName, platform) => {
+      if (moduleName === 'openpgp') {
+        return { type: 'sourceFile', filePath: path.join(root, 'node_modules', 'openpgp', 'dist', 'openpgp.min.mjs') }
+      }
+      return context.resolveRequest(context, moduleName, platform)
+    }
   }
 }
 

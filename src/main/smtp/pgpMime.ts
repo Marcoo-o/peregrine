@@ -1,6 +1,6 @@
 import MimeNode from 'nodemailer/lib/mime-node'
 import { buildRawMessage, type OutgoingMessage } from './messageBuilder'
-import { splitHeadersAndBody } from '../pgp/pgpMimeParser'
+import { splitHeadersAndBody } from '@peregrine/core/pgpMimeParser'
 
 /**
  * Assembles outgoing PGP/MIME messages (RFC 3156).

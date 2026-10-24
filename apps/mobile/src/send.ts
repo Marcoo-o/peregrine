@@ -4,11 +4,12 @@ import type { SecureMode, ComposeInput } from '@peregrine/core/types'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { Transport } from '@peregrine/imap/transport'
 import { SmtpClient, type SendResult } from '@peregrine/smtp/client'
-import { composeMessage, type Attachment, type ComposeOptions } from '@peregrine/smtp/compose'
+import { composeMessage, type Attachment, type ComposeInput as SmtpInput, type ComposeOptions } from '@peregrine/smtp/compose'
 import { getAccount, type Account } from './accounts'
 import { MAX_ATTACHMENT_BYTES, type FileAccess } from './files'
 import { getFolderBySpecialUse } from './folders'
 import { contentTypeFor } from './mimeTypes'
+import { composeProtectedMessage } from './pgp/protect'
 
 /** What sending needs of the device: a way to connect, and the files that were attached. */
 export interface SendEnvironment {
@@ -64,33 +65,40 @@ export function smtpSettingsOf(account: Account): SmtpSettings | undefined {
   }
 }
 
+/** What the message is made of, from what the account and the input say; the addressing and the content, before they are signed or encrypted. */
+async function smtpInputOf(account: Account, input: ComposeInput, files: FileAccess | undefined): Promise<SmtpInput> {
+  return {
+    // A name that is only the address again says nothing, and shows twice in a mail client.
+    from: { name: account.displayName === account.emailAddress ? undefined : account.displayName, address: account.emailAddress },
+    to: input.to,
+    cc: input.cc,
+    bcc: input.bcc,
+    subject: input.subject,
+    text: input.textBody,
+    html: input.htmlBody === '' ? undefined : input.htmlBody,
+    attachments: await readAttachments(input, files),
+    inReplyTo: input.inReplyTo,
+    references: input.references
+  }
+}
+
 /**
  * The message that an input says, written out from an account: what is sent, and what a draft keeps. The account
- * must have an address, which the callers have looked at.
+ * must have an address, which the callers have looked at. When the input asks for it the content is signed or
+ * encrypted, with the keys the database holds, and raises the reason when that cannot be done: a message that was
+ * asked to be encrypted is never written in the clear.
  */
 export async function composeFromInput(
+  db: SqlDb,
   account: Account,
   input: ComposeInput,
   files: FileAccess | undefined,
   options: ComposeOptions = {}
 ): Promise<ReturnType<typeof composeMessage>> {
-  const attachments = await readAttachments(input, files)
-  return composeMessage(
-    {
-      // A name that is only the address again says nothing, and shows twice in a mail client.
-      from: { name: account.displayName === account.emailAddress ? undefined : account.displayName, address: account.emailAddress },
-      to: input.to,
-      cc: input.cc,
-      bcc: input.bcc,
-      subject: input.subject,
-      text: input.textBody,
-      html: input.htmlBody === '' ? undefined : input.htmlBody,
-      attachments,
-      inReplyTo: input.inReplyTo,
-      references: input.references
-    },
-    options
-  )
+  const message = await smtpInputOf(account, input, files)
+  const protection = { encrypt: input.encrypt === true, sign: input.sign === true }
+  if (!protection.encrypt && !protection.sign) return composeMessage(message, options)
+  return composeProtectedMessage(db, account.id, protection, message, options)
 }
 
 /**
@@ -99,8 +107,7 @@ export async function composeFromInput(
  * it again.
  *
  * It refuses what the phone cannot do yet, and says so, where the alternative is sending something
- * other than what was written: a message to be encrypted or signed would go out in the clear, and one
- * for a later time would go out now.
+ * other than what was written: one for a later time would go out now.
  */
 export async function sendMessage(
   db: SqlDb,
@@ -110,7 +117,6 @@ export async function sendMessage(
 ): Promise<SentMessage> {
   const account = await getAccount(db, input.accountId)
   if (!account) throw new Error('The account this message was written for is gone')
-  if (input.encrypt || input.sign) throw new Error('Encrypting and signing are not on the phone yet')
   if (input.sendAt !== undefined && input.sendAt > Date.now()) {
     throw new Error('Sending at a later time is not on the phone yet')
   }
@@ -118,7 +124,7 @@ export async function sendMessage(
   const settings = smtpSettingsOf(account)
   if (!settings) throw new Error('This account has no server for sending')
 
-  const composed = await composeFromInput(account, input, environment.files, options)
+  const composed = await composeFromInput(db, account, input, environment.files, options)
 
   const client = new SmtpClient(environment.makeTransport(), settings)
   try {
