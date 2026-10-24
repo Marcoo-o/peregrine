@@ -12,8 +12,10 @@ import Forward from 'lucide-react-native/icons/forward'
 import ImageOff from 'lucide-react-native/icons/image-off'
 import Inbox from 'lucide-react-native/icons/inbox'
 import Info from 'lucide-react-native/icons/info'
+import KeyRound from 'lucide-react-native/icons/key-round'
 import Layers from 'lucide-react-native/icons/layers'
 import ListChecks from 'lucide-react-native/icons/list-checks'
+import Lock from 'lucide-react-native/icons/lock'
 import Mail from 'lucide-react-native/icons/mail'
 import MailOpen from 'lucide-react-native/icons/mail-open'
 import Menu from 'lucide-react-native/icons/menu'
@@ -25,6 +27,7 @@ import ReplyAll from 'lucide-react-native/icons/reply-all'
 import Search from 'lucide-react-native/icons/search'
 import Send from 'lucide-react-native/icons/send'
 import Settings from 'lucide-react-native/icons/settings'
+import Signature from 'lucide-react-native/icons/signature'
 import ShieldAlert from 'lucide-react-native/icons/shield-alert'
 import ShieldCheck from 'lucide-react-native/icons/shield-check'
 import ShieldQuestion from 'lucide-react-native/icons/shield-question-mark'
@@ -73,6 +76,9 @@ const ICONS = {
   imageOff: ImageOff,
   shieldOk: ShieldCheck,
   shieldUnknown: ShieldQuestion,
+  lock: Lock,
+  key: KeyRound,
+  signature: Signature,
   alert: TriangleAlert,
   info: Info
 } satisfies Record<string, LucideIcon>

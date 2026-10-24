@@ -17,8 +17,8 @@ describe('what a message has to say for itself', () => {
   it('says what the message has to say of its signature and encryption, sharply only where something is wrong', () => {
     expect(hints({ pgp: 'none' })).toEqual([])
     const tone = (pgp: Parameters<typeof hintsFor>[0]['pgp']) => hints({ pgp })[0].tone
-    expect(tone('signed-verified')).toBe('info')
-    expect(tone('encrypted-verified')).toBe('info')
+    expect(tone('signed-verified')).toBe('good')
+    expect(tone('encrypted-verified')).toBe('good')
     expect(tone('encrypted-unverified')).toBe('info')
     expect(tone('signed-unverified')).toBe('info')
     expect(tone('encrypted-failed')).toBe('warning')

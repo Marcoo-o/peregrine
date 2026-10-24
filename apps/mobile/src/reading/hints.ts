@@ -16,7 +16,9 @@ export interface Hint {
   /** Stable for what it is about, so that a list of them can be kept as it changes. */
   id: string
   /** How sharply it is said: what is probably wrong, what is worth knowing, what only informs. */
-  tone: 'danger' | 'warning' | 'info'
+  tone: 'danger' | 'warning' | 'info' | 'good'
+  /** A picture that says it at a glance, for those hints that have one. */
+  icon?: 'lock' | 'signature' | 'shieldOk' | 'shieldUnknown' | 'alert'
   title: string
   detail?: string
   /** What the user can do about it right there. */
@@ -31,7 +33,8 @@ function pgpHint(status: PgpStatus): Hint | undefined {
     case 'encrypted-verified':
       return {
         id: 'pgp',
-        tone: 'info',
+        tone: 'good',
+        icon: 'lock',
         title: 'Verschlüsselt und signiert, die Signatur stimmt',
         detail: 'Nur dieses Konto konnte die Nachricht öffnen, und sie stammt vom Besitzer des Schlüssels, den du für den Absender hinterlegt hast.'
       }
@@ -39,6 +42,7 @@ function pgpHint(status: PgpStatus): Hint | undefined {
       return {
         id: 'pgp',
         tone: 'info',
+        icon: 'lock',
         title: 'Verschlüsselt, der Absender ist nicht bestätigt',
         detail:
           'Die Nachricht war für dich verschlüsselt und ist geöffnet. Ob sie vom angegebenen Absender stammt, lässt sich nicht sagen: Sie ist nicht signiert, oder für den Absender ist kein Schlüssel hinterlegt.'
@@ -47,13 +51,15 @@ function pgpHint(status: PgpStatus): Hint | undefined {
       return {
         id: 'pgp',
         tone: 'warning',
+        icon: 'alert',
         title: 'Verschlüsselt, und das Handy kann sie nicht öffnen',
         detail: 'Für dieses Konto fehlt der Schlüssel, mit dem die Nachricht verschlüsselt wurde, oder sie ist beschädigt.'
       }
     case 'signed-verified':
       return {
         id: 'pgp',
-        tone: 'info',
+        tone: 'good',
+        icon: 'shieldOk',
         title: 'Signiert, die Signatur stimmt',
         detail: 'Der Inhalt ist unverändert und stammt vom Besitzer des Schlüssels, den du für den Absender hinterlegt hast.'
       }
@@ -61,6 +67,7 @@ function pgpHint(status: PgpStatus): Hint | undefined {
       return {
         id: 'pgp',
         tone: 'info',
+        icon: 'shieldUnknown',
         title: 'Signiert, die Signatur ist nicht geprüft',
         detail: 'Für den Absender ist kein Schlüssel hinterlegt, mit dem sich die Signatur prüfen ließe.'
       }
@@ -68,6 +75,7 @@ function pgpHint(status: PgpStatus): Hint | undefined {
       return {
         id: 'pgp',
         tone: 'danger',
+        icon: 'alert',
         title: 'Die Signatur dieser Nachricht stimmt nicht',
         detail: 'Der Inhalt wurde nach dem Signieren verändert, oder die Signatur stammt nicht von dem Schlüssel, den du für den Absender hinterlegt hast.'
       }

@@ -150,7 +150,7 @@ describe('letting go of a key and giving one away', () => {
     const [own] = await listOwnKeys(t.db, t.work.id)
     await t.app.keys.exportPublic(t.work.id, own.fingerprint)
     const [saved] = t.files.saved
-    expect(saved.name).toBe(`${t.work.emailAddress}.asc`)
+    expect(saved.name).toBe(t.work.emailAddress)
     const text = new TextDecoder().decode(saved.content)
     expect(text).toContain('PUBLIC KEY BLOCK')
     expect(text).not.toContain('PRIVATE')

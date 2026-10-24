@@ -107,7 +107,8 @@ export class MessageController {
         knownDomains,
         protection: reading.status,
         source,
-        attachments: this.attachmentsOf(source)
+        // The signature of a signed message is part of what the message says of itself, not a file the reader asked for.
+        attachments: this.attachmentsOf(source).filter((info) => reading.status === 'none' || info.contentType !== 'application/pgp-signature')
       })
     } catch (error) {
       this.store.showScreen({ name: 'message', ...opened, error: explainError(error) })

@@ -2,6 +2,7 @@ import { Text, View } from 'react-native'
 import type { AttachmentInfo } from '../attachments'
 import { formatSize, riskText } from '../attachmentText'
 import { Chip } from './controls'
+import { Icon } from './Icon'
 import { useStyles } from './useStyles'
 
 /** The attachments of an open message, each with what its name gives away and what can be done with it. */
@@ -17,10 +18,12 @@ export function AttachmentList(props: {
       <Text style={styles.section}>Anhänge</Text>
       {props.attachments.map((attachment) => (
         <View key={attachment.id} style={styles.attachment}>
-          <Text style={styles.itemTitle}>📎 {attachment.filename}</Text>
-          <Text style={styles.itemMeta}>
-            {attachment.contentType} · {formatSize(attachment.size)}
-          </Text>
+          <View style={styles.noticeHead}>
+            <Icon name="attachment" size={18} />
+            <Text style={[styles.itemTitle, styles.noticeTitle]}>{attachment.filename}</Text>
+          </View>
+          <Text style={styles.itemMeta}>{formatSize(attachment.size)}</Text>
+          <Text style={styles.itemMeta}>{attachment.contentType}</Text>
           {attachment.findings.map((finding) => (
             <Text key={finding.risk} style={styles.error}>
               {riskText(finding)}
