@@ -3,6 +3,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- From Android 13 on, the user is asked for it, when notifications are switched on. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Where the system has no push service and the user switched it on, the application keeps its connections to the mail
+         servers open itself, in a foreground service. Its type is special use: nothing else fits a connection that waits for
+         mail, and the other types are ended by the system after hours on Android 15. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Where the system has a push service, this is what lets the application register what it should watch. Where it has none the
          permission is not defined, and asking for it does nothing. -->
     <uses-permission android:name="org.frogger.permission.PUSH_REGISTER" />
@@ -33,6 +40,22 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
+      <!-- Keeps the connections open for new mail where the system has no push service (see IdleService). -->
+      <service
+        android:name=".IdleService"
+        android:exported="false"
+        android:foregroundServiceType="specialUse">
+        <property
+          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+          android:value="Keeps IMAP IDLE connections to the user's mail servers open to be told of new mail at once, switched on by the user" />
+      </service>
+      <!-- Starts that service again after the phone was started, where the user had it on. -->
+      <receiver android:name=".IdleBootReceiver" android:exported="false">
+        <intent-filter>
+          <action android:name="android.intent.action.BOOT_COMPLETED" />
+          <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+        </intent-filter>
+      </receiver>
       <!-- The push service wakes this when something happened on a mailbox it watches for the application. Only it holds the
            permission, so nothing else can. Where the system has no such service the permission is not defined and nobody can. -->
       <receiver

@@ -1151,8 +1151,8 @@ registering, taking out and muting, an account without encryption, a service tha
 and the registration. Not seen: a device that has no service (the receiver and the queries are inert, as designed), Doze, the
 service as a part of the system image (it is not built yet), and more than one application using it.
 
-Not done: a foreground service with IDLE inside Peregrine for devices without a push service, which was the first plan. Android
-before 14 is treated as having no service, since the sender is not named there.
+Not done here: a foreground service with IDLE inside Peregrine for devices without a push service, which was the first plan (see
+"What the foreground service found"). Android before 14 is treated as having no system service, since the sender is not named there.
 
 ## What the launcher icon found
 
@@ -1179,6 +1179,45 @@ Seen: the rendered layers under both masks and in one colour, and the resources 
 release APK has the adaptive icon as its icon. Not seen on a device: the launcher, the dock, the themed icon. The image
 that has the phone app in it has to be built for that; the quick way (`dev_push_app.py peregrine` in FroggerOS) stops at
 `adb remount` on a fresh image and at fs-verity for an update of a system app.
+
+## What the foreground service found
+
+On a device without a push service of the system, new mail still reached the phone at the next run of the schedule, every 15
+minutes at best. There is a switch now that has the application keep the connections itself.
+
+- *Off until the user turns it on.* "Sofort benachrichtigen: Verbindung offen halten" is in the settings, under the switches for
+  notifications, and only where the system has no push service (where it has one, the switch is not there and the service is
+  used). It costs some battery and shows a notification for as long as it is on, and the text under it says so. It does nothing
+  while notifications are off: what it watches is what the settings say, so the accounts that are muted are not watched.
+- *The same registrations.* JavaScript says to the same native module what to watch (`register`, `unregister`,
+  `unregisterAll`), and `PushRouter` sends it to the system service where there is one, to the foreground service where there is
+  none and the user asked, and nowhere else. Nothing that follows a wake is written twice: the look for mail and the
+  notifications are the ones of the schedule and the system service.
+- *`IdleService`* is a foreground service of the type special use (nothing else fits a connection that waits for mail, and the
+  other types are ended by the system after hours on Android 15), with a quiet notification that opens the application. One
+  watcher thread for each account (`IdleWatchers`, `IdleSession`: the same design and the same fixes as FroggerPush: EXAMINE and
+  not SELECT, a change that comes while IDLE ends is not lost, the exists count of the open is no change, a refused login is
+  tried again only after 30 minutes and a network that comes back does not cut that short, pauses of 5 s to 5 min after a failed
+  connection). IDLE is begun again every ten minutes and not every 25: a mobile network forgets a quiet connection sooner. A
+  change goes through a gate (`WakeGate`) that lets one look start per ten seconds and keeps one for the end of the gap.
+- *It survives the system ending it.* The sources are in a file (`IdleSourceStore`) with the passwords sealed under a key of the
+  Android Keystore, since nothing else holds them when the system has killed the process; `START_STICKY` has the system start the
+  service again, and a receiver starts it after the phone was started or the application updated (`IdleBootReceiver`). Switching
+  the connection off, or notifications off, ends the service and deletes the file: nothing that holds a password is left.
+- *The battery:* a foreground service does not keep a phone out of Doze, and the system may close its connection while it rests.
+  The setting offers a button to the system's list of the applications that are free of those limits.
+- *A debug build next to the one in the image:* `-PdevSuffix=.dev` gives the debug build another application id, so that it can be
+  tried on a device that has the application in its image (it has another signature there, and the image's cannot be replaced
+  without a new image).
+
+Seen on the emulator (the system service switched off for the user with `pm disable-user`): the new section is in the settings,
+switching it on starts the foreground service (type special use, the notification of the channel for the connection), "watching 1
+inboxes", and a message delivered with the application in the background was notified two seconds later. With the process
+killed hard the system started the service again within two seconds, which read its source from the sealed file and watched
+again, and the next message was notified three seconds after its delivery. Switching it off ended the service and removed the
+file. Covered by tests only: the session and the watchers against a server of the tests (32 JVM tests), the settings and the
+registrations that follow them. Not seen: the start after a reboot, Doze, STARTTLS against a real server, the button for the
+battery settings, and a phone with Android before 8.
 
 ## What stage 4 found
 

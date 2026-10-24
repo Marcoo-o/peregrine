@@ -1,5 +1,6 @@
 import type { Account } from '../accounts'
 import type { AttachmentInfo } from '../attachments'
+import type { PushState } from '../background/devices'
 import type { Draft } from '../draft'
 import type { ListSettings, NotificationSettings } from '../settings'
 import type { Folder } from '../folders'
@@ -117,6 +118,8 @@ export interface SettingsState {
   accounts: Account[]
   /** Whether the system lets the application show notifications at all, whatever is switched on here. */
   permitted: boolean
+  /** How the phone is told of new mail at once: by the system's push service, or by connections of its own that are switched on. */
+  push: PushState
   /** What was said about the last thing done, or nothing. */
   notice?: string
 }

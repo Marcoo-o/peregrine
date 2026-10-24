@@ -60,9 +60,11 @@ export function SettingsScreen(props: {
   onMuted: (accountId: string) => void
   onInterval: (minutes: number) => void
   onRunNow: () => void
+  onKeepConnection: (on: boolean) => void
+  onBatterySettings: () => void
 }) {
   const styles = useStyles()
-  const { settings, list, accounts, permitted, notice } = props.state
+  const { settings, list, accounts, permitted, push, notice } = props.state
   const quiet = hasQuietHours(settings)
   const off = !settings.enabled
 
@@ -94,6 +96,22 @@ export function SettingsScreen(props: {
         </Text>
       ) : null}
       {notice ? <Text style={styles.hint}>{notice}</Text> : null}
+
+      {/* Where the system tells the phone of new mail itself there is nothing to switch: it is there. */}
+      {push.system ? null : (
+        <>
+          <Text style={styles.section}>Sofort benachrichtigen</Text>
+          <View style={styles.group}>
+            <SwitchRow label="Verbindung offen halten" value={push.keepConnection} disabled={off} onChange={props.onKeepConnection} />
+          </View>
+          <Text style={styles.hint}>
+            Peregrine hält die Verbindung zum Mailserver selbst offen und meldet neue Nachrichten sofort, statt im Abstand von Minuten
+            oder Stunden. Solange das an ist, zeigt Android eine dauerhafte Benachrichtigung, und der Akku wird etwas stärker beansprucht.
+            Damit die Verbindung auch hält, wenn das Telefon ruht, Peregrine von der Akkuoptimierung ausnehmen.
+          </Text>
+          {push.keepConnection ? <Button label="Akkuoptimierung öffnen" variant="secondary" onPress={props.onBatterySettings} /> : null}
+        </>
+      )}
 
       <Text style={styles.section}>Abruf im Hintergrund, alle</Text>
       <View style={styles.actions}>

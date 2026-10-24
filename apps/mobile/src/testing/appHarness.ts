@@ -2,7 +2,7 @@ import type { FetchedMessage, ImapSession, MailboxEntry } from '@peregrine/core/
 import { FakeSmtpServer } from '../../../../packages/smtp/test-support/fakeServer'
 import { addAccount, type Account, type NewAccount } from '../accounts'
 import { Application, createApplication } from '../app/Application'
-import type { Notifications, PushDevice, PushSource, SyncSchedule } from '../background/devices'
+import type { Notifications, PushDevice, PushSource, PushState, SyncSchedule } from '../background/devices'
 import type { MailNotification, MessageTarget } from '../background/notifications'
 import type { ImapLogin } from '../app/accountForm'
 import type { Platform } from '../app/services'
@@ -234,8 +234,10 @@ export class FakePush implements PushDevice {
   readonly calls: string[] = []
   /** What is registered now, by source id. */
   readonly sources = new Map<string, PushSource>()
-  /** Whether the device has a push service. */
+  /** Whether the device has a push service of the system. */
   present = true
+  /** Whether the user switched on the application's own connections, which count where there is no service of the system. */
+  keepConnection = false
   failWith: Error | null = null
 
   private record(call: string): Promise<void> {
@@ -245,7 +247,22 @@ export class FakePush implements PushDevice {
   }
 
   available(): Promise<boolean> {
-    return Promise.resolve(this.present)
+    return Promise.resolve(this.present || this.keepConnection)
+  }
+
+  state(): Promise<PushState> {
+    return Promise.resolve({ system: this.present, keepConnection: this.keepConnection })
+  }
+
+  async setKeepConnection(on: boolean): Promise<void> {
+    await this.record(`keepConnection ${on}`)
+    this.keepConnection = on
+    // What the application kept for itself goes when it is switched off.
+    if (!on && !this.present) this.sources.clear()
+  }
+
+  openBatterySettings(): Promise<void> {
+    return this.record('openBatterySettings')
   }
 
   async register(source: PushSource): Promise<void> {

@@ -238,3 +238,67 @@ describe('telling the push service what to watch', () => {
     expect((await loadNotificationSettings(t.db)).enabled).toBe(true)
   })
 })
+
+describe('the application keeping the connections itself', () => {
+  it('is shown with what the device has: the system service, or the switch of the user', async () => {
+    const t = await onSettings()
+    await t.app.settings.show()
+    expect(t.screen().push).toEqual({ system: true, keepConnection: false })
+    t.push.present = false
+    t.push.keepConnection = true
+    await t.app.settings.show()
+    expect(t.screen().push).toEqual({ system: false, keepConnection: true })
+  })
+
+  it('has no state to show when the device cannot be asked, and says so', async () => {
+    const t = await onSettings()
+    t.push.state = () => Promise.reject(new Error('no module'))
+    await t.app.settings.show()
+    expect(t.screen().push).toEqual({ system: false, keepConnection: false })
+    expect(t.logs.some((line) => line.includes('no module'))).toBe(true)
+  })
+
+  it('watches the accounts once it is switched on where there is no system service, and stops when it is switched off', async () => {
+    const t = await onSettings()
+    t.notifications.allowed = true
+    t.push.present = false
+    await t.app.settings.setEnabled(true)
+    expect(t.push.sources.size).toBe(0)
+
+    await t.app.settings.setKeepConnection(true)
+    expect(t.push.keepConnection).toBe(true)
+    expect([...t.push.sources.keys()].sort()).toEqual([t.work.id, t.home.id].sort())
+    expect(t.screen().push.keepConnection).toBe(true)
+
+    await t.app.settings.setKeepConnection(false)
+    expect(t.push.keepConnection).toBe(false)
+    expect(t.push.sources.size).toBe(0)
+  })
+
+  it('holds nothing while notifications are off, whatever the switch says', async () => {
+    const t = await onSettings()
+    t.push.present = false
+    await t.app.settings.setKeepConnection(true)
+    expect(t.push.sources.size).toBe(0)
+    t.notifications.allowed = true
+    await t.app.settings.setEnabled(true)
+    expect(t.push.sources.size).toBe(2)
+    await t.app.settings.setEnabled(false)
+    expect(t.push.sources.size).toBe(0)
+    expect(t.push.keepConnection).toBe(true)
+  })
+
+  it('goes on when the switch cannot be made, and says why', async () => {
+    const t = await onSettings()
+    t.push.present = false
+    t.push.failWith = new Error('no service')
+    await expect(t.app.settings.setKeepConnection(true)).resolves.toBeUndefined()
+    expect(t.logs.some((line) => line.includes('no service'))).toBe(true)
+  })
+
+  it('opens the list of the applications that the resting phone does not limit', async () => {
+    const t = await onSettings()
+    await t.app.settings.openBatterySettings()
+    expect(t.push.calls).toContain('openBatterySettings')
+  })
+})
