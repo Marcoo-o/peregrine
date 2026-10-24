@@ -12,6 +12,7 @@ import { getFolder, getFolderBySpecialUse, listFolders, type Folder } from '../f
 import type { MailActions } from '../mailActions'
 import { getMessage, snoozeMessages, type StoredMessage } from '../messages'
 import { readMessage } from '../messageText'
+import { readProtected } from '../pgp/readProtected'
 import { assessMessage, isOwnAddress, knownDomainsOf } from '../reading/assessment'
 import type { SearchHit } from '../search'
 import { isFirstContact, messagesFrom } from '../senderHistory'
@@ -81,11 +82,18 @@ export class MessageController {
       const imap = await this.services.connections.ensure(account)
       const full = await imap.fetchFullMessage(folder.imapPath, summary.uid)
       if (!full) throw new Error('Die Nachricht gibt es auf dem Server nicht mehr')
-      const message = readMessage(full.source)
-      // The text is in hand: keeping it costs nothing, and the list shows the first of it from now on.
-      void storeBody(this.services.db, folder.id, summary.uid, message.text).catch((error) =>
-        this.services.log.error(describeError(error))
-      )
+      const outer = readMessage(full.source)
+      // A message that is signed or encrypted is read for that, and an encrypted one is shown with its content opened.
+      const reading = await readProtected(this.services.db, account, full.source, outer)
+      const source = reading.source
+      const message = reading.text !== undefined ? { ...outer, text: reading.text, html: null } : source === full.source ? outer : readMessage(source)
+      // The text is in hand: keeping it costs nothing, and the list shows the first of it from now on. What was encrypted is
+      // not kept: it would be written down in the clear where nobody asked for it, and searched.
+      if (!reading.status.startsWith('encrypted')) {
+        void storeBody(this.services.db, folder.id, summary.uid, message.text).catch((error) =>
+          this.services.log.error(describeError(error))
+        )
+      }
       const accounts = await listAccounts(this.services.db)
       const knownDomains = knownDomainsOf(accounts)
       // What the user wrote themselves, a draft or a copy in the sent folder, is not a first message from anybody.
@@ -97,8 +105,9 @@ export class MessageController {
         message,
         assessment: assessMessage(message, knownDomains, firstContact),
         knownDomains,
-        source: full.source,
-        attachments: this.attachmentsOf(full.source)
+        protection: reading.status,
+        source,
+        attachments: this.attachmentsOf(source)
       })
     } catch (error) {
       this.store.showScreen({ name: 'message', ...opened, error: explainError(error) })

@@ -22,6 +22,10 @@ export interface Draft {
   attachments: DraftAttachment[]
   inReplyTo?: string
   references?: string
+  /** The content is to be readable only by those the message goes to. */
+  encrypt?: boolean
+  /** The content is to carry a signature that says who wrote it. */
+  sign?: boolean
 }
 
 export const emptyDraft: Draft = { to: '', cc: '', bcc: '', subject: '', body: '', attachments: [] }
@@ -59,6 +63,8 @@ export function isChanged(start: Draft, now: Draft): boolean {
     start.bcc !== now.bcc ||
     start.subject !== now.subject ||
     start.body !== now.body ||
+    (start.encrypt === true) !== (now.encrypt === true) ||
+    (start.sign === true) !== (now.sign === true) ||
     files(start) !== files(now)
   )
 }
@@ -190,8 +196,15 @@ export function toComposeInput(accountId: string, draft: Draft): ComposeInput {
     htmlBody: '',
     attachments: draft.attachments.map(({ filename, path, contentType }) => ({ filename, path, contentType })),
     inReplyTo: draft.inReplyTo,
-    references: draft.references
+    references: draft.references,
+    encrypt: draft.encrypt === true ? true : undefined,
+    sign: draft.sign === true ? true : undefined
   }
+}
+
+/** The addresses a draft goes to, in all three fields, as they are typed. */
+export function recipientAddresses(draft: Draft): string[] {
+  return [...parseAddressList(draft.to), ...parseAddressList(draft.cc), ...parseAddressList(draft.bcc)].map((address) => address.address)
 }
 
 /** Whether there is anything to send to: the screen enables its button on this. */

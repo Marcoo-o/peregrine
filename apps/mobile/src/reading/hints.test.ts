@@ -14,6 +14,22 @@ describe('what a message has to say for itself', () => {
     expect(hints()).toEqual([])
   })
 
+  it('says what the message has to say of its signature and encryption, sharply only where something is wrong', () => {
+    expect(hints({ pgp: 'none' })).toEqual([])
+    const tone = (pgp: Parameters<typeof hintsFor>[0]['pgp']) => hints({ pgp })[0].tone
+    expect(tone('signed-verified')).toBe('info')
+    expect(tone('encrypted-verified')).toBe('info')
+    expect(tone('encrypted-unverified')).toBe('info')
+    expect(tone('signed-unverified')).toBe('info')
+    expect(tone('encrypted-failed')).toBe('warning')
+    expect(tone('signed-invalid')).toBe('danger')
+  })
+
+  it('has the word on signature and encryption first', () => {
+    const spam = assessSpam({ 'x-spamd-result': 'default: True [16.00 / 15.00]; ODD(1.50)[]' })!
+    expect(hints({ assessment: { ...calm, spam }, pgp: 'signed-invalid' }).map((hint) => hint.id)).toEqual(['pgp', 'spam'])
+  })
+
   it('is nothing before the message is there to be looked at', () => {
     expect(hints({ assessment: undefined })).toEqual([])
   })

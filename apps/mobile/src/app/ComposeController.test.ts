@@ -6,6 +6,8 @@ import { listFolders } from '../folders'
 import type { StoredMessage } from '../messages'
 import { emptyDraft, type Draft } from '../draft'
 import { appHarness, eventually } from '../testing/appHarness'
+import { saveOwnKey } from '../pgp/keyStore'
+import { generateKeyPair } from '../pgp/pgpService'
 import { readable } from '../testing/readable'
 import { senderProblem } from './ComposeController'
 import type { ComposeState, MessageState, Screen } from './screens'
@@ -182,6 +184,23 @@ describe('sending', () => {
     expect(await listPendingActions(t.db, t.work.id)).toEqual([])
   })
 
+  it('tells a message that is to be encrypted what is missing before anything is queued, and stays', async () => {
+    const t = await composing()
+    await t.app.compose.send(t.state, { ...t.draft, encrypt: true })
+    expect(t.store.screen).toMatchObject({ name: 'compose', error: expect.stringContaining('keinen Schlüssel') })
+    expect(await listPendingActions(t.db, t.work.id)).toEqual([])
+    expect(t.smtp.messages).toEqual([])
+  })
+
+  it('names the recipients without a key when the account has its own', async () => {
+    const t = await composing()
+    const own = await generateKeyPair('Work', 'work@example.org')
+    await saveOwnKey(t.db, { fingerprint: own.fingerprint, accountId: t.work.id, publicKey: own.publicKey, privateKey: own.privateKey, createdAt: 1 })
+    await t.app.compose.send(t.state, { ...t.draft, encrypt: true })
+    expect(t.store.screen).toMatchObject({ name: 'compose', error: expect.stringContaining('anna@example.net') })
+    expect(await listPendingActions(t.db, t.work.id)).toEqual([])
+  })
+
   it('stays with the reason when it could not be queued, and is not busy any more', async () => {
     const t = await composing()
     t.app.services.mail.send = async () => {
@@ -261,6 +280,18 @@ describe('drafts', () => {
       saved: { uid: 7 },
       returnTo: t.message
     })
+  })
+
+  it('is written on encrypted when it was kept encrypted, and signed when it was kept signed', async () => {
+    const encrypted = await withDraft({ protection: 'encrypted-unverified' })
+    await encrypted.app.compose.startFromDraft(encrypted.message)
+    expect((encrypted.store.screen as ComposeState).draft).toMatchObject({ encrypt: true })
+    expect((encrypted.store.screen as ComposeState).draft.sign).toBeUndefined()
+
+    const signed = await withDraft({ protection: 'signed-verified' })
+    await signed.app.compose.startFromDraft(signed.message)
+    expect((signed.store.screen as ComposeState).draft).toMatchObject({ sign: true })
+    expect((signed.store.screen as ComposeState).draft.encrypt).toBeUndefined()
   })
 
   it('is not opened when it has a formatting that cannot be written, and says why on the message', async () => {
@@ -476,6 +507,13 @@ describe('keeping a message as a draft by itself', () => {
     t.app.compose.startNew(work, returnTo)
     await t.app.compose.autosave(shown(t), { ...emptyDraft, body: 'Hello' })
     expect(shown(t)).toMatchObject({ autosave: { status: 'failed', error: expect.stringContaining('keinen Ordner für Entwürfe') } })
+  })
+
+  it('does not keep a draft in the clear that was meant to be encrypted, and says why', async () => {
+    const t = await composing()
+    await t.app.compose.autosave(shown(t), { ...emptyDraft, body: 'Hello', encrypt: true })
+    expect(shown(t)).toMatchObject({ autosave: { status: 'failed', error: expect.stringContaining('keinen Schlüssel') } })
+    expect(await listPendingActions(t.db, t.work.id)).toEqual([])
   })
 
   it('stops keeping by itself when the server does not say where it put the draft, so that there are not two', async () => {

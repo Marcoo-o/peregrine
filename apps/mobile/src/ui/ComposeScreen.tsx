@@ -140,7 +140,17 @@ export function ComposeScreen(props: {
         </View>
       ))}
       {form.notice ? <Text style={styles.error}>{form.notice}</Text> : null}
-      <Chip label="Datei anhängen" active={false} onPress={form.pick} />
+      <View style={styles.actions}>
+        <Chip label="Datei anhängen" active={false} onPress={form.pick} />
+        <Chip label="Verschlüsseln" active={draft.encrypt === true} onPress={() => form.update({ encrypt: draft.encrypt !== true })} />
+        <Chip label="Signieren" active={draft.sign === true} onPress={() => form.update({ sign: draft.sign !== true })} />
+      </View>
+      {draft.encrypt || draft.sign ? (
+        <Text style={styles.hint}>
+          {draft.encrypt ? 'Verschlüsselt und signiert wird der Inhalt mit den Anhängen. ' : 'Signiert wird der Inhalt mit den Anhängen. '}
+          Absender, Empfänger und Betreff bleiben lesbar, weil der Mailserver sie braucht.
+        </Text>
+      ) : null}
       {form.confirming ? (
         <Text style={styles.error}>
           Du schreibst von einem Anhang, aber es ist keiner angehängt. Tippe noch einmal, wenn die Nachricht so raus soll.

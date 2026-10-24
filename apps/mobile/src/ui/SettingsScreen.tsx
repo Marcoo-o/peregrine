@@ -55,6 +55,7 @@ export function SettingsScreen(props: {
   onPreview: (preview: boolean) => void
   onShowPreview: (show: boolean) => void
   onTags: () => void
+  onKeys: () => void
   onQuietHours: (on: boolean) => void
   onQuietTime: (end: QuietEnd, value: string) => void
   onMuted: (accountId: string) => void
@@ -77,6 +78,9 @@ export function SettingsScreen(props: {
         <SwitchRow label="Text unter dem Betreff zeigen" value={list.showPreview} onChange={props.onShowPreview} />
       </View>
       <Button label="Tags verwalten" variant="secondary" onPress={props.onTags} />
+
+      <Text style={styles.section}>Verschlüsselung</Text>
+      <Button label="Schlüssel verwalten" variant="secondary" onPress={props.onKeys} />
 
       <Text style={styles.section}>Benachrichtigungen</Text>
       <View style={styles.group}>

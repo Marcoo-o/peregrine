@@ -1,10 +1,11 @@
 import { listAccounts, type Account } from '../accounts'
 import { suggestContacts, type Contact } from '../contacts'
-import { editableDraft, emptyDraft, forwardDraft, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
+import { editableDraft, emptyDraft, forwardDraft, recipientAddresses, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
 import { bringAttachments, notBroughtText } from '../draftAttachments'
 import { draftsFolderOf } from '../drafts'
 import { newId } from '../ids'
 import { explainError } from '../errors'
+import { protectionProblem } from '../pgp/protect'
 import { smtpSettingsOf } from '../send'
 import { autosaveDue } from './autosave'
 import type { Navigator } from './Navigator'
@@ -113,7 +114,13 @@ export class ComposeController {
       this.store.showScreen({ ...state, notice: found.refusal })
       return
     }
-    let draft = found.draft
+    // A draft that was kept encrypted is written on encrypted, and one that was kept signed, signed.
+    const protection = state.protection ?? 'none'
+    let draft: Draft = {
+      ...found.draft,
+      encrypt: protection.startsWith('encrypted') ? true : undefined,
+      sign: protection.startsWith('signed') ? true : undefined
+    }
     const infos = state.attachments ?? []
     if (infos.length > 0) {
       try {
@@ -148,7 +155,7 @@ export class ComposeController {
    */
   async send(given: ComposeState, draft: Draft): Promise<void> {
     const state = await this.settled(given)
-    const problem = senderProblem(state.account)
+    const problem = senderProblem(state.account) ?? (await this.protectionProblemOf(state, draft))
     if (problem) {
       this.store.showScreen({ ...state, draft, error: problem })
       return
@@ -242,6 +249,9 @@ export class ComposeController {
   private async keepOnServer(state: ComposeState, draft: Draft): Promise<'kept' | 'waiting'> {
     const { db, mail } = this.services
     if (!(await draftsFolderOf(db, state.account.id))) throw new Error('Dieses Konto hat keinen Ordner für Entwürfe.')
+    // A draft that was meant to be encrypted is not kept in the clear, and says why it is not kept.
+    const unprotected = await this.protectionProblemOf(state, draft, { draft: true })
+    if (unprotected) throw new Error(unprotected)
     // A connection is made when there is none yet, as the account does for anything it is asked: only one that cannot be
     // made leaves the draft in the queue.
     await this.services.connections.ensure(state.account).catch(() => undefined)
@@ -253,6 +263,17 @@ export class ComposeController {
     // Still there after the queue ran: it is waiting for a connection, unless an attempt was made, which failed.
     if (after.error !== null) throw new Error(after.error)
     return 'waiting'
+  }
+
+  /** Why the message cannot be signed or encrypted as asked, or null: before it is queued, where it can still be put right. */
+  private protectionProblemOf(state: ComposeState, draft: Draft, options: { draft?: boolean } = {}): Promise<string | null> {
+    return protectionProblem(
+      this.services.db,
+      state.account.id,
+      { encrypt: draft.encrypt === true, sign: draft.sign === true },
+      recipientAddresses(draft),
+      options
+    )
   }
 
   /** The state it was given with what has been kept since, which is on the screen while the writing of it is. */

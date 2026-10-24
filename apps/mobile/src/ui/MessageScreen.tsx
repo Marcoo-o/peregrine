@@ -69,7 +69,7 @@ export function MessageScreen(props: {
     [facts, message, known]
   )
   const remoteImages = facts?.images.filter((image) => /^https?:/i.test(image.src)).length ?? 0
-  const hints = hintsFor({ assessment, page, remoteImages, showingImages: showImages })
+  const hints = hintsFor({ assessment, page, remoteImages, showingImages: showImages, pgp: props.state.protection })
 
   const followLink = (url: string) => {
     const decision = decideLink(url, facts?.links ?? [], known)
