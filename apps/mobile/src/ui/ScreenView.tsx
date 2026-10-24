@@ -161,6 +161,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onMuted={(accountId) => settings.toggleMuted(accountId)}
           onInterval={(minutes) => settings.setInterval(minutes)}
           onRunNow={() => settings.runNow()}
+          onKeepConnection={(on) => settings.setKeepConnection(on)}
+          onBatterySettings={() => settings.openBatterySettings()}
         />
       )
   }

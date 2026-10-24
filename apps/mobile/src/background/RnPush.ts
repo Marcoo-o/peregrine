@@ -1,8 +1,11 @@
-import type { PushDevice, PushSource } from './devices'
+import type { PushDevice, PushSource, PushState } from './devices'
 
 /** What the native module `PeregrinePush` offers, in the shapes that cross the bridge. */
 export interface NativePush {
   available(): Promise<boolean>
+  state(): Promise<PushState>
+  setKeepConnection(on: boolean): Promise<void>
+  openBatterySettings(): Promise<void>
   register(
     sourceId: string,
     host: string,
@@ -22,6 +25,18 @@ export class RnPush implements PushDevice {
 
   available(): Promise<boolean> {
     return this.native.available()
+  }
+
+  state(): Promise<PushState> {
+    return this.native.state()
+  }
+
+  setKeepConnection(on: boolean): Promise<void> {
+    return this.native.setKeepConnection(on)
+  }
+
+  openBatterySettings(): Promise<void> {
+    return this.native.openBatterySettings()
   }
 
   register(source: PushSource): Promise<void> {

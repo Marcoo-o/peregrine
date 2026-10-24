@@ -1,5 +1,6 @@
 import { parseTimeOfDay } from '@peregrine/core/notificationPolicy'
 import { listAccounts } from '../accounts'
+import type { PushState } from '../background/devices'
 import { applyPush } from '../background/push'
 import { describeError, explainError } from '../errors'
 import {
@@ -36,6 +37,7 @@ export class SettingsController {
       list: await loadListSettings(db),
       accounts: await listAccounts(db),
       permitted: await notifications.permitted(),
+      push: await this.pushState(),
       notice
     })
   }
@@ -69,6 +71,22 @@ export class SettingsController {
     await this.applyPush()
     if (!enabled) await this.attempt(() => notifications.clearAll())
     await this.show()
+  }
+
+  /**
+   * Switches on or off that the application keeps the connections to the mail servers open itself, which is what there is where
+   * the system has no push service. It shows a notification for as long as it is on, and costs some battery, so it is off until
+   * the user says so. What it watches is what the settings say, so the accounts are told to it at once.
+   */
+  async setKeepConnection(on: boolean): Promise<void> {
+    await this.attempt(() => this.services.push.setKeepConnection(on))
+    await this.applyPush()
+    await this.show()
+  }
+
+  /** Opens the system's list of the applications that are free of the limits of the resting phone, where the connections hold best. */
+  async openBatterySettings(): Promise<void> {
+    await this.attempt(() => this.services.push.openBatterySettings())
   }
 
   setPreview(preview: boolean): Promise<void> {
@@ -137,6 +155,16 @@ export class SettingsController {
   async applyPush(): Promise<void> {
     const { db, push, log } = this.services
     await applyPush({ db, push, log })
+  }
+
+  /** What the phone has for being told at once; nothing when it cannot be asked. */
+  private async pushState(): Promise<PushState> {
+    try {
+      return await this.services.push.state()
+    } catch (error) {
+      this.services.log.error(`the push state could not be read: ${describeError(error)}`)
+      return { system: false, keepConnection: false }
+    }
   }
 
   private async change(change: Partial<NotificationSettings>): Promise<void> {

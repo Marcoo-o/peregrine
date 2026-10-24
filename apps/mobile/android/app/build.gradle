@@ -104,6 +104,8 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            // `-PdevSuffix=.dev` gives the debug build another application id, so that it can be installed next to another build.
+            if (project.hasProperty('devSuffix')) applicationIdSuffix project.property('devSuffix')
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -125,6 +127,8 @@ dependencies {
 
     // The JVM tests, which run without a phone: the certificate check in TlsUpgrade.
     testImplementation("junit:junit:4.13.2")
+    // The platform's org.json is a stub in the JVM tests, which read and write the file of the sources.
+    testImplementation("org.json:json:20240303")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
