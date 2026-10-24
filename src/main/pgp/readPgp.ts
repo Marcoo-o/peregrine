@@ -15,7 +15,7 @@ import {
   verifyDetachedSignature,
   type SignatureCheck
 } from './pgpService'
-import { isInlineCleartextSigned, parsePgpMime } from './pgpMimeParser'
+import { isInlineCleartextSigned, parsePgpMime } from '@peregrine/core/pgpMimeParser'
 
 /**
  * Turns a stored PGP message into something readable, on every read.

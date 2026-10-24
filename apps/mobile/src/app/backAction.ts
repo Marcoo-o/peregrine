@@ -25,6 +25,7 @@ export function backAction(
     case 'settings':
       return () => void settings.back()
     case 'tags':
+    case 'keys':
       return () => void settings.show()
     case 'search':
     case 'folders':

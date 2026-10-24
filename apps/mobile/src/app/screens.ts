@@ -1,9 +1,12 @@
+import type { PgpStatus } from '@peregrine/core/types'
 import type { Account } from '../accounts'
 import type { AttachmentInfo } from '../attachments'
 import type { PushState } from '../background/devices'
 import type { Draft } from '../draft'
 import type { ListSettings, NotificationSettings } from '../settings'
 import type { Folder } from '../folders'
+import type { ContactKey, OwnKey } from '../pgp/keyStore'
+import type { ScannedKey } from '../pgp/pgpService'
 import type { MessageAssessment } from '../reading/assessment'
 import type { StoredMessage } from '../messages'
 import type { ReadableMessage } from '../messageText'
@@ -97,6 +100,8 @@ export interface MessageState extends OpenMessage {
   assessment?: MessageAssessment
   /** The domains of the user's addresses, which a sender or a link is measured against for looking like one. */
   knownDomains?: string[]
+  /** What the message says of its signature and its encryption; the message above is then the content that was opened. */
+  protection?: PgpStatus
   /** What was said about the last thing done with an attachment. */
   notice?: string
   error?: string
@@ -152,6 +157,21 @@ export interface ComposeState {
   error?: string
 }
 
+/** The OpenPGP keys: those of the accounts, the public keys of the people the user writes to, and keys that were read and wait to be placed. */
+export interface KeysState {
+  name: 'keys'
+  accounts: Account[]
+  /** The keys of each account, by the id of the account, the newest first. */
+  own: Record<string, OwnKey[]>
+  contacts: ContactKey[]
+  /** What was read from a file or from pasted text, not stored yet: the user says where each key belongs. */
+  found?: ScannedKey[]
+  /** What is being done that takes long, said on the screen. */
+  working?: string
+  notice?: string
+  error?: string
+}
+
 /** The tags of the user, which are shown from the store, and how many messages have each, by keyword in lower case. */
 export interface TagsState {
   name: 'tags'
@@ -170,6 +190,7 @@ export type Screen =
   | MoveState
   | ComposeState
   | SettingsState
+  | KeysState
   | TagsState
 
 /** The screens that are about the mail of the accounts and so show what waits in the queue. */

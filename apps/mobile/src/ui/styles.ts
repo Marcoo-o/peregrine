@@ -131,6 +131,7 @@ function createStyles({ colors }: Theme) {
     noticeInfo: { backgroundColor: colors.accentSoft, borderColor: 'transparent' },
     // What is worth knowing is in the colour of a warning, as a tint with a thin edge, as on the desktop.
     noticeWarning: { backgroundColor: withAlpha(colors.warning, 0.12), borderColor: withAlpha(colors.warning, 0.5) },
+    noticeGood: { backgroundColor: withAlpha(colors.success, 0.12), borderColor: 'transparent' },
     noticeDanger: { backgroundColor: colors.dangerSoft, borderColor: 'transparent' },
     noticeTitle: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
     noticeDetail: { fontSize: 13, lineHeight: 18, marginTop: 4, color: colors.text },
@@ -304,6 +305,17 @@ function createStyles({ colors }: Theme) {
       gap: 12
     },
     settingLabel: { flex: 1, fontSize: 16, color: colors.text },
+    // A setting that says in a line under its name what it does.
+    settingText: { flex: 1, paddingVertical: 10 },
+    settingSub: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
+    // What a key is, in a block of its own: small, and in the face that tells the characters of a fingerprint apart.
+    fingerprint: { fontFamily: 'monospace', fontSize: 13, lineHeight: 19, color: colors.text, marginTop: 2 },
+    fieldLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.6, color: colors.muted, textTransform: 'uppercase', marginTop: 10 },
+    keyCard: { gap: 2, paddingVertical: 12 },
+    tag: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, backgroundColor: colors.accentSoft, marginTop: 6 },
+    tagText: { fontSize: 12, fontWeight: '600', color: colors.accent },
+    tagWarning: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, backgroundColor: withAlpha(colors.warning, 0.12), marginTop: 6 },
+    tagWarningText: { fontSize: 12, fontWeight: '600', color: colors.warning },
     timeInput: { width: 90, textAlign: 'center', minHeight: 40, paddingVertical: 6 },
     attachments: { marginTop: SIZE.gap, marginBottom: 24 },
     attachment: {

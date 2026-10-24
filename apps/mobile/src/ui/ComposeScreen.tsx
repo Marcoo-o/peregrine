@@ -6,7 +6,7 @@ import { withContact, type Contact } from '../contacts'
 import { hasRecipient, isChanged, type Draft } from '../draft'
 import { autosaveText } from './autosaveText'
 import type { Files } from '../files'
-import { Button, Chip, Spinner } from './controls'
+import { Button, Chip, Spinner, SwitchRow } from './controls'
 import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
@@ -140,7 +140,28 @@ export function ComposeScreen(props: {
         </View>
       ))}
       {form.notice ? <Text style={styles.error}>{form.notice}</Text> : null}
-      <Chip label="Datei anhängen" active={false} onPress={form.pick} />
+      <View style={styles.actions}>
+        <Chip label="Datei anhängen" active={false} icon="attachment" onPress={form.pick} />
+      </View>
+      <Text style={styles.section}>Schutz</Text>
+      <View style={styles.group}>
+        <SwitchRow
+          label="Verschlüsseln"
+          hint="Nur die Empfänger können den Inhalt lesen. Für jeden braucht es einen Schlüssel."
+          value={draft.encrypt === true}
+          onChange={(encrypt) => form.update({ encrypt })}
+        />
+        <SwitchRow
+          label="Signieren"
+          hint={draft.encrypt ? 'Beim Verschlüsseln immer dabei.' : 'Die Empfänger können prüfen, dass die Nachricht von dir kommt.'}
+          value={draft.encrypt === true || draft.sign === true}
+          disabled={draft.encrypt === true}
+          onChange={(sign) => form.update({ sign })}
+        />
+      </View>
+      {draft.encrypt || draft.sign ? (
+        <Text style={styles.hint}>Geschützt wird der Inhalt mit den Anhängen. Absender, Empfänger und Betreff bleiben lesbar, weil der Mailserver sie braucht.</Text>
+      ) : null}
       {form.confirming ? (
         <Text style={styles.error}>
           Du schreibst von einem Anhang, aber es ist keiner angehängt. Tippe noch einmal, wenn die Nachricht so raus soll.

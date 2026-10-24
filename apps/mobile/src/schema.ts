@@ -131,7 +131,27 @@ const MIGRATIONS: string[][] = [
   // 8. When a message that was put aside comes back, as the desktop keeps it: the moment, in epoch milliseconds, or null
   // for a message that is not. It is the phone's own, and is not written to the server: a message put aside here stays
   // where it is on the other devices. A moment that has passed is no snooze at all, so nothing has to clear it.
-  ['ALTER TABLE messages ADD COLUMN snoozed_until INTEGER']
+  ['ALTER TABLE messages ADD COLUMN snoozed_until INTEGER'],
+  // 9. The OpenPGP keys. An account's own, with the private half kept open: the database is encrypted, which is what
+  // protects it, as it protects the passwords, and a key that was sealed would ask for its passphrase at every message.
+  // And the public keys of the people the user writes to, filed by address.
+  [
+    `CREATE TABLE own_keys (
+       fingerprint TEXT PRIMARY KEY,
+       account_id TEXT NOT NULL,
+       public_key TEXT NOT NULL,
+       private_key TEXT NOT NULL,
+       created_at INTEGER NOT NULL
+     )`,
+    'CREATE INDEX idx_own_keys_account ON own_keys(account_id)',
+    `CREATE TABLE contact_keys (
+       fingerprint TEXT PRIMARY KEY,
+       address TEXT NOT NULL,
+       public_key TEXT NOT NULL,
+       created_at INTEGER NOT NULL
+     )`,
+    'CREATE INDEX idx_contact_keys_address ON contact_keys(address)'
+  ]
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */

@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, Switch, Text, View } from 'react-native'
 import { Icon, type IconName } from './Icon'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
@@ -95,4 +95,30 @@ export function Spinner(props: { size?: 'small' | 'large' }) {
   const styles = useStyles()
   const { colors } = useTheme()
   return <ActivityIndicator style={styles.spinner} size={props.size ?? 'small'} color={colors.accent} />
+}
+
+/** A line with a name and a switch, the shape most settings have, and under the name what it does when that is worth saying. */
+export function SwitchRow(props: { label: string; hint?: string; value: boolean; disabled?: boolean; onChange: (value: boolean) => void }) {
+  const styles = useStyles()
+  const { colors } = useTheme()
+  return (
+    <View style={styles.setting}>
+      {props.hint ? (
+        <View style={styles.settingText}>
+          <Text style={styles.settingLabel}>{props.label}</Text>
+          <Text style={styles.settingSub}>{props.hint}</Text>
+        </View>
+      ) : (
+        <Text style={styles.settingLabel}>{props.label}</Text>
+      )}
+      <Switch
+        accessibilityLabel={props.label}
+        value={props.value}
+        disabled={props.disabled}
+        onValueChange={props.onChange}
+        trackColor={{ false: colors.border, true: colors.accent }}
+        thumbColor={props.value ? colors.onAccent : colors.muted}
+      />
+    </View>
+  )
 }

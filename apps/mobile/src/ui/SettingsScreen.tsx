@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Switch, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import type { SettingsState } from '../app/screens'
 import { hasQuietHours, INTERVAL_CHOICES } from '../settings'
-import { Button, Chip } from './controls'
+import { Button, Chip, SwitchRow } from './controls'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
 import { intervalLabel } from './intervalLabel'
@@ -10,24 +10,6 @@ import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
 
 type QuietEnd = 'quietFrom' | 'quietTo'
-
-/** A line with a label and a switch, the shape most settings have. */
-function SwitchRow(props: { label: string; value: boolean; disabled?: boolean; onChange: (value: boolean) => void }) {
-  const styles = useStyles()
-  const { colors } = useTheme()
-  return (
-    <View style={styles.setting}>
-      <Text style={styles.settingLabel}>{props.label}</Text>
-      <Switch
-        value={props.value}
-        disabled={props.disabled}
-        onValueChange={props.onChange}
-        trackColor={{ false: colors.border, true: colors.accent }}
-        thumbColor={props.value ? colors.onAccent : colors.muted}
-      />
-    </View>
-  )
-}
 
 /** One end of the quiet hours. It is taken when the user is done typing, and only if it is a time of day. */
 function TimeField(props: { label: string; value: string; onDone: (value: string) => void }) {
@@ -55,6 +37,7 @@ export function SettingsScreen(props: {
   onPreview: (preview: boolean) => void
   onShowPreview: (show: boolean) => void
   onTags: () => void
+  onKeys: () => void
   onQuietHours: (on: boolean) => void
   onQuietTime: (end: QuietEnd, value: string) => void
   onMuted: (accountId: string) => void
@@ -77,6 +60,9 @@ export function SettingsScreen(props: {
         <SwitchRow label="Text unter dem Betreff zeigen" value={list.showPreview} onChange={props.onShowPreview} />
       </View>
       <Button label="Tags verwalten" variant="secondary" onPress={props.onTags} />
+
+      <Text style={styles.section}>Verschlüsselung</Text>
+      <Button label="Schlüssel verwalten" variant="secondary" onPress={props.onKeys} />
 
       <Text style={styles.section}>Benachrichtigungen</Text>
       <View style={styles.group}>

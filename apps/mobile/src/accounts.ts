@@ -112,7 +112,7 @@ export async function addAccount(
 }
 
 /**
- * Removes an account and everything of it: its folders, its messages, and what waits in the queue
+ * Removes an account and everything of it: its folders, its messages, its own keys, and what waits in the queue
  * for it. In one transaction, so that a failure part way does not leave an account that is gone and
  * messages that belong to nobody. The database has no foreign keys to do this, and a queued action
  * for an account that does not exist would be replayed against nothing.
@@ -122,6 +122,7 @@ export async function removeAccount(db: SqlDb, id: string): Promise<void> {
     await tx.run('DELETE FROM pending_actions WHERE account_id = ?', id)
     await tx.run('DELETE FROM messages WHERE account_id = ?', id)
     await tx.run('DELETE FROM folders WHERE account_id = ?', id)
+    await tx.run('DELETE FROM own_keys WHERE account_id = ?', id)
     await tx.run('DELETE FROM accounts WHERE id = ?', id)
   })
 }

@@ -11,12 +11,13 @@ import { MessagesScreen } from './MessagesScreen'
 import { MoveScreen } from './MoveScreen'
 import { SearchScreen } from './SearchScreen'
 import { SettingsScreen } from './SettingsScreen'
+import { KeysScreen } from './KeysScreen'
 import { TagsScreen } from './TagsScreen'
 import { UnifiedScreen } from './UnifiedScreen'
 
 /** The screen for what the application is showing, with what each of its buttons does handed to it. */
 export function ScreenView(props: { application: Application; screen: Screen }): ReactElement {
-  const { navigator, messages, compose, accounts, settings, selection, tags, services } = props.application
+  const { navigator, messages, compose, accounts, settings, selection, tags, keys, services } = props.application
   const { screen } = props
 
   switch (screen.name) {
@@ -147,6 +148,22 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onDelete={(tag) => void tags.remove(tag.id)}
         />
       )
+    case 'keys':
+      return (
+        <KeysScreen
+          state={screen}
+          onBack={() => settings.show()}
+          onGenerate={(accountId) => void keys.generate(accountId)}
+          onPickFile={() => void keys.pickFile()}
+          onPasted={(text) => void keys.scan(text)}
+          onAdoptOwn={(fingerprint, accountId, passphrase) => void keys.adoptOwn(fingerprint, accountId, passphrase)}
+          onAdoptContact={(fingerprint, address) => void keys.adoptContact(fingerprint, address)}
+          onDismiss={(fingerprint) => void keys.dismiss(fingerprint)}
+          onRemoveOwn={(accountId, fingerprint) => void keys.removeOwn(accountId, fingerprint)}
+          onRemoveContact={(fingerprint) => void keys.removeContact(fingerprint)}
+          onExport={(accountId, fingerprint) => void keys.exportPublic(accountId, fingerprint)}
+        />
+      )
     case 'settings':
       return (
         <SettingsScreen
@@ -156,6 +173,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onPreview={(preview) => settings.setPreview(preview)}
           onShowPreview={(show) => settings.setShowPreview(show)}
           onTags={() => void tags.show()}
+          onKeys={() => void keys.show()}
           onQuietHours={(on) => settings.setQuietHours(on)}
           onQuietTime={(end, value) => settings.setQuietTime(end, value)}
           onMuted={(accountId) => settings.toggleMuted(accountId)}

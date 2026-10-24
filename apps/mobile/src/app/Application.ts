@@ -2,6 +2,7 @@ import type { SqlDb } from '@peregrine/core/sqlDb'
 import { AccountSetup } from './AccountSetup'
 import { describeError } from '../errors'
 import { ComposeController } from './ComposeController'
+import { KeysController } from './KeysController'
 import { MessageController } from './MessageController'
 import { Navigator } from './Navigator'
 import { discardFailedActions, refreshQueueStatus } from './queueStatus'
@@ -24,6 +25,7 @@ export class Application {
   readonly settings: SettingsController
   readonly selection: SelectionController
   readonly tags: TagController
+  readonly keys: KeysController
 
   constructor(
     readonly services: Services,
@@ -37,6 +39,7 @@ export class Application {
     this.settings = new SettingsController(services, store, this.navigator)
     this.selection = new SelectionController(services, store, this.navigator)
     this.tags = new TagController(services, store)
+    this.keys = new KeysController(services, store)
   }
 
   /**

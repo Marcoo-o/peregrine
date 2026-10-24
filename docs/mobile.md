@@ -238,8 +238,7 @@ In:
 
 Out, for now:
 
-- OpenPGP. openpgp.js needs a crypto polyfill on Hermes, and where a private key lives on a
-  phone deserves its own design rather than a port of the desktop's.
+- OpenPGP (done since: see "What OpenPGP found").
 - Filter rules, tasks, snooze, saved searches, several identities per account.
 - Thunderbird import, which has nothing to read from.
 
@@ -380,8 +379,8 @@ and is final in the trash itself, and it settles a move that waited for the same
 **Sending.** The composer and the client of `packages/smtp` over the phone's transport, with the
 sender and the login from the account. A user name or password that was not given for sending is the
 one for reading, and a port that was not given is the one for the kind of connection. It refuses,
-saying why, what the phone cannot do yet and would otherwise do wrongly: attachments, encrypting or
-signing, and a later time. An answer quotes the original and joins its thread, which needed the
+saying why, what the phone cannot do yet and would otherwise do wrongly: a later time (attachments and, later,
+encrypting and signing are done). An answer quotes the original and joins its thread, which needed the
 Message-ID, References and Reply-To of the message read out of the source. A message that went out is
 filed in the account's Sent folder with IMAP `APPEND`, marked read, as most providers do not do it
 themselves. The queue hands its connection to the send handler for this. The copy is made after the
@@ -802,8 +801,8 @@ Seen on the emulator: a new message saved as a draft (flags `\Draft` and `\Seen`
 written), the draft opened from the Drafts folder, written on and saved again, with exactly one draft left on the server.
 Sending a draft and the failure without a connection are covered by tests and were not tried on the device.
 
-Not done: drafts while offline, saving as the user writes, a `Bcc` field, formatted and encrypted drafts, and writing
-on a draft with attached files.
+Not done: drafts while offline, saving as the user writes, a `Bcc` field, formatted drafts, and writing
+on a draft with attached files. (Several of these were done later; see the sections that follow.)
 
 ## What suggesting recipients found
 
@@ -1242,6 +1241,88 @@ draft by itself, which the server has as a multipart message; opening that draft
 change replaces the draft on the server with one that still has it. Covered by tests only: the limit, files without content,
 a failing copy and the clean-up of the copies, for both starts.
 
+## What OpenPGP found
+
+The phone could not write an encrypted or signed message, and showed one that came in as what it was on the wire. The question
+that had been left open was whether OpenPGP runs on Hermes at all, and where a private key lives.
+
+**Does it run.** Yes, with OpenPGP.js 6 and no native module for it, with four things put under it (`src/pgp/runtime.ts`,
+`src/pgp/openpgp.ts`, `metro.config.js`):
+
+- *The build.* Metro takes the Node build of the package, which is no use here. The package is aliased to its browser build
+  as an ES module (`openpgp.min.mjs`); the UMD file is an IIFE that exports nothing as Metro reads it. Where the module comes
+  as `{ default }` it is taken from there.
+- *Random numbers* come from the platform (`react-native-get-random-values`, a TurboModule). Nothing about keys is made
+  from `Math.random`.
+- *`crypto.subtle`* is not in Hermes, and OpenPGP raises as it loads without it. A stand-in is installed that hashes (SHA-1, 256,
+  384, 512, with `@noble/hashes`), because OpenPGP does not fall back where it hashes, and refuses everything else with a
+  `NotSupportedError`, which OpenPGP reads as "use your own" and does, in JavaScript.
+- *`Symbol.species`.* Hermes does not look at it, so `concat` on a class that extends `Array` gives a plain array. OpenPGP joins
+  the packets of a message that is signed and encrypted with the signature after them that way, and then asks for the ones
+  with a tag, which only its own list class knows: reading such a message failed with "undefined is not a function", without
+  a stack, since Hermes gives none here. `PacketList.concat` is given back its own class.
+
+**How long it takes**, measured on the emulator and not on a phone, in the JavaScript of Hermes:
+
+| | |
+|---|---|
+| a key pair (curve 25519) | 0.1 s |
+| encrypting and signing, opening and checking (curve 25519) | under 0.1 s |
+| opening an RSA 4096 message | 2.4 s |
+| signing with RSA 4096 | 8 s |
+| opening a private key that is sealed with a passphrase | 40 s |
+
+The last is the one that matters. A key from a mail program is sealed by hashing the passphrase for tens of millions of bytes
+(the iterated S2K), which is done at the pace of a script here. It is done once, when the key is taken in: the key is kept
+open from then on, in the database, as the desktop keeps it, since a sealed key would ask for its passphrase at every message
+read or sent. The screen says so before it begins. A key sealed with Argon2 would need WebAssembly, which Hermes does not have,
+and is refused. Doing the S2K in Kotlin is the way to make it a second, if 40 seconds turns out to be too much.
+
+**Where the private key lives.** In the database (`own_keys`), which is encrypted, as the passwords of the accounts are. No
+other place on the phone holds it. The keys of the people written to are in `contact_keys`, by address.
+
+**Writing.** `composeProtected` (`packages/smtp`) hands the content of a message over as an entity of its own, and
+`signedBody` and `encryptedBody` (`packages/smtp/src/pgpMime.ts`) put it back as PGP/MIME (RFC 3156), as the desktop writes it:
+the addressing stays outside, since every server on the way needs it, and the content with its attachments is signed or
+encrypted. The signed part is the entity byte for byte, since the signature covers those bytes. Encrypting signs as well, and
+encrypts to the sender's own key too, so that the copy in Sent can be read. A message that is to be encrypted and cannot be (the
+account has no key, or a recipient has none) is refused before it is queued, naming those who lack one, and is refused again
+where it is written, so that it is never written in the clear. A draft that is to be encrypted is encrypted to its author
+alone, as on the desktop, so that autosave does not fail for an address that was typed half an hour ago; a draft that is only
+to be signed is kept as it is. Opening such a draft encrypts it again when it is saved.
+
+**Reading.** `readProtected` looks at the top headers of a message before it decodes anything (most mail is neither signed
+nor encrypted, and a large message is not decoded for that), and then:
+
+- a *signed* message is checked against every key held for the sender, not only the newest one: a sender who has changed keys
+  has signed older mail with the old one. The answers are the desktop's: verified, not checked (no key of the sender), invalid.
+  The account's own keys count for a message that is from the account itself, which is what a copy in Sent is.
+- an *encrypted* message is opened with whichever key of the account fits, and read as the message it was: the outer headers are
+  kept, the content headers come from inside, and so the text, the attachments and the hints are read as for any message.
+- the older inline forms (`BEGIN PGP SIGNED MESSAGE`, `BEGIN PGP MESSAGE` in the text) are read as well.
+
+Nothing is kept of the result: not the opened text (an encrypted message is not stored in the list's text, which a search would
+read) and not the verdict, since a verdict kept says nothing about the message on the screen. A message that cannot be opened
+is shown as it came and said to be encrypted. The hint says what is known, and says less than "authentic" where less is known: a
+valid signature is the key's, and whose key it is, is what the user decided when the key was put there.
+
+**Keys.** A screen in the settings: a key pair made on the phone for an account (curve 25519), a key read from a file or from
+pasted text (several in one file are found, a private key goes to an account and asks for its passphrase when it is sealed, a
+public key to the address it is for), the public half of an own key saved as a file to give away, and removing either, with a
+question first. The fingerprint is shown in full, in two lines, for comparing it with what the owner says it is. An expired key
+is said to be.
+
+Seen on the emulator: a key made for an account, saved as a file and read back by a program on the PC; an encrypted and signed
+message from the PC, which opens with "Verschlüsselt, der Absender ist nicht bestätigt" until the sender's key is read from a
+file, and then with the signature checked; a signed message, "Signiert, die Signatur stimmt"; an encrypted reply to the sender,
+which was sent to the receiving server and opens on the PC with the signature checked. Covered by tests only: keys sealed with a
+passphrase on the phone (the 40 seconds were measured, not the screen), RSA keys, the inline forms, a signature that does not
+match, a recipient without a key, and the removal of the keys with the account.
+
+Not done: keys from a key server or from the address's domain (WKD), a message sent to several recipients of whom some have a
+key and others none (it is refused, not split), expiry and revocation of a contact's key (the desktop shows both; the phone
+uses the key regardless), a default for signing or encrypting, and taking a key from a message that has it attached.
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was
@@ -1297,7 +1378,7 @@ x86_64, and the debug APK is 62 MB with one architecture.
 - Whether the key can be handed over in the form `profileCrypto` derives, if a profile is ever to
   move between a phone and a desktop. The phone's own database does not need it.
 - Foreground service types and daily caps on the Android version being targeted.
-- Hermes and openpgp.js, if PGP is ever wanted.
+- Hermes and openpgp.js: answered, see "What OpenPGP found".
 - nodejs-mobile's actual state, if the shortcut still tempts.
 
 ## Effort, honestly

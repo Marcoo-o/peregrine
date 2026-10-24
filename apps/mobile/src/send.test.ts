@@ -111,13 +111,13 @@ describe('sending from the application', () => {
     expect(t.server.closed).toBe(true)
   })
 
-  it('refuses what the phone cannot do yet, and sends nothing', async () => {
+  it('refuses what the phone cannot do, and sends nothing: a message for later, one to be encrypted or signed without a key', async () => {
     const t = await setup()
     const refused = async (over: Partial<ComposeInput>, reason: RegExp) => {
       await expect(sendMessage(t.db, { makeTransport: t.make }, input(t.account.id, over))).rejects.toThrow(reason)
     }
-    await refused({ encrypt: true }, /Encrypting/)
-    await refused({ sign: true }, /signing/)
+    await refused({ encrypt: true }, /keinen Schlüssel/)
+    await refused({ sign: true }, /keinen Schlüssel/)
     await refused({ sendAt: Date.now() + 3600_000 }, /later time/)
     expect(t.server.connectedWith).toBeNull()
   })
