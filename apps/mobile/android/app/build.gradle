@@ -104,8 +104,7 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
-            // `-PdevSuffix=.dev` makes a debug build that lives next to the one that is installed as a system app (it has the same
-            // signature on no device), for trying something on a device that has the application in its image.
+            // `-PdevSuffix=.dev` gives the debug build another application id, so that it can be installed next to another build.
             if (project.hasProperty('devSuffix')) applicationIdSuffix project.property('devSuffix')
         }
         release {

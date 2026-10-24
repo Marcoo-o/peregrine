@@ -1206,11 +1206,10 @@ minutes at best. There is a switch now that has the application keep the connect
   the connection off, or notifications off, ends the service and deletes the file: nothing that holds a password is left.
 - *The battery:* a foreground service does not keep a phone out of Doze, and the system may close its connection while it rests.
   The setting offers a button to the system's list of the applications that are free of those limits.
-- *A debug build next to the one in the image:* `-PdevSuffix=.dev` gives the debug build another application id, so that it can be
-  tried on a device that has the application in its image (it has another signature there, and the image's cannot be replaced
-  without a new image).
+- *A debug build next to another one:* `-PdevSuffix=.dev` gives the debug build another application id, so that it can be
+  installed next to another build of the application.
 
-Seen on the emulator (the system service switched off for the user with `pm disable-user`): the new section is in the settings,
+Seen on the emulator, where the system has no push service: the new section is in the settings,
 switching it on starts the foreground service (type special use, the notification of the channel for the connection), "watching 1
 inboxes", and a message delivered with the application in the background was notified two seconds later. With the process
 killed hard the system started the service again within two seconds, which read its source from the sealed file and watched
