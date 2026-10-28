@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Text, View } from 'react-native'
 import type { KeysState } from '../app/screens'
 import type { ContactKey, OwnKey } from '../pgp/keyStore'
-import { fingerprintLines } from '../pgp/keyText'
+import { fingerprintLines, healthTag } from '../pgp/keyText'
+import type { KeyState } from '../pgp/pgpService'
 import type { ScannedKey } from '../pgp/pgpService'
 import { Button, Spinner } from './controls'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -24,6 +25,18 @@ function Fingerprint(props: { value: string }) {
         {fingerprintLines(props.value)}
       </Text>
     </>
+  )
+}
+
+/** What is said of a key that is not in order, as a tag; nothing for one that is. */
+function HealthTag(props: { state: KeyState | undefined }) {
+  const styles = useStyles()
+  const tag = props.state ? healthTag(props.state) : null
+  if (!tag) return null
+  return (
+    <View style={tag.tone === 'danger' ? styles.tagDanger : styles.tagWarning}>
+      <Text style={tag.tone === 'danger' ? styles.tagDangerText : styles.tagWarningText}>{tag.text}</Text>
+    </View>
   )
 }
 
@@ -105,7 +118,7 @@ export function KeysScreen(props: {
   onExport: (accountId: string, fingerprint: string) => void
 }) {
   const styles = useStyles()
-  const { accounts, own, contacts, found, working, notice, error } = props.state
+  const { accounts, own, contacts, states, found, working, notice, error } = props.state
   const [pasted, setPasted] = useState('')
   const [removing, setRemoving] = useState<{ title: string; text: string; remove: () => void } | null>(null)
   const idle = working === undefined
@@ -147,11 +160,14 @@ export function KeysScreen(props: {
             <View key={key.fingerprint} style={[styles.group, styles.keyCard]}>
               <Text style={styles.itemTitle}>{account.emailAddress || account.displayName}</Text>
               <Text style={styles.itemMeta}>Angelegt am {dayOf(key.createdAt)}</Text>
-              {index === 0 ? (
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>Signiert damit</Text>
-                </View>
-              ) : null}
+              <View style={styles.actions}>
+                {index === 0 ? (
+                  <View style={styles.tag}>
+                    <Text style={styles.tagText}>Signiert damit</Text>
+                  </View>
+                ) : null}
+                <HealthTag state={states[key.fingerprint]} />
+              </View>
               <Fingerprint value={key.fingerprint} />
               <View style={{ height: 12 }} />
               <Button label="Öffentlichen Teil speichern" variant="secondary" disabled={!idle} onPress={() => props.onExport(account.id, key.fingerprint)} />
@@ -175,6 +191,7 @@ export function KeysScreen(props: {
         <View key={key.fingerprint} style={[styles.group, styles.keyCard]}>
           <Text style={styles.itemTitle}>{key.address}</Text>
           <Text style={styles.itemMeta}>Gemerkt am {dayOf(key.createdAt)}</Text>
+          <HealthTag state={states[key.fingerprint]} />
           <Fingerprint value={key.fingerprint} />
           <View style={{ height: 12 }} />
           <Button label="Entfernen" variant="danger" disabled={!idle} onPress={() => askToRemoveContact(key)} />

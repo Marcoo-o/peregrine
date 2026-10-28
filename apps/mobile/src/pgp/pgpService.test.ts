@@ -5,6 +5,7 @@ import {
   decryptMessage,
   encryptEntity,
   generateKeyPair,
+  keyState,
   scanKeys,
   signEntity,
   unlockKey,
@@ -171,5 +172,47 @@ describe('opening a sealed key', () => {
   it('takes a key that is open as it is, whatever passphrase comes with it', async () => {
     const result = await unlockKey(alex.privateKey, '')
     expect(result.ok).toBe(true)
+  })
+})
+
+/** A key that was made in the past, with a lifetime, so that it has expired by now or is about to. */
+async function keyMadeAgo(daysAgo: number, lifetimeDays: number | undefined, address = 'old@example.org') {
+  return openpgp.generateKey({
+    type: 'ecc',
+    curve: 'curve25519Legacy',
+    userIDs: [{ email: address }],
+    date: new Date(Date.now() - daysAgo * 86_400_000),
+    keyExpirationTime: lifetimeDays === undefined ? undefined : lifetimeDays * 86_400,
+    format: 'object'
+  })
+}
+
+describe('the state of a key', () => {
+  it('is good for encrypting and signing, and does not expire, for a key as it is made', async () => {
+    expect(await keyState(alex.publicKey)).toEqual({ expiresAt: null, revoked: false, canEncrypt: true, canSign: true })
+  })
+
+  it('says when a key expires, and that it can be used until then', async () => {
+    const { publicKey } = await keyMadeAgo(1, 30)
+    const state = await keyState(publicKey.armor())
+    expect(state.canEncrypt).toBe(true)
+    expect(new Date(state.expiresAt as string).getTime()).toBeGreaterThan(Date.now())
+  })
+
+  it('is good for nothing once it has expired', async () => {
+    const { publicKey } = await keyMadeAgo(10, 1)
+    const state = await keyState(publicKey.armor())
+    expect(state).toMatchObject({ revoked: false, canEncrypt: false, canSign: false })
+    expect(new Date(state.expiresAt as string).getTime()).toBeLessThan(Date.now())
+  })
+
+  it('says that a key was withdrawn, and is good for nothing then either', async () => {
+    const made = await keyMadeAgo(1, undefined)
+    const { publicKey } = await openpgp.revokeKey({ key: made.privateKey, format: 'armored' })
+    expect(await keyState(publicKey)).toMatchObject({ revoked: true, canEncrypt: false })
+  })
+
+  it('is good for nothing for what is no key', async () => {
+    expect(await keyState('nonsense')).toEqual({ expiresAt: null, revoked: false, canEncrypt: false, canSign: false })
   })
 })

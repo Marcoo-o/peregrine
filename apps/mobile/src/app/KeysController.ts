@@ -3,7 +3,7 @@ import { listAccounts } from '../accounts'
 import { explainError } from '../errors'
 import { listContactKeys, listOwnKeys, removeContactKey, removeOwnKey, saveContactKey, saveOwnKey } from '../pgp/keyStore'
 import { keyFileName } from '../pgp/keyText'
-import { generateKeyPair, scanKeys, unlockKey } from '../pgp/pgpService'
+import { generateKeyPair, keyState, scanKeys, unlockKey } from '../pgp/pgpService'
 import type { KeysState } from './screens'
 import type { Services } from './services'
 import type { AppStore } from './store'
@@ -31,7 +31,10 @@ export class KeysController {
     const accounts = await listAccounts(db)
     const own: KeysState['own'] = {}
     for (const account of accounts) own[account.id] = await listOwnKeys(db, account.id)
-    this.store.showScreen({ name: 'keys', accounts, own, contacts: await listContactKeys(db), ...patch })
+    const contacts = await listContactKeys(db)
+    const states: KeysState['states'] = {}
+    for (const key of [...Object.values(own).flat(), ...contacts]) states[key.fingerprint] = await keyState(key.publicKey)
+    this.store.showScreen({ name: 'keys', accounts, own, contacts, states, ...patch })
   }
 
   /** The state of the keys screen when it is the screen, or undefined. */

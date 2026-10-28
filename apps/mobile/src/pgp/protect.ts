@@ -2,8 +2,8 @@ import type { SqlDb } from '@peregrine/core/sqlDb'
 import { composeMessage, composeProtected, type AddressInput, type Composed, type ComposeInput, type ComposeOptions } from '@peregrine/smtp/compose'
 import { parseAddress } from '@peregrine/smtp/headers'
 import { encryptedBody, signedBody } from '@peregrine/smtp/pgpMime'
-import { contactKeysFor, signingKey } from './keyStore'
-import { encryptEntity, signEntity } from './pgpService'
+import { contactKeysFor, listOwnKeys, type OwnKey } from './keyStore'
+import { encryptEntity, keyState, signEntity, type KeyState } from './pgpService'
 
 /** What is asked of a message: that it be readable only by those it goes to, that it say who wrote it, or both. */
 export interface Protection {
@@ -18,6 +18,44 @@ function recipientsOf(input: ComposeInput): string[] {
   const all = [...input.to, ...(input.cc ?? []), ...(input.bcc ?? [])].map(addressOf)
   return [...new Map(all.map((address) => [address.toLowerCase(), address])).values()]
 }
+
+/** Why the newest key of a person cannot be used, when none of those held can. */
+type KeyFault = 'expired' | 'revoked' | 'unusable'
+
+const faultOf = (state: KeyState): KeyFault =>
+  state.revoked ? 'revoked' : state.expiresAt !== null && new Date(state.expiresAt) <= new Date() ? 'expired' : 'unusable'
+
+/**
+ * The key to encrypt to for an address: the newest of those held that can still encrypt. A person who has changed keys has
+ * the old one held as well, and an old one that has expired is no reason not to use the new one. When none can, the fault
+ * of the newest says why.
+ */
+async function recipientKey(db: SqlDb, address: string): Promise<{ publicKey: string } | { fault: KeyFault | 'missing' }> {
+  const held = await contactKeysFor(db, address)
+  if (held.length === 0) return { fault: 'missing' }
+  let newest: KeyFault | undefined
+  for (const key of held) {
+    const state = await keyState(key.publicKey)
+    if (state.canEncrypt && !state.revoked) return { publicKey: key.publicKey }
+    newest ??= faultOf(state)
+  }
+  return { fault: newest ?? 'unusable' }
+}
+
+/** The key of an account that signs: the newest that can still sign, or the fault of the newest when none can. */
+async function usableOwnKey(db: SqlDb, accountId: string): Promise<{ key: OwnKey } | { fault: KeyFault | 'missing' }> {
+  const held = await listOwnKeys(db, accountId)
+  if (held.length === 0) return { fault: 'missing' }
+  let newest: KeyFault | undefined
+  for (const key of held) {
+    const state = await keyState(key.publicKey)
+    if (state.canSign && state.canEncrypt && !state.revoked) return { key }
+    newest ??= faultOf(state)
+  }
+  return { fault: newest ?? 'unusable' }
+}
+
+const FAULT_WORDS: Record<KeyFault, string> = { expired: 'abgelaufen', revoked: 'widerrufen', unusable: 'nicht zu gebrauchen' }
 
 /**
  * Why a message cannot be protected as asked, in the words of the screen, or null when it can. The compose screen asks
@@ -35,15 +73,26 @@ export async function protectionProblem(
   options: { draft?: boolean } = {}
 ): Promise<string | null> {
   if (!protection.encrypt && !protection.sign) return null
-  if (!(await signingKey(db, accountId))) {
-    return 'Für dieses Konto gibt es keinen Schlüssel. In den Einstellungen lässt sich einer anlegen oder einlesen.'
+  const own = await usableOwnKey(db, accountId)
+  if ('fault' in own) {
+    return own.fault === 'missing'
+      ? 'Für dieses Konto gibt es keinen Schlüssel. In den Einstellungen lässt sich einer anlegen oder einlesen.'
+      : `Der Schlüssel dieses Kontos ist ${FAULT_WORDS[own.fault]}. In den Einstellungen lässt sich ein neuer anlegen.`
   }
   if (!protection.encrypt || options.draft) return null
   const missing: string[] = []
-  for (const address of recipients) if ((await contactKeysFor(db, address)).length === 0) missing.push(address)
-  return missing.length === 0
-    ? null
-    : `Für ${missing.join(', ')} ist kein Schlüssel hinterlegt. Ohne ihn lässt sich die Nachricht nicht verschlüsseln.`
+  const faults: Record<KeyFault, string[]> = { expired: [], revoked: [], unusable: [] }
+  for (const address of recipients) {
+    const found = await recipientKey(db, address)
+    if ('fault' in found) (found.fault === 'missing' ? missing : faults[found.fault]).push(address)
+  }
+  const parts = [
+    missing.length > 0 ? `Für ${missing.join(', ')} ist kein Schlüssel hinterlegt.` : '',
+    ...(Object.keys(faults) as KeyFault[]).map((fault) =>
+      faults[fault].length > 0 ? `Der Schlüssel für ${faults[fault].join(', ')} ist ${FAULT_WORDS[fault]}.` : ''
+    )
+  ].filter((part) => part !== '')
+  return parts.length === 0 ? null : `${parts.join(' ')} Ohne einen gültigen Schlüssel lässt sich die Nachricht nicht verschlüsseln.`
 }
 
 /**
@@ -62,8 +111,9 @@ export async function composeProtectedMessage(
 ): Promise<Composed> {
   const problem = await protectionProblem(db, accountId, protection, recipientsOf(input), options)
   if (problem) throw new Error(problem)
-  const own = await signingKey(db, accountId)
-  if (!own) throw new Error('Für dieses Konto gibt es keinen Schlüssel.')
+  const usable = await usableOwnKey(db, accountId)
+  if ('fault' in usable) throw new Error('Für dieses Konto gibt es keinen Schlüssel, der sich gebrauchen ließe.')
+  const own = usable.key
 
   if (options.draft) {
     if (!protection.encrypt) return composeMessage(input, options)
@@ -73,7 +123,11 @@ export async function composeProtectedMessage(
   }
   if (protection.encrypt) {
     const keys: string[] = []
-    for (const address of recipientsOf(input)) keys.push((await contactKeysFor(db, address))[0].publicKey)
+    for (const address of recipientsOf(input)) {
+      const found = await recipientKey(db, address)
+      if ('fault' in found) throw new Error(`Für ${address} gibt es keinen Schlüssel, der sich gebrauchen ließe.`)
+      keys.push(found.publicKey)
+    }
     return composeProtected(input, options, async (entity) =>
       encryptedBody(await encryptEntity(entity.source, [...keys, own.publicKey], own.privateKey), options.random)
     )

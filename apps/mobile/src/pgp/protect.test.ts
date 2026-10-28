@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
+import * as openpgp from 'openpgp'
 import { parsePgpMime } from '@peregrine/core/pgpMimeParser'
 import type { ComposeInput } from '@peregrine/core/types'
 import { addAccount, type NewAccount } from '../accounts'
@@ -166,5 +167,82 @@ describe('what is asked of a message and cannot be done', () => {
   it('does not ask for the keys of the recipients of a draft', async () => {
     const { db, account } = await setup({ own: true })
     expect(await protectionProblem(db, account.id, { encrypt: true, sign: false }, ['sam@example.net'], { draft: true })).toBeNull()
+  })
+})
+
+async function oldKey(address: string, daysAgo: number, lifetimeDays?: number) {
+  return openpgp.generateKey({
+    type: 'ecc',
+    curve: 'curve25519Legacy',
+    userIDs: [{ email: address }],
+    date: new Date(Date.now() - daysAgo * 86_400_000),
+    keyExpirationTime: lifetimeDays === undefined ? undefined : lifetimeDays * 86_400,
+    format: 'object'
+  })
+}
+
+describe('a key that cannot be used any more', () => {
+  it('of a recipient that has expired is said to be, naming the address, and the message is not written', async () => {
+    const { db, account } = await setup({ own: true, sam: false })
+    const expired = await oldKey('sam@example.net', 10, 1)
+    await saveContactKey(db, { fingerprint: expired.publicKey.getFingerprint(), address: 'sam@example.net', publicKey: expired.publicKey.armor(), createdAt: 1 })
+    expect(await protectionProblem(db, account.id, { encrypt: true, sign: false }, ['sam@example.net'])).toMatch(
+      /Der Schlüssel für sam@example\.net ist abgelaufen\./
+    )
+    await expect(composeFromInput(db, account, input(account.id, { encrypt: true }), undefined)).rejects.toThrow('sam@example.net')
+  })
+
+  it('of a recipient that was withdrawn is said to be', async () => {
+    const { db, account } = await setup({ own: true, sam: false })
+    const made = await oldKey('sam@example.net', 1)
+    const { publicKey } = await openpgp.revokeKey({ key: made.privateKey, format: 'armored' })
+    await saveContactKey(db, { fingerprint: made.publicKey.getFingerprint(), address: 'sam@example.net', publicKey, createdAt: 1 })
+    expect(await protectionProblem(db, account.id, { encrypt: true, sign: false }, ['sam@example.net'])).toMatch(/ist widerrufen\./)
+  })
+
+  it('of a recipient is passed over for a newer one of the same address that can be used', async () => {
+    const { db, account } = await setup({ own: true, sam: false })
+    const expired = await oldKey('sam@example.net', 10, 1)
+    await saveContactKey(db, { fingerprint: expired.publicKey.getFingerprint(), address: 'sam@example.net', publicKey: expired.publicKey.armor(), createdAt: 1 })
+    await saveContactKey(db, { fingerprint: sam.fingerprint, address: 'sam@example.net', publicKey: sam.publicKey, createdAt: 2 })
+    expect(await protectionProblem(db, account.id, { encrypt: true, sign: false }, ['sam@example.net'])).toBeNull()
+    const composed = await composeFromInput(db, account, input(account.id, { encrypt: true }), undefined)
+    const parsed = parsePgpMime(text(composed.source))
+    if (parsed.kind !== 'encrypted') throw new Error('not encrypted')
+    expect((await decryptMessage(parsed.ciphertext, [sam.privateKey], [])).text).toContain('Content-Type')
+  })
+
+  it('of the account that has expired is said to be, and nothing is signed with it', async () => {
+    const { db } = await migratedDatabase()
+    const account = await addAccount(db, NEW_ACCOUNT)
+    const expired = await oldKey('alex@example.org', 10, 1)
+    await saveOwnKey(db, {
+      fingerprint: expired.publicKey.getFingerprint(),
+      accountId: account.id,
+      publicKey: expired.publicKey.armor(),
+      privateKey: expired.privateKey.armor(),
+      createdAt: 1
+    })
+    expect(await protectionProblem(db, account.id, { encrypt: false, sign: true }, [])).toMatch(/Schlüssel dieses Kontos ist abgelaufen/)
+    await expect(composeFromInput(db, account, input(account.id, { sign: true }), undefined)).rejects.toThrow()
+  })
+
+  it('of the account is passed over for a newer one that can be used', async () => {
+    const { db } = await migratedDatabase()
+    const account = await addAccount(db, NEW_ACCOUNT)
+    const expired = await oldKey('alex@example.org', 10, 1)
+    await saveOwnKey(db, {
+      fingerprint: expired.publicKey.getFingerprint(),
+      accountId: account.id,
+      publicKey: expired.publicKey.armor(),
+      privateKey: expired.privateKey.armor(),
+      createdAt: 5
+    })
+    await saveOwnKey(db, { fingerprint: alex.fingerprint, accountId: account.id, publicKey: alex.publicKey, privateKey: alex.privateKey, createdAt: 1 })
+    // The newest is the expired one; the older one that works is what signs.
+    expect(await protectionProblem(db, account.id, { encrypt: false, sign: true }, [])).toBeNull()
+    const composed = await composeFromInput(db, account, input(account.id, { sign: true }), undefined)
+    const parsed = parsePgpMime(text(composed.source))
+    expect(parsed.kind === 'signed' && (await verifyDetached(parsed.signedEntity, parsed.signature, [alex.publicKey]))).toBe('valid')
   })
 })
