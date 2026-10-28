@@ -32,7 +32,7 @@ export function AttachmentList(props: {
               {riskText(finding)}
             </Text>
           ))}
-          <View style={styles.row}>
+          <View style={styles.actions}>
             <Chip label="Speichern" active={false} onPress={() => props.onSave(attachment)} />
             <Chip label="Öffnen" active={false} onPress={() => props.onOpen(attachment)} />
             {props.onTakeKey && looksLikeKeyFile(attachment) ? (
