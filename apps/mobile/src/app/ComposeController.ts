@@ -6,6 +6,7 @@ import { draftsFolderOf } from '../drafts'
 import { newId } from '../ids'
 import { explainError } from '../errors'
 import { protectionProblem } from '../pgp/protect'
+import type { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { smtpSettingsOf } from '../send'
 import { autosaveDue } from './autosave'
 import type { Navigator } from './Navigator'
@@ -28,7 +29,8 @@ export class ComposeController {
   constructor(
     private readonly services: Services,
     private readonly store: AppStore,
-    private readonly navigator: Navigator
+    private readonly navigator: Navigator,
+    private readonly protection: ProtectionDefaults
   ) {
     // A draft that waited for a connection is kept when the queue runs, which can be while the message is still on the screen.
     services.mail.onDraftKept((session, kept) => {
@@ -46,7 +48,7 @@ export class ComposeController {
 
   /** An empty message from an account, and the screen to show again when it is done with. */
   startNew(account: Account, returnTo: Screen): void {
-    this.show({ account, returnTo, draft: emptyDraft })
+    this.show({ account, returnTo, draft: this.started(account, emptyDraft) })
   }
 
   /**
@@ -67,13 +69,17 @@ export class ComposeController {
   /** An answer to the open message, once its text is there to quote. */
   startReply(state: MessageState): void {
     if (!state.message) return
-    this.show({ account: state.account, returnTo: state, draft: replyDraft(state.message) })
+    this.show({ account: state.account, returnTo: state, draft: this.started(state.account, replyDraft(state.message)) })
   }
 
   /** An answer to everybody the open message went to. */
   startReplyAll(state: MessageState): void {
     if (!state.message) return
-    this.show({ account: state.account, returnTo: state, draft: replyAllDraft(state.message, state.account.emailAddress) })
+    this.show({
+      account: state.account,
+      returnTo: state,
+      draft: this.started(state.account, replyAllDraft(state.message, state.account.emailAddress))
+    })
   }
 
   /** The open message, to be passed on to somebody. */
@@ -83,7 +89,7 @@ export class ComposeController {
    */
   async startForward(state: MessageState): Promise<void> {
     if (!state.message) return
-    const draft = forwardDraft(state.message)
+    const draft = this.started(state.account, forwardDraft(state.message))
     const infos = state.attachments ?? []
     if (infos.length === 0) {
       this.show({ account: state.account, returnTo: state, draft })
@@ -274,6 +280,11 @@ export class ComposeController {
       recipientAddresses(draft),
       options
     )
+  }
+
+  /** A message that is started, with signing and encrypting on where the user wants them for every message and the account can. */
+  private started(account: Account, draft: Draft): Draft {
+    return { ...draft, ...this.protection.forAccount(account.id) }
   }
 
   /** The state it was given with what has been kept since, which is on the screen while the writing of it is. */

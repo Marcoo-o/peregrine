@@ -15,6 +15,12 @@ export function healthTag(facts: KeyFacts, now: Date = new Date()): { text: stri
   return { text: `Läuft ${when} ab`, tone: 'warning' }
 }
 
+/** Whether an attachment is, by its name and its type, a file with keys in it, which can be taken from the message. */
+export function looksLikeKeyFile(attachment: { filename: string; contentType: string }): boolean {
+  if (attachment.contentType.toLowerCase() === 'application/pgp-signature') return false
+  return attachment.contentType.toLowerCase() === 'application/pgp-keys' || /\.(asc|gpg|pgp|key)$/i.test(attachment.filename)
+}
+
 /**
  * A fingerprint as people compare it: in groups of four, in upper case, in two lines of five groups. It is 40 characters
  * long, and what is read out or checked against what the owner of the key says is all of it.

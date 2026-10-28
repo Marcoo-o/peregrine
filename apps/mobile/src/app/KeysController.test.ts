@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import * as openpgp from 'openpgp'
 import { encodeUtf8 } from '@peregrine/imap/utf8'
+import { composeMessage } from '@peregrine/smtp/compose'
+import { listAttachments } from '../attachments'
 import { contactKeysFor, listOwnKeys } from '../pgp/keyStore'
 import { generateKeyPair, type KeyPair } from '../pgp/pgpService'
 import { appHarness } from '../testing/appHarness'
@@ -163,5 +165,74 @@ describe('letting go of a key and giving one away', () => {
     t.files.saveAnswer = false
     await t.app.keys.exportPublic(t.work.id, own.fingerprint)
     expect(t.shown().error).toBeUndefined()
+  })
+})
+
+describe('taking a key from a message', () => {
+  const withKeyAttached = (content: string) =>
+    composeMessage({
+      from: 'sam@example.net',
+      to: ['work@example.org'],
+      subject: 'My key',
+      text: 'Here it is.',
+      attachments: [{ filename: 'sam.asc', contentType: 'application/pgp-keys', content: encodeUtf8(content) }]
+    }).source
+
+  it('shows what the attached file holds, to be placed, and stores nothing yet', async () => {
+    const t = await keys()
+    const source = withKeyAttached(sam.publicKey)
+    const [attachment] = listAttachments(source)
+    await t.app.keys.takeFrom(source, attachment)
+    expect(t.shown().name).toBe('keys')
+    expect(t.shown().found?.map((key) => key.addresses)).toEqual([['sam@example.net']])
+    expect(await contactKeysFor(t.db, 'sam@example.net')).toEqual([])
+  })
+
+  it('says so when the file holds no key', async () => {
+    const t = await keys()
+    const source = withKeyAttached('nothing to see')
+    const [attachment] = listAttachments(source)
+    await t.app.keys.takeFrom(source, attachment)
+    expect(t.shown().error).toMatch(/kein Schlüssel/)
+  })
+
+  it('says so when the message has no such part any more', async () => {
+    const t = await keys()
+    const [attachment] = listAttachments(withKeyAttached(sam.publicKey))
+    await t.app.keys.takeFrom(undefined, attachment)
+    expect(t.shown().error).toMatch(/nicht lesen/)
+  })
+})
+
+describe('what the screen says of the state of the keys', () => {
+  it('has the state of every key, own and of others', async () => {
+    const t = await keys()
+    await t.app.keys.generate(t.work.id)
+    await t.app.keys.scan(sam.publicKey)
+    await t.app.keys.adoptContact(sam.fingerprint, 'sam@example.net')
+    const states = t.shown().states
+    const [own] = await listOwnKeys(t.db, t.work.id)
+    expect(states[own.fingerprint]).toMatchObject({ revoked: false, canEncrypt: true, canSign: true })
+    expect(states[sam.fingerprint]).toMatchObject({ revoked: false, canEncrypt: true })
+  })
+})
+
+describe('what the user wants of every message', () => {
+  it('is shown and set from the keys screen', async () => {
+    const t = await keys()
+    expect(t.shown().defaults).toEqual({ sign: false, encrypt: false })
+    await t.app.keys.setDefault('sign', true)
+    expect(t.shown().defaults).toEqual({ sign: true, encrypt: false })
+    await t.app.keys.setDefault('encrypt', true)
+    expect(t.shown().defaults).toEqual({ sign: true, encrypt: true })
+    await t.app.keys.setDefault('sign', false)
+    expect(t.shown().defaults).toEqual({ sign: false, encrypt: true })
+  })
+
+  it('is read by the application when it starts, so that the first message already has it', async () => {
+    const t = await keys()
+    await t.app.keys.generate(t.work.id)
+    await t.app.keys.setDefault('sign', true)
+    expect(t.app.protection.forAccount(t.work.id)).toEqual({ sign: true })
   })
 })

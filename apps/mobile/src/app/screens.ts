@@ -164,6 +164,8 @@ export interface KeysState {
   /** The keys of each account, by the id of the account, the newest first. */
   own: Record<string, OwnKey[]>
   contacts: ContactKey[]
+  /** What the user wants of every message: signed, encrypted. */
+  defaults: { sign: boolean; encrypt: boolean }
   /** What each key is good for now, by fingerprint: expired, withdrawn. */
   states: Record<string, KeyState>
   /** What was read from a file or from pasted text, not stored yet: the user says where each key belongs. */

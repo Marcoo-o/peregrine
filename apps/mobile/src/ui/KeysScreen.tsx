@@ -5,7 +5,7 @@ import type { ContactKey, OwnKey } from '../pgp/keyStore'
 import { fingerprintLines, healthTag } from '../pgp/keyText'
 import type { KeyState } from '../pgp/pgpService'
 import type { ScannedKey } from '../pgp/pgpService'
-import { Button, Spinner } from './controls'
+import { Button, Spinner, SwitchRow } from './controls'
 import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
@@ -116,9 +116,10 @@ export function KeysScreen(props: {
   onRemoveOwn: (accountId: string, fingerprint: string) => void
   onRemoveContact: (fingerprint: string) => void
   onExport: (accountId: string, fingerprint: string) => void
+  onDefault: (which: 'sign' | 'encrypt', on: boolean) => void
 }) {
   const styles = useStyles()
-  const { accounts, own, contacts, states, found, working, notice, error } = props.state
+  const { accounts, own, contacts, states, defaults, found, working, notice, error } = props.state
   const [pasted, setPasted] = useState('')
   const [removing, setRemoving] = useState<{ title: string; text: string; remove: () => void } | null>(null)
   const idle = working === undefined
@@ -151,6 +152,22 @@ export function KeysScreen(props: {
       ) : null}
       {notice ? <Text style={styles.hint}>{notice}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Text style={styles.section}>Beim Schreiben</Text>
+      <View style={styles.group}>
+        <SwitchRow
+          label="Immer signieren"
+          hint="Jede neue Nachricht beginnt signiert. Das gilt für Konten mit einem Schlüssel."
+          value={defaults.sign}
+          onChange={(on) => props.onDefault('sign', on)}
+        />
+        <SwitchRow
+          label="Immer verschlüsseln"
+          hint="Jede neue Nachricht beginnt verschlüsselt. Ohne Schlüssel des Empfängers lässt sie sich nicht senden, dann schaltest du es für diese Nachricht aus."
+          value={defaults.encrypt}
+          onChange={(on) => props.onDefault('encrypt', on)}
+        />
+      </View>
 
       <Text style={styles.section}>Deine Schlüssel</Text>
       {accounts.length === 0 ? <Text style={styles.hint}>Es gibt noch kein Konto.</Text> : null}

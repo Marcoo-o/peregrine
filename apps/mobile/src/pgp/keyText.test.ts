@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fingerprintLines, healthTag, keyFileName } from './keyText'
+import { fingerprintLines, healthTag, keyFileName, looksLikeKeyFile } from './keyText'
 
 const FINGERPRINT = '0123456789abcdef0123456789abcdef01234567'
 
@@ -46,5 +46,22 @@ describe('what is said of a key that is not in order', () => {
     expect(healthTag({ expiresAt: inDays(10), revoked: false }, now)).toEqual({ text: 'Läuft in 10 Tagen ab', tone: 'warning' })
     expect(healthTag({ expiresAt: inDays(1), revoked: false }, now)?.text).toBe('Läuft morgen ab')
     expect(healthTag({ expiresAt: new Date(now.getTime() + 3_600_000).toISOString(), revoked: false }, now)?.text).toBe('Läuft morgen ab')
+  })
+})
+
+describe('a file with keys in it', () => {
+  const file = (filename: string, contentType = 'application/octet-stream') => ({ filename, contentType })
+
+  it('is one that says so by its type, or by the ending of its name', () => {
+    expect(looksLikeKeyFile(file('alex.txt', 'application/pgp-keys'))).toBe(true)
+    expect(looksLikeKeyFile(file('alex.asc'))).toBe(true)
+    expect(looksLikeKeyFile(file('ALEX.GPG'))).toBe(true)
+    expect(looksLikeKeyFile(file('alex.pgp'))).toBe(true)
+    expect(looksLikeKeyFile(file('alex.key'))).toBe(true)
+  })
+
+  it('is not an ordinary file, nor the signature of a message', () => {
+    expect(looksLikeKeyFile(file('plan.pdf', 'application/pdf'))).toBe(false)
+    expect(looksLikeKeyFile(file('signature.asc', 'application/pgp-signature'))).toBe(false)
   })
 })

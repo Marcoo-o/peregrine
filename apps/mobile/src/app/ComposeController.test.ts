@@ -4,7 +4,7 @@ import { getAccount } from '../accounts'
 import { listAttachments } from '../attachments'
 import { listFolders } from '../folders'
 import type { StoredMessage } from '../messages'
-import { emptyDraft, type Draft } from '../draft'
+import { emptyDraft, isChanged, type Draft } from '../draft'
 import { appHarness, eventually } from '../testing/appHarness'
 import { saveOwnKey } from '../pgp/keyStore'
 import { generateKeyPair } from '../pgp/pgpService'
@@ -37,6 +37,53 @@ describe('who can send', () => {
     const noServer = await t.givenAccount('b', {}, { smtpHost: null })
     expect(senderProblem(noAddress)).toMatch(/keine Absenderadresse/)
     expect(senderProblem(noServer)).toMatch(/kein Server zum Senden/)
+  })
+})
+
+describe('starting a message with what the user wants of every message', () => {
+  async function withKey(on: { sign?: boolean; encrypt?: boolean }) {
+    const t = await composing()
+    const own = await generateKeyPair('Work', 'work@example.org')
+    await saveOwnKey(t.db, { fingerprint: own.fingerprint, accountId: t.work.id, publicKey: own.publicKey, privateKey: own.privateKey, createdAt: 1 })
+    await t.app.protection.change(on)
+    await t.app.protection.load()
+    return t
+  }
+
+  it('is signed and encrypted from the start where both are wanted and the account has a key', async () => {
+    const t = await withKey({ sign: true, encrypt: true })
+    t.app.compose.startNew(t.work, returnTo)
+    expect((t.store.screen as ComposeState).draft).toMatchObject({ sign: true, encrypt: true })
+  })
+
+  it('starts an answer in the same way', async () => {
+    const t = await withKey({ sign: true })
+    const message: MessageState = {
+      name: 'message',
+      account: t.work,
+      folder: undefined as never,
+      summary: undefined as never,
+      origin: 'folder',
+      message: readable()
+    }
+    t.app.compose.startReply(message)
+    expect((t.store.screen as ComposeState).draft).toMatchObject({ sign: true })
+    expect((t.store.screen as ComposeState).draft.encrypt).toBeUndefined()
+  })
+
+  it('is as it would have been for an account without a key', async () => {
+    const t = await composing()
+    await t.app.protection.change({ sign: true, encrypt: true })
+    await t.app.protection.load()
+    t.app.compose.startNew(t.work, returnTo)
+    expect((t.store.screen as ComposeState).draft).toEqual(emptyDraft)
+  })
+
+  it('does not count as a change that has to be kept: leaving it as it started loses nothing', async () => {
+    const t = await withKey({ sign: true })
+    t.app.compose.startNew(t.work, returnTo)
+    const state = t.store.screen as ComposeState
+    expect(isChanged(state.draft, state.draft)).toBe(false)
   })
 })
 
