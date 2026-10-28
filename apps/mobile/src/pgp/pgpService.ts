@@ -1,6 +1,7 @@
 import { addressesFromUserIds } from '@peregrine/core/keyImport'
 import { decodeUtf8 } from '@peregrine/imap/utf8'
 import type { Key, PrivateKey } from 'openpgp'
+import { installNativeS2k, type NativeS2k } from './nativeS2k'
 import { openpgp } from './openpgp'
 
 /** A key pair, both halves as ASCII armor, the private one open. */
@@ -115,18 +116,28 @@ export async function keyState(armoredKey: string): Promise<KeyState> {
   }
 }
 
+/** The hashing of the platform, where there is one, which opening a sealed key then uses. */
+let platformHash: NativeS2k | undefined
+
+/** Gives the platform's hashing to what opens a sealed key. Called once, where the application starts. */
+export function useNativeS2k(hash: NativeS2k | undefined): void {
+  platformHash = hash
+}
+
 export type UnlockResult = { ok: true; privateKey: string } | { ok: false; reason: 'wrongPassphrase' | 'passphraseRequired' }
 
 /**
  * Opens a private key that is sealed. Done once, when the key is taken in, and the key is kept open after that, as the
  * desktop does it: a key that stayed sealed would ask for its passphrase at every message that is read or signed.
  *
- * It takes long: a key from a mail program is sealed so that opening it needs a great many rounds of a hash, which
- * this runtime does at the pace of a script. The callers say so.
+ * It takes long where the hashing is left to a script: a key from a mail program is sealed so that opening it needs tens of
+ * millions of bytes hashed. The platform does that where it has been given (`useNativeS2k`), in a moment; the callers say so
+ * where it has not.
  */
 export async function unlockKey(armoredPrivateKey: string, passphrase: string): Promise<UnlockResult> {
   const key = await openpgp.readPrivateKey({ armoredKey: armoredPrivateKey })
   if (key.isDecrypted()) return { ok: true, privateKey: key.armor() }
+  if (platformHash) installNativeS2k(key, platformHash)
   if (passphrase === '') return { ok: false, reason: 'passphraseRequired' }
   try {
     return { ok: true, privateKey: (await openpgp.decryptKey({ privateKey: key, passphrase })).armor() }

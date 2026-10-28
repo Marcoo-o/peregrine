@@ -1270,13 +1270,14 @@ that had been left open was whether OpenPGP runs on Hermes at all, and where a p
 | encrypting and signing, opening and checking (curve 25519) | under 0.1 s |
 | opening an RSA 4096 message | 2.4 s |
 | signing with RSA 4096 | 8 s |
-| opening a private key that is sealed with a passphrase | 40 s |
+| opening a private key that is sealed with a passphrase (16 million bytes to hash), in JavaScript | 40 s |
+| the same, hashed by the platform (see "What opening a sealed key natively found") | a few seconds |
 
 The last is the one that matters. A key from a mail program is sealed by hashing the passphrase for tens of millions of bytes
 (the iterated S2K), which is done at the pace of a script here. It is done once, when the key is taken in: the key is kept
 open from then on, in the database, as the desktop keeps it, since a sealed key would ask for its passphrase at every message
 read or sent. The screen says so before it begins. A key sealed with Argon2 would need WebAssembly, which Hermes does not have,
-and is refused. Doing the S2K in Kotlin is the way to make it a second, if 40 seconds turns out to be too much.
+and is refused. The hashing is done by the platform now, which is the way to make it seconds.
 
 **Where the private key lives.** In the database (`own_keys`), which is encrypted, as the passwords of the accounts are. No
 other place on the phone holds it. The keys of the people written to are in `contact_keys`, by address.
@@ -1316,11 +1317,11 @@ Seen on the emulator: a key made for an account, saved as a file and read back b
 message from the PC, which opens with "Verschlüsselt, der Absender ist nicht bestätigt" until the sender's key is read from a
 file, and then with the signature checked; a signed message, "Signiert, die Signatur stimmt"; an encrypted reply to the sender,
 which was sent to the receiving server and opens on the PC with the signature checked. Covered by tests only: keys sealed with a
-passphrase on the phone (the 40 seconds were measured, not the screen), RSA keys, the inline forms, a signature that does not
+passphrase on the phone (the time of the JavaScript was measured, not the screen), RSA keys, the inline forms, a signature that does not
 match, a recipient without a key, and the removal of the keys with the account.
 
 Not done: keys from a key server or from the address's domain (WKD), a message sent to several recipients of whom some have a
-key and others none (it is refused, not split), and opening a sealed key faster than the script does. What was left in this
+key and others none (it is refused, not split), (opening a sealed key faster than the script does is in the section after the next). What was left in this
 list at first (expiry and revocation, a default for signing and encrypting, taking a key from a message) is in the next section.
 
 ## What finishing OpenPGP found
@@ -1343,6 +1344,29 @@ list at first (expiry and revocation, a default for signing and encrypting, taki
   (`ProtectionDefaults`), since a message is started without waiting for the database.
 - *No more dots between two things.* The lists said "account · folder" and similar in several places. The account is now a small
   line over the name of the list, the lines of the status are lines, and the others have a comma or a word.
+
+## What opening a sealed key natively found
+
+A private key from a mail program is sealed with a key that is made of the passphrase by hashing the salt and the passphrase,
+written one after the other again and again, for a number of bytes: the iterated string-to-key. OpenPGP.js builds those bytes as
+one array and hashes it in JavaScript. At OpenPGP.js's own count of 16 million bytes that took 40 seconds on the emulator, for a
+key and its subkey together; GnuPG asks for more (about 65 million) when it calibrates, and the time goes with it.
+
+- *The platform hashes.* `IteratedS2k` (Kotlin, `MessageDigest`) feeds the hash from a block of some 64 KiB that is the repeated data,
+  so that no array of tens of megabytes is ever made, and `PeregrinePgpModule` hands the hash back as base64 off the thread of the
+  script. Only the salt, the passphrase and the count cross the bridge, and the hash comes back.
+- *OpenPGP stays in charge of everything else.* `installNativeS2k` replaces `produceKey` on the class of the specifier, which a key
+  that is sealed gives (the class is not exported), once. It takes the platform's hash only where the result is the same: the iterated
+  specifier, and a hash that is long enough for the key at one go (SHA-1 to SHA-512, 20 bytes or more, for AES-128 and AES-256 with
+  SHA-256, which is what OpenPGP.js and GnuPG make). A key that needs two hashes, the other specifiers and Argon2 go the way they went.
+  Without the module (a test, a build without it) nothing changes.
+- *Tested.* The Kotlin hash against values made with a plain loop in another program, byte by byte, for several counts, among them
+  one that is not a whole number of copies and one below the length of the data; the replaced method against OpenPGP's own: the key
+  that comes out is the key that went in, for the count a key is sealed with and for another, with a wrong passphrase refused, and with
+  the platform asked for the primary key and each subkey, and not asked for a key that needs two hashes.
+
+Seen on the emulator: a key sealed with 65 million bytes was taken for the account within the 11 seconds that this took to type and
+to look at, where 16 million took 40 seconds before. The time of the hash itself was not measured apart from that.
 
 ## What stage 4 found
 

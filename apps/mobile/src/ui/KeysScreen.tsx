@@ -81,7 +81,7 @@ function FoundKey(props: {
                 value={passphrase}
                 onChangeText={setPassphrase}
               />
-              <Text style={styles.hint}>Ein geschützter Schlüssel braucht hier bis zu einer Minute zum Öffnen, einmalig.</Text>
+              <Text style={styles.hint}>Das Öffnen eines geschützten Schlüssels dauert einige Sekunden und geschieht nur einmal.</Text>
             </>
           ) : null}
           {accounts.map((account) => (
