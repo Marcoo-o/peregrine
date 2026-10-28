@@ -50,7 +50,8 @@ export function MessagesScreen(props: {
         <>
           <TopBar onSearch={props.onSearch} onRefresh={props.onRefresh} onSettings={props.onSettings} />
           <ListHead
-            title={`${account.displayName} · ${folderLabel(folder)}`}
+            title={folderLabel(folder)}
+            subtitle={account.displayName}
             total={messages.length}
             shown={rows.length}
             filter={filter}

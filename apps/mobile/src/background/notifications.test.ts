@@ -114,7 +114,7 @@ describe('the notifications for messages that are back', () => {
         accountId: 'work',
         title: 'Anna',
         body: 'Budget',
-        subtitle: 'Wiedervorlage · Work',
+        subtitle: 'Wiedervorlage für Work',
         count: 1,
         target: { accountId: 'work', folderId: 'f-work', uid: 1 }
       }

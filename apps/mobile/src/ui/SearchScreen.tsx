@@ -70,7 +70,7 @@ export function SearchScreen(props: {
             message={item}
             sender={item.sender}
             showPreview={props.state.showPreview}
-            account={`${item.accountName} · ${folderLabel(item.folder)}`}
+            account={`${item.accountName}, ${folderLabel(item.folder)}`}
             accountColor={item.accountColor}
             pendingNote={item.pendingMoveTo ? 'wird verschoben, sobald es geht' : undefined}
             onPress={() => props.onOpen(item)}

@@ -12,7 +12,11 @@ export function StatusLine(props: { online: boolean; waiting: QueueStatus | null
   if (lines.length === 0 && !failed) return null
   return (
     <View style={styles.status}>
-      {lines.length > 0 ? <Text style={styles.statusText}>{lines.join(' · ')}</Text> : null}
+      {lines.map((line) => (
+        <Text key={line} style={styles.statusText}>
+          {line}
+        </Text>
+      ))}
       {props.waiting?.problem ? <Text style={styles.statusProblem}>{props.waiting.problem}</Text> : null}
       {failed ? (
         <Pressable onPress={props.onDiscard}>
