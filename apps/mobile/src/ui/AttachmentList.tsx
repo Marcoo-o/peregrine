@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native'
 import type { AttachmentInfo } from '../attachments'
 import { formatSize, riskText } from '../attachmentText'
+import { looksLikeKeyFile } from '../pgp/keyText'
 import { Chip } from './controls'
 import { Icon } from './Icon'
 import { useStyles } from './useStyles'
@@ -10,6 +11,8 @@ export function AttachmentList(props: {
   attachments: AttachmentInfo[]
   onSave: (attachment: AttachmentInfo) => void
   onOpen: (attachment: AttachmentInfo) => void
+  /** Takes the keys that a file holds, for the files that look like one. */
+  onTakeKey?: (attachment: AttachmentInfo) => void
 }) {
   const styles = useStyles()
   if (props.attachments.length === 0) return null
@@ -29,9 +32,12 @@ export function AttachmentList(props: {
               {riskText(finding)}
             </Text>
           ))}
-          <View style={styles.row}>
+          <View style={styles.actions}>
             <Chip label="Speichern" active={false} onPress={() => props.onSave(attachment)} />
             <Chip label="Öffnen" active={false} onPress={() => props.onOpen(attachment)} />
+            {props.onTakeKey && looksLikeKeyFile(attachment) ? (
+              <Chip label="Schlüssel übernehmen" icon="key" active={false} onPress={() => props.onTakeKey?.(attachment)} />
+            ) : null}
           </View>
         </View>
       ))}

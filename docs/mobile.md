@@ -948,7 +948,7 @@ back after it.
   message in it says "Zurück am Fr., 23. Okt., 08:00"; in that list the bar brings messages back instead.
 - *The reminder.* The periodic look for mail (see stage 6) also looks at what has come due, and tells it as "Nachricht
   ist wieder da" or "N Nachrichten sind wieder da" for an account, with who wrote and what about for one, under the
-  heading "Wiedervorlage · account". Each is told once: the moment is taken off what was told. It goes by the same rules
+  heading "Wiedervorlage für account" (a dot between the two was used at first and is not any more). Each is told once: the moment is taken off what was told. It goes by the same rules
   as new mail (switched on, account not muted, not in the quiet hours), and it comes at the next run after the moment,
   which is up to the interval the user chose later: the platform has no exact alarm to give here. While the application is
   open the message is simply in the list again.
@@ -1320,8 +1320,29 @@ passphrase on the phone (the 40 seconds were measured, not the screen), RSA keys
 match, a recipient without a key, and the removal of the keys with the account.
 
 Not done: keys from a key server or from the address's domain (WKD), a message sent to several recipients of whom some have a
-key and others none (it is refused, not split), expiry and revocation of a contact's key (the desktop shows both; the phone
-uses the key regardless), a default for signing or encrypting, and taking a key from a message that has it attached.
+key and others none (it is refused, not split), and opening a sealed key faster than the script does. What was left in this
+list at first (expiry and revocation, a default for signing and encrypting, taking a key from a message) is in the next section.
+
+## What finishing OpenPGP found
+
+- *The envelope of a message that cannot be opened* was shown as two attachments (`anhang-1`, `encrypted.asc`), which are all it
+  has and nothing the reader asked for. They are not shown now, as the signature of a signed message is not.
+- *A key that has expired or was withdrawn* was used all the same, and encrypting to it failed with a message that said nothing.
+  `keyState` (`pgpService.ts`) reads from the key itself whether it has expired, whether it was withdrawn, and whether it can
+  still encrypt and sign. A message that is to be encrypted uses, for each recipient, the newest key that can: a person who has
+  changed keys has the old one held as well, and an old one that has expired is no reason to refuse the new one. When none can,
+  the message is refused before it is queued and says whose key has expired, whose was withdrawn, and who has none. The same
+  goes for the account's own key, with the older one that works signing when the newest does not. The card of a key says
+  "Abgelaufen", "Widerrufen" or "Läuft in N Tagen ab", the last four weeks ahead, as the desktop does.
+- *A key can be taken from a message.* An attachment that looks like a file with keys (type `application/pgp-keys`, or a name
+  ending in `.asc`, `.gpg`, `.pgp` or `.key`, but not the signature of a message) has "Schlüssel übernehmen", which shows what
+  it holds on the screen for keys, to be placed as for any file. Nothing is stored before the user says where it belongs.
+- *Signing and encrypting every message* can be switched on in the settings for keys, for the accounts that have a key. A message
+  that is started (new, answer, answer to all, passed on) begins as that says and the switch on the message can still be turned
+  off. A draft that is opened begins as it was kept. The settings and which accounts have a key are held in memory
+  (`ProtectionDefaults`), since a message is started without waiting for the database.
+- *No more dots between two things.* The lists said "account · folder" and similar in several places. The account is now a small
+  line over the name of the list, the lines of the status are lines, and the others have a comma or a word.
 
 ## What stage 4 found
 

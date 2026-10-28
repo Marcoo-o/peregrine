@@ -2,6 +2,7 @@ import type { SqlDb } from '@peregrine/core/sqlDb'
 import { AccountSetup } from './AccountSetup'
 import { describeError } from '../errors'
 import { ComposeController } from './ComposeController'
+import { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { KeysController } from './KeysController'
 import { MessageController } from './MessageController'
 import { Navigator } from './Navigator'
@@ -26,6 +27,8 @@ export class Application {
   readonly selection: SelectionController
   readonly tags: TagController
   readonly keys: KeysController
+  /** What a new message starts with, which the screen for keys sets and the screen for writing asks. */
+  readonly protection: ProtectionDefaults
 
   constructor(
     readonly services: Services,
@@ -34,12 +37,13 @@ export class Application {
   ) {
     this.navigator = new Navigator(services, store)
     this.messages = new MessageController(services, store, this.navigator)
-    this.compose = new ComposeController(services, store, this.navigator)
+    this.protection = new ProtectionDefaults(services.db)
+    this.compose = new ComposeController(services, store, this.navigator, this.protection)
     this.accounts = new AccountSetup(services, store, this.navigator)
     this.settings = new SettingsController(services, store, this.navigator)
     this.selection = new SelectionController(services, store, this.navigator)
     this.tags = new TagController(services, store)
-    this.keys = new KeysController(services, store)
+    this.keys = new KeysController(services, store, this.protection)
   }
 
   /**
@@ -52,6 +56,7 @@ export class Application {
     await this.settings.applySchedule()
     await this.settings.applyPush()
     await this.tags.load()
+    await this.protection.load()
     await this.navigator.start()
     await this.openLaunchTarget()
   }

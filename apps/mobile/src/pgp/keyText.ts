@@ -1,3 +1,26 @@
+import { daysUntilExpiry, keyHealth, type KeyFacts } from '@peregrine/core/keyHealth'
+
+/**
+ * What to tell of a key that is not in order, for a tag on its card, or null for a key that is. A key that was withdrawn or
+ * has expired cannot be used for anything new; one that expires soon still can, and is said to be, early enough to do
+ * something about it.
+ */
+export function healthTag(facts: KeyFacts, now: Date = new Date()): { text: string; tone: 'warning' | 'danger' } | null {
+  const health = keyHealth(facts, now)
+  if (health === 'ok') return null
+  if (health === 'revoked') return { text: 'Widerrufen', tone: 'danger' }
+  if (health === 'expired') return { text: 'Abgelaufen', tone: 'danger' }
+  const days = daysUntilExpiry(facts.expiresAt, now) ?? 0
+  const when = days <= 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} Tagen`
+  return { text: `Läuft ${when} ab`, tone: 'warning' }
+}
+
+/** Whether an attachment is, by its name and its type, a file with keys in it, which can be taken from the message. */
+export function looksLikeKeyFile(attachment: { filename: string; contentType: string }): boolean {
+  if (attachment.contentType.toLowerCase() === 'application/pgp-signature') return false
+  return attachment.contentType.toLowerCase() === 'application/pgp-keys' || /\.(asc|gpg|pgp|key)$/i.test(attachment.filename)
+}
+
 /**
  * A fingerprint as people compare it: in groups of four, in upper case, in two lines of five groups. It is 40 characters
  * long, and what is read out or checked against what the owner of the key says is all of it.

@@ -1,9 +1,11 @@
 import { encodeUtf8 } from '@peregrine/imap/utf8'
 import { listAccounts } from '../accounts'
+import { attachmentContent, type AttachmentInfo } from '../attachments'
 import { explainError } from '../errors'
+import type { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { listContactKeys, listOwnKeys, removeContactKey, removeOwnKey, saveContactKey, saveOwnKey } from '../pgp/keyStore'
 import { keyFileName } from '../pgp/keyText'
-import { generateKeyPair, scanKeys, unlockKey } from '../pgp/pgpService'
+import { generateKeyPair, keyState, scanKeys, unlockKey } from '../pgp/pgpService'
 import type { KeysState } from './screens'
 import type { Services } from './services'
 import type { AppStore } from './store'
@@ -22,7 +24,8 @@ const OPENING = 'Der Schlüssel wird geöffnet. Das kann bis zu einer Minute dau
 export class KeysController {
   constructor(
     private readonly services: Services,
-    private readonly store: AppStore
+    private readonly store: AppStore,
+    private readonly protection: ProtectionDefaults
   ) {}
 
   /** Shows the keys, with a line about what was just done when there is one, and what was found in a file and waits to be placed. */
@@ -31,7 +34,11 @@ export class KeysController {
     const accounts = await listAccounts(db)
     const own: KeysState['own'] = {}
     for (const account of accounts) own[account.id] = await listOwnKeys(db, account.id)
-    this.store.showScreen({ name: 'keys', accounts, own, contacts: await listContactKeys(db), ...patch })
+    await this.protection.load()
+    const contacts = await listContactKeys(db)
+    const states: KeysState['states'] = {}
+    for (const key of [...Object.values(own).flat(), ...contacts]) states[key.fingerprint] = await keyState(key.publicKey)
+    this.store.showScreen({ name: 'keys', accounts, own, contacts, states, defaults: { ...this.protection.settings }, ...patch })
   }
 
   /** The state of the keys screen when it is the screen, or undefined. */
@@ -57,6 +64,12 @@ export class KeysController {
     await letScreenDraw()
   }
 
+  /** Sets whether every new message starts signed or encrypted. It is for the accounts that have a key; the others are as they were. */
+  async setDefault(which: 'sign' | 'encrypt', on: boolean): Promise<void> {
+    await this.protection.change({ [which]: on })
+    await this.show({ found: this.found() })
+  }
+
   /** Makes a key pair for an account on the phone. */
   async generate(accountId: string): Promise<void> {
     const account = (await listAccounts(this.services.db)).find((candidate) => candidate.id === accountId)
@@ -78,6 +91,20 @@ export class KeysController {
     } catch (error) {
       await this.show({ error: `Der Schlüssel konnte nicht erzeugt werden: ${explainError(error)}`, found: this.found() })
     }
+  }
+
+  /**
+   * Takes the keys that an attachment of the open message holds, which are shown to be placed as for any file: nothing is
+   * stored before the user says where it belongs.
+   */
+  async takeFrom(source: Uint8Array | undefined, attachment: AttachmentInfo): Promise<void> {
+    const content = source ? attachmentContent(source, attachment.id) : undefined
+    await this.show()
+    if (!content) {
+      await this.show({ error: `${attachment.filename} ließ sich in der Nachricht nicht lesen.` })
+      return
+    }
+    await this.scan(content)
   }
 
   /** Lets the user pick a file with keys and reads it. */

@@ -41,7 +41,8 @@ export function UnifiedScreen(props: {
         <>
           <TopBar onSearch={props.onSearch} onRefresh={props.onRefresh} onSettings={props.onSettings} />
           <ListHead
-            title={`Vereinheitlicht · ${roleLabel(role)}`}
+            title={roleLabel(role)}
+            subtitle="Alle Konten"
             total={messages.length}
             shown={shown.length}
             filter={filter}

@@ -180,6 +180,7 @@ function createStyles({ colors }: Theme) {
     },
     searchPillText: { flex: 1, fontSize: 15, color: colors.muted },
     // The line over a list: what it is, how many, and the filters.
+    listSubtitle: { fontSize: 13, color: colors.muted, marginTop: 4 },
     listTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
     listTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
     listCount: { fontSize: 13, color: colors.muted },
@@ -314,6 +315,8 @@ function createStyles({ colors }: Theme) {
     keyCard: { gap: 2, paddingVertical: 12 },
     tag: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, backgroundColor: colors.accentSoft, marginTop: 6 },
     tagText: { fontSize: 12, fontWeight: '600', color: colors.accent },
+    tagDanger: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, backgroundColor: colors.dangerSoft, marginTop: 6 },
+    tagDangerText: { fontSize: 12, fontWeight: '600', color: colors.danger },
     tagWarning: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, backgroundColor: withAlpha(colors.warning, 0.12), marginTop: 6 },
     tagWarningText: { fontSize: 12, fontWeight: '600', color: colors.warning },
     timeInput: { width: 90, textAlign: 'center', minHeight: 40, paddingVertical: 6 },

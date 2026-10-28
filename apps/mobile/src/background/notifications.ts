@@ -44,7 +44,7 @@ export function backCountText(count: number): string {
 export type NotificationKind = 'new' | 'back'
 
 /** What the notification of a single message says under it: the account, and for a message that is back, that it is. */
-const subtitleFor = (kind: NotificationKind, accountName: string): string => (kind === 'back' ? `Wiedervorlage · ${accountName}` : accountName)
+const subtitleFor = (kind: NotificationKind, accountName: string): string => (kind === 'back' ? `Wiedervorlage für ${accountName}` : accountName)
 
 /**
  * The notifications for new mail, one for each account that is to be told, as the desktop makes them.

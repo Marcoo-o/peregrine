@@ -203,7 +203,7 @@ describe('messages that were put aside, in the background', () => {
       accountId: t.work.id,
       title: 'sender@example.net',
       body: 'Old at work',
-      subtitle: 'Wiedervorlage · work',
+      subtitle: 'Wiedervorlage für work',
       target: { accountId: t.work.id, uid: 1 }
     })
   })

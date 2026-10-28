@@ -1,3 +1,4 @@
+import type { PgpStatus } from '@peregrine/core/types'
 import { parseAddress } from '@peregrine/smtp/headers'
 import { refusalForOpening } from '@peregrine/core/attachmentSafety'
 import { SNIFF_BYTES } from '@peregrine/core/fileType'
@@ -107,8 +108,7 @@ export class MessageController {
         knownDomains,
         protection: reading.status,
         source,
-        // The signature of a signed message is part of what the message says of itself, not a file the reader asked for.
-        attachments: this.attachmentsOf(source).filter((info) => reading.status === 'none' || info.contentType !== 'application/pgp-signature')
+        attachments: this.attachmentsShown(this.attachmentsOf(source), reading.status)
       })
     } catch (error) {
       this.store.showScreen({ name: 'message', ...opened, error: explainError(error) })
@@ -117,6 +117,17 @@ export class MessageController {
 
   private markRead(folder: Folder, summary: StoredMessage): void {
     this.services.mail.setFlags(folder, [summary.uid], [SEEN], []).catch((error) => this.services.log.error(describeError(error)))
+  }
+
+  /**
+   * What of the attachments the reader is shown. The signature of a signed message is part of what the message says of itself,
+   * and the two parts of the envelope of an encrypted message that could not be opened are all it has: neither is a file the
+   * reader asked for.
+   */
+  private attachmentsShown(attachments: AttachmentInfo[], status: PgpStatus): AttachmentInfo[] {
+    if (status === 'none') return attachments
+    if (status === 'encrypted-failed') return []
+    return attachments.filter((info) => info.contentType !== 'application/pgp-signature')
   }
 
   /** The attachments of a message. One that cannot be read for them is shown without, and not refused. */

@@ -80,6 +80,41 @@ export async function scanKeys(material: string | Uint8Array): Promise<ScannedKe
   return [...found.values()]
 }
 
+/** What a key is good for now. A key that cannot be read is good for nothing, and is not said to be broken for it. */
+export interface KeyState {
+  /** When it stops being valid, as an ISO time, or null when it does not. */
+  expiresAt: string | null
+  /** Withdrawn by its owner: the gravest state, and not a matter of time. */
+  revoked: boolean
+  canEncrypt: boolean
+  canSign: boolean
+}
+
+/** Whether a key has expired or been withdrawn, and whether it can still encrypt and sign, read from the key itself. */
+export async function keyState(armoredKey: string): Promise<KeyState> {
+  try {
+    const key = await openpgp.readKey({ armoredKey })
+    const expiry = await key.getExpirationTime()
+    const can = async (find: () => Promise<unknown>): Promise<boolean> => {
+      try {
+        await find()
+        return true
+      } catch {
+        return false
+      }
+    }
+    return {
+      // OpenPGP gives Infinity for a key that does not expire.
+      expiresAt: expiry instanceof Date ? expiry.toISOString() : null,
+      revoked: await key.isRevoked(),
+      canEncrypt: await can(() => key.getEncryptionKey()),
+      canSign: await can(() => key.getSigningKey())
+    }
+  } catch {
+    return { expiresAt: null, revoked: false, canEncrypt: false, canSign: false }
+  }
+}
+
 export type UnlockResult = { ok: true; privateKey: string } | { ok: false; reason: 'wrongPassphrase' | 'passphraseRequired' }
 
 /**

@@ -49,6 +49,7 @@ export function MessageScreen(props: {
   onDelete: () => void
   onSave: (attachment: AttachmentInfo) => void
   onOpenAttachment: (attachment: AttachmentInfo) => void
+  onTakeKey: (attachment: AttachmentInfo) => void
 }) {
   const styles = useStyles()
   const { account, summary, message, attachments, assessment, notice, error } = props.state
@@ -94,7 +95,7 @@ export function MessageScreen(props: {
         {!message && !error ? <Spinner /> : null}
 
         <Notices hints={hints} onAction={() => setShowImages(true)} />
-        <AttachmentList attachments={attachments ?? []} onSave={props.onSave} onOpen={props.onOpenAttachment} />
+        <AttachmentList attachments={attachments ?? []} onSave={props.onSave} onOpen={props.onOpenAttachment} onTakeKey={props.onTakeKey} />
         {notice ? <Text style={styles.hint}>{notice}</Text> : null}
 
         {message?.html ? (

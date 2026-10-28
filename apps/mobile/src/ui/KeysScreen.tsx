@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { Text, View } from 'react-native'
 import type { KeysState } from '../app/screens'
 import type { ContactKey, OwnKey } from '../pgp/keyStore'
-import { fingerprintLines } from '../pgp/keyText'
+import { fingerprintLines, healthTag } from '../pgp/keyText'
+import type { KeyState } from '../pgp/pgpService'
 import type { ScannedKey } from '../pgp/pgpService'
-import { Button, Spinner } from './controls'
+import { Button, Spinner, SwitchRow } from './controls'
 import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
@@ -24,6 +25,18 @@ function Fingerprint(props: { value: string }) {
         {fingerprintLines(props.value)}
       </Text>
     </>
+  )
+}
+
+/** What is said of a key that is not in order, as a tag; nothing for one that is. */
+function HealthTag(props: { state: KeyState | undefined }) {
+  const styles = useStyles()
+  const tag = props.state ? healthTag(props.state) : null
+  if (!tag) return null
+  return (
+    <View style={tag.tone === 'danger' ? styles.tagDanger : styles.tagWarning}>
+      <Text style={tag.tone === 'danger' ? styles.tagDangerText : styles.tagWarningText}>{tag.text}</Text>
+    </View>
   )
 }
 
@@ -103,9 +116,10 @@ export function KeysScreen(props: {
   onRemoveOwn: (accountId: string, fingerprint: string) => void
   onRemoveContact: (fingerprint: string) => void
   onExport: (accountId: string, fingerprint: string) => void
+  onDefault: (which: 'sign' | 'encrypt', on: boolean) => void
 }) {
   const styles = useStyles()
-  const { accounts, own, contacts, found, working, notice, error } = props.state
+  const { accounts, own, contacts, states, defaults, found, working, notice, error } = props.state
   const [pasted, setPasted] = useState('')
   const [removing, setRemoving] = useState<{ title: string; text: string; remove: () => void } | null>(null)
   const idle = working === undefined
@@ -139,6 +153,22 @@ export function KeysScreen(props: {
       {notice ? <Text style={styles.hint}>{notice}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      <Text style={styles.section}>Beim Schreiben</Text>
+      <View style={styles.group}>
+        <SwitchRow
+          label="Immer signieren"
+          hint="Jede neue Nachricht beginnt signiert. Das gilt für Konten mit einem Schlüssel."
+          value={defaults.sign}
+          onChange={(on) => props.onDefault('sign', on)}
+        />
+        <SwitchRow
+          label="Immer verschlüsseln"
+          hint="Jede neue Nachricht beginnt verschlüsselt. Ohne Schlüssel des Empfängers lässt sie sich nicht senden, dann schaltest du es für diese Nachricht aus."
+          value={defaults.encrypt}
+          onChange={(on) => props.onDefault('encrypt', on)}
+        />
+      </View>
+
       <Text style={styles.section}>Deine Schlüssel</Text>
       {accounts.length === 0 ? <Text style={styles.hint}>Es gibt noch kein Konto.</Text> : null}
       {accounts.map((account) => (
@@ -147,11 +177,14 @@ export function KeysScreen(props: {
             <View key={key.fingerprint} style={[styles.group, styles.keyCard]}>
               <Text style={styles.itemTitle}>{account.emailAddress || account.displayName}</Text>
               <Text style={styles.itemMeta}>Angelegt am {dayOf(key.createdAt)}</Text>
-              {index === 0 ? (
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>Signiert damit</Text>
-                </View>
-              ) : null}
+              <View style={styles.actions}>
+                {index === 0 ? (
+                  <View style={styles.tag}>
+                    <Text style={styles.tagText}>Signiert damit</Text>
+                  </View>
+                ) : null}
+                <HealthTag state={states[key.fingerprint]} />
+              </View>
               <Fingerprint value={key.fingerprint} />
               <View style={{ height: 12 }} />
               <Button label="Öffentlichen Teil speichern" variant="secondary" disabled={!idle} onPress={() => props.onExport(account.id, key.fingerprint)} />
@@ -175,6 +208,7 @@ export function KeysScreen(props: {
         <View key={key.fingerprint} style={[styles.group, styles.keyCard]}>
           <Text style={styles.itemTitle}>{key.address}</Text>
           <Text style={styles.itemMeta}>Gemerkt am {dayOf(key.createdAt)}</Text>
+          <HealthTag state={states[key.fingerprint]} />
           <Fingerprint value={key.fingerprint} />
           <View style={{ height: 12 }} />
           <Button label="Entfernen" variant="danger" disabled={!idle} onPress={() => askToRemoveContact(key)} />

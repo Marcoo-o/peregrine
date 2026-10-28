@@ -115,6 +115,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onDelete={() => messages.delete(screen)}
           onSave={(attachment) => messages.saveAttachment(screen, attachment)}
           onOpenAttachment={(attachment) => messages.openAttachment(screen, attachment)}
+          onTakeKey={(attachment) => void keys.takeFrom(screen.source, attachment)}
         />
       )
     case 'move':
@@ -162,6 +163,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onRemoveOwn={(accountId, fingerprint) => void keys.removeOwn(accountId, fingerprint)}
           onRemoveContact={(fingerprint) => void keys.removeContact(fingerprint)}
           onExport={(accountId, fingerprint) => void keys.exportPublic(accountId, fingerprint)}
+          onDefault={(which, on) => void keys.setDefault(which, on)}
         />
       )
     case 'settings':

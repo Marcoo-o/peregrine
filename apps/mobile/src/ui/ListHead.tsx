@@ -10,6 +10,8 @@ import { useStyles } from './useStyles'
  */
 export function ListHead(props: {
   title: string
+  /** Where the list is from, in a small line over its name: the account, or that it is all of them. */
+  subtitle?: string
   /** How many the list has, and how many of them the filters leave. */
   total: number
   shown: number
@@ -21,6 +23,7 @@ export function ListHead(props: {
   const tags = useTags()
   return (
     <View>
+      {props.subtitle ? <Text style={styles.listSubtitle}>{props.subtitle}</Text> : null}
       <View style={styles.listTitleRow}>
         <Text accessibilityRole="header" style={styles.listTitle} numberOfLines={1}>
           {props.title}
