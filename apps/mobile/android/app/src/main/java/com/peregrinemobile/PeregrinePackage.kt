@@ -5,7 +5,7 @@ import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.ViewManager
 
-/** The native modules the application has of its own: the network, the database key, the files, notifications and the schedule of the look for mail. */
+/** The native modules the application has of its own: the network, the database key, the files, notifications, the schedule of the look for mail, and the hashing that opens a sealed key. */
 class PeregrinePackage : ReactPackage {
   override fun createNativeModules(context: ReactApplicationContext): List<NativeModule> =
     listOf(
@@ -14,7 +14,8 @@ class PeregrinePackage : ReactPackage {
       PeregrineFilesModule(context),
       PeregrineNotificationsModule(context),
       PeregrineSyncModule(context),
-      PeregrinePushModule(context)
+      PeregrinePushModule(context),
+      PeregrinePgpModule(context)
     )
 
   override fun createViewManagers(context: ReactApplicationContext): List<ViewManager<*, *>> =

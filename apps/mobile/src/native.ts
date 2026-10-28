@@ -2,6 +2,7 @@ import { DeviceEventEmitter, NativeModules } from 'react-native'
 import { RnNotifications, RnSyncSchedule } from './background/RnNotifications'
 import { RnPush } from './background/RnPush'
 import { RnFiles } from './RnFiles'
+import { RnPgp } from './RnPgp'
 import { RnTransport } from './RnTransport'
 
 /**
@@ -31,6 +32,11 @@ export function createSyncSchedule(): RnSyncSchedule {
 /** The push service of the system, where there is one. */
 export function createPush(): RnPush {
   return new RnPush(NativeModules.PeregrinePush)
+}
+
+/** The hashing of the platform that opens a sealed OpenPGP key. */
+export function createPgp(): RnPgp {
+  return new RnPgp(NativeModules.PeregrinePgp)
 }
 
 /** The passphrase of the database, 64 hexadecimal characters, made on the first call. */

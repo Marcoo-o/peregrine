@@ -14,7 +14,7 @@ import type { AppStore } from './store'
 const letScreenDraw = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 50))
 
 /** Opening a key that is sealed is the long piece of work, and the user is told so before it begins. */
-const OPENING = 'Der Schlüssel wird geöffnet. Das kann bis zu einer Minute dauern, die App reagiert in dieser Zeit nicht.'
+const OPENING = 'Der Schlüssel wird geöffnet. Das dauert einige Sekunden.'
 
 /**
  * The OpenPGP keys: the account's own, which are made here or read from a file, and the public keys of the people the
