@@ -206,6 +206,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onEnabled={(enabled) => settings.setEnabled(enabled)}
           onPreview={(preview) => settings.setPreview(preview)}
           onShowPreview={(show) => settings.setShowPreview(show)}
+          onDeviceContacts={(on) => settings.setDeviceContacts(on)}
           onTags={() => void tags.show()}
           onKeys={() => void keys.show()}
           onQuietHours={(on) => settings.setQuietHours(on)}

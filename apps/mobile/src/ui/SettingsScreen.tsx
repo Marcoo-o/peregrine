@@ -36,6 +36,7 @@ export function SettingsScreen(props: {
   onEnabled: (enabled: boolean) => void
   onPreview: (preview: boolean) => void
   onShowPreview: (show: boolean) => void
+  onDeviceContacts: (on: boolean) => void
   onTags: () => void
   onKeys: () => void
   onQuietHours: (on: boolean) => void
@@ -47,7 +48,7 @@ export function SettingsScreen(props: {
   onBatterySettings: () => void
 }) {
   const styles = useStyles()
-  const { settings, list, accounts, permitted, push, notice } = props.state
+  const { settings, list, contactsPermitted, accounts, permitted, push, notice } = props.state
   const quiet = hasQuietHours(settings)
   const off = !settings.enabled
 
@@ -60,6 +61,18 @@ export function SettingsScreen(props: {
         <SwitchRow label="Text unter dem Betreff zeigen" value={list.showPreview} onChange={props.onShowPreview} />
       </View>
       <Button label="Tags verwalten" variant="secondary" onPress={props.onTags} />
+
+      <Text style={styles.section}>Adressen</Text>
+      <View style={styles.group}>
+        <SwitchRow label="Kontakte des Geräts vorschlagen" value={list.deviceContacts} onChange={props.onDeviceContacts} />
+      </View>
+      <Text style={styles.hint}>
+        Beim Tippen einer Adresse schlägt Peregrine auch Personen aus dem Adressbuch des Geräts vor. Sie werden nur zum Vorschlagen gelesen
+        und nirgends gespeichert.
+      </Text>
+      {list.deviceContacts && !contactsPermitted ? (
+        <Text style={styles.error}>Das System lässt das Lesen der Kontakte nicht zu. Das lässt sich in den Systemeinstellungen ändern.</Text>
+      ) : null}
 
       <Text style={styles.section}>Verschlüsselung</Text>
       <Button label="Schlüssel verwalten" variant="secondary" onPress={props.onKeys} />

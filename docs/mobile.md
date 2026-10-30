@@ -1435,9 +1435,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 1. *History.* (Done as far as loading goes: see "What loading older messages found". What is left is an IMAP search for what is not on the
    phone, and CONDSTORE for the flags, which now come with every sync as a list of the whole folder.) A sync fetched the headers of the newest 50
    messages of a folder and nothing older, ever; search looks only through what was fetched. The desktop synchronises the whole folder.
-2. *The phone's own place in the system.* `mailto:` links, sharing text and files to a new message, being offered as an application for mail,
-   and the people of the phone's contacts as suggestions for recipients. None of it is in the manifest. The desktop has no counterpart; a mail
-   client on a phone without it is used less than one that has it. M.
+2. *The phone's own place in the system.* (Done: see "What the phone's place in the system found". What is left is a share target for single people and the "Share" of a message to other applications.)
 3. *Setting up and changing an account.* (Done as far as the servers, the logins and the editing go: see "What setting up an account found". What is left is DNS SRV on the phone and OAuth2.)
 4. *Folders.* (Done: see "What managing folders found". What is left is subscribing to folders and moving a folder under another.)
 
@@ -1619,6 +1617,38 @@ failing for reading and for sending).
 Seen on the emulator: the form with the search button and the hint of whom it asks; an account made against the test server; "Konto bearbeiten" with
 the stored values, the passwords empty, and the colour changed and kept (the dot in the folder list turned). Not seen on the device: the search over
 the internet (covered by tests with a fake web) and a wrong login for sending (covered by tests).
+
+## What the phone's place in the system found
+
+The phone was not a mail application of the system: a link to an address, something shared to it, and the people of the address book went nowhere.
+
+- *Links to an address.* The activity takes `mailto:` (`VIEW` and `SENDTO`) and starts a message from it: the addresses before the question mark and
+  `to`, `cc`, `bcc`, `subject` and `body` after it (RFC 6068), the rest of a link left unread. Not `attach`, which would name a file of
+  this phone: a link in a web page is not to decide what a message carries; and not `in-reply-to`.
+- *What is shared.* `SEND` and `SEND_MULTIPLE` of any type: the text is the body, the subject the one the other application gave, the
+  addresses it named (`EXTRA_EMAIL` and the copies) the recipients, and each file an attachment, copied into the application's storage as a picked
+  one is. A file larger than a message can carry is copied only to one byte past the limit, so that sharing a film costs no more than that, and
+  is said and removed. Only `content://` addresses are read: a `file://` path would be read with the permissions of this application, which is
+  the one that can read its own database, and the application's own provider is not accepted either (tests in Kotlin).
+- *How it reaches the screen.* As with a tap on a notification, the intent is kept natively and JavaScript asks for it at the start and each time the
+  application comes to the front, and gets it once. It is written from the first account that can send. Over a message that is being written it is
+  not taken: what was typed so far is on the screen and nowhere else, so the request waits for the next time the application comes to the front.
+- *The address book.* A switch "Kontakte des Geräts vorschlagen" under Settings, off until the user allows reading the contacts, which is asked for when it is
+  switched on (as for notifications). The people it gives are looked up for each typed part and never copied into the database. They come after the people the
+  phone has mail from; one who is in both is shown with the name of the address book; the user's own addresses are left out; an address book that cannot be read
+  leaves the others.
+- *Not done:* offering the phone as a target for a single person (a share shortcut), the "Share" of a message to another application, and reading
+  the `Reply-To` or `List-Post` of a link. Opening a `mailto:` while a message is being written does not interrupt it (see above) and so may seem to do nothing.
+
+Covered by tests: the reading of links (fields, case, percent signs, what is not read), what a share makes of a message (text, subject, people, files too large),
+the controller (from which account, over what screen, not over writing, no account), the address book (merging, the switch, the permission asked once, a failing
+provider), and in Kotlin the intents (which links, which addresses may be read, once only) and the limited copy.
+Seen on the emulator: a `mailto:` link with two addresses, a copy, subject and a body of two lines opened a message with all of it and without the `attach` it
+also carried; shared text arrived as the body with its subject, and when a message was being written the request did not touch it and was taken when the
+application was brought forward again after leaving it; the switch under Settings asked for the permission, and a person of the address book was
+suggested while typing in the "An" field. A shared file whose address the sender had not granted was refused by the system (`SecurityException`), the message started
+without it, and says so (what `adb` cannot show is a file that was granted: `am` sets no `ClipData`, so a file really copied from another application was not seen
+on the device. The copy is the one a picked file goes through).
 
 ## What managing folders found
 

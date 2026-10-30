@@ -62,6 +62,22 @@ export class Application {
     await this.protection.load()
     await this.navigator.start()
     await this.openLaunchTarget()
+    await this.openIncoming()
+  }
+
+  /**
+   * Starts the message that another application asked for, a link to an address or something shared with this one. Asked at
+   * the start and whenever the application comes to the front, where such a request arrives when it is running already.
+   */
+  async openIncoming(): Promise<void> {
+    try {
+      // Not over a message that is being written: what was typed so far is on the screen and nowhere else. The request waits for the next time.
+      if (this.store.screen.name === 'compose') return
+      const incoming = await this.services.files.consumeIncoming()
+      if (incoming) await this.compose.startFromIncoming(incoming)
+    } catch (error) {
+      this.services.log.error(`what another application shared could not be opened: ${describeError(error)}`)
+    }
   }
 
   /**
@@ -84,6 +100,7 @@ export class Application {
    */
   async comeToFront(): Promise<void> {
     await this.openLaunchTarget()
+    await this.openIncoming()
     await this.reconnector.wake()
   }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FetchedMessage, MailboxEntry } from '@peregrine/core/imapSession'
 import { addAccount } from './accounts'
-import { suggestContacts, typedPart, withContact } from './contacts'
+import { mergeSuggestions, suggestContacts, typedPart, withContact } from './contacts'
 import { syncFolders } from './folders'
 import { saveMessages } from './messages'
 import { migratedDatabase } from './testing/testDb'
@@ -117,5 +117,31 @@ describe('the people to suggest', () => {
     expect(await suggestContacts(db, '  ')).toEqual([])
     expect(await suggestContacts(db, '%')).toEqual([])
     expect(await suggestContacts(db, '_nna')).toEqual([])
+  })
+})
+
+describe('merging the suggestions of the mail and of the address book', () => {
+  const a = { name: '', address: 'a@example.org' }
+  const b = { name: 'Bea', address: 'b@example.org' }
+
+  it('puts the mail first, then the address book, each address once whatever the case', () => {
+    const book = [
+      { name: 'Cy', address: 'C@example.org' },
+      { name: 'A again', address: 'A@example.org' }
+    ]
+    expect(mergeSuggestions([a], book, 10).map((contact) => contact.address)).toEqual(['a@example.org', 'C@example.org'])
+  })
+
+  it('shows a person who is in both with the name of the address book', () => {
+    expect(mergeSuggestions([a], [{ name: 'Alex', address: 'A@example.org' }], 10)).toEqual([{ name: 'Alex', address: 'a@example.org' }])
+  })
+
+  it('keeps the name the mail has when the address book has none', () => {
+    expect(mergeSuggestions([b], [{ name: '', address: 'b@example.org' }], 10)).toEqual([b])
+  })
+
+  it('gives at most the limit, and nothing for nothing', () => {
+    expect(mergeSuggestions([a, b], [{ name: 'Cy', address: 'c@example.org' }], 2)).toEqual([a, b])
+    expect(mergeSuggestions([], [], 4)).toEqual([])
   })
 })

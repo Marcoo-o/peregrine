@@ -7,7 +7,9 @@ import type { MailNotification, MessageTarget } from '../background/notification
 import type { ImapLogin } from '../app/accountForm'
 import type { Platform } from '../app/services'
 import { AppStore } from '../app/store'
+import type { Contact, DeviceContacts } from '../contacts'
 import type { Files, PickedFile } from '../files'
+import type { Incoming } from '../incoming'
 import { syncFolders, type Folder } from '../folders'
 import { saveMessages } from '../messages'
 import { FakeTimers } from './fakeTimers'
@@ -195,6 +197,34 @@ function toFetched(message: FakeMessage): FetchedMessage {
   }
 }
 
+/** The address book of the device: who is in it, whether the user allowed reading it, and what they answer when asked. */
+export class FakeContacts implements DeviceContacts {
+  people: Contact[] = []
+  allowed = false
+  /** What the user answers when asked for the permission. */
+  answer = true
+  asked = 0
+
+  async permitted(): Promise<boolean> {
+    return this.allowed
+  }
+
+  async ensurePermission(): Promise<boolean> {
+    if (this.allowed) return true
+    this.asked++
+    this.allowed = this.answer
+    return this.allowed
+  }
+
+  async search(typed: string, limit: number): Promise<Contact[]> {
+    if (!this.allowed) return []
+    const part = typed.trim().toLowerCase()
+    return this.people
+      .filter((person) => person.name.toLowerCase().includes(part) || person.address.toLowerCase().includes(part))
+      .slice(0, limit)
+  }
+}
+
 /** The device's files, which keeps what it was asked to do and answers as it is told to. */
 export class FakeFiles implements Files {
   readonly picked: PickedFile[] = []
@@ -207,6 +237,14 @@ export class FakeFiles implements Files {
   /** What the user chooses in the dialog for saving: true to save, false to cancel. */
   saveAnswer = true
   failWith: Error | null = null
+  /** What another application asked of the application, which is given once. */
+  incoming: Incoming | null = null
+
+  async consumeIncoming(): Promise<Incoming | null> {
+    const asked = this.incoming
+    this.incoming = null
+    return asked
+  }
 
   async pick(): Promise<PickedFile[]> {
     return [...this.picked]
@@ -382,6 +420,7 @@ export async function appHarness() {
   const { db, raw } = await migratedDatabase()
   const server = new FakeMailServer()
   const files = new FakeFiles()
+  const deviceContacts = new FakeContacts()
   const smtp = new FakeSmtpServer()
   const notifications = new FakeNotifications()
   const syncSchedule = new FakeSyncSchedule()
@@ -391,6 +430,7 @@ export async function appHarness() {
     connectImap: async (login) => server.connect(login) as unknown as ImapSession,
     makeTransport: () => smtp.transport,
     files,
+    deviceContacts,
     notifications,
     syncSchedule,
     push,
@@ -414,7 +454,7 @@ export async function appHarness() {
 
   const folderOf = (folders: Folder[], path: string): Folder => folders.find((f) => f.imapPath === path) as Folder
 
-  return { app, store, db, raw, server, files, smtp, notifications, syncSchedule, push, logs, reconnectTimers, givenAccount, folderOf }
+  return { app, store, db, raw, server, files, deviceContacts, smtp, notifications, syncSchedule, push, logs, reconnectTimers, givenAccount, folderOf }
 }
 
 /**

@@ -5,6 +5,7 @@ import type { Transport } from '@peregrine/imap/transport'
 import { sweepCopies } from '../attachmentCopies'
 import type { Notifications, PushDevice, SyncSchedule } from '../background/devices'
 import { Connections } from '../connections'
+import type { DeviceContacts } from '../contacts'
 import { describeError } from '../errors'
 import type { Files } from '../files'
 import { MailActions } from '../mailActions'
@@ -24,6 +25,8 @@ export interface Platform {
   connectImap(login: ImapLogin): Promise<ImapSession>
   makeTransport(): Transport
   files: Files
+  /** The address book of the device, from which people are suggested when the user allowed it. */
+  deviceContacts: DeviceContacts
   notifications: Notifications
   /** When the platform looks for new mail while the application is closed. */
   syncSchedule: SyncSchedule
@@ -39,6 +42,7 @@ export interface Services {
   queue: QueueRunner
   mail: MailActions
   files: Files
+  deviceContacts: DeviceContacts
   notifications: Notifications
   syncSchedule: SyncSchedule
   push: PushDevice
@@ -66,7 +70,7 @@ export interface ServiceListeners {
  * and sends what was written, and the actions the screens ask for, which go through the queue.
  */
 export function createServices(db: SqlDb, platform: Platform, listeners: ServiceListeners): Services {
-  const { log, files, notifications, syncSchedule, push } = platform
+  const { log, files, deviceContacts, notifications, syncSchedule, push } = platform
   const connections = new Connections(
     (account) => platform.connectImap(imapLoginOf(account)),
     listeners.connectionsChanged
@@ -83,6 +87,7 @@ export function createServices(db: SqlDb, platform: Platform, listeners: Service
     queue,
     mail,
     files,
+    deviceContacts,
     notifications,
     syncSchedule,
     push,

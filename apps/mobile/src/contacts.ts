@@ -8,6 +8,34 @@ export interface Contact {
   address: string
 }
 
+/** The address book of the device, from which people are suggested. The native module is behind it. */
+export interface DeviceContacts {
+  /** Whether the address book may be read now, without asking. */
+  permitted(): Promise<boolean>
+  /** Whether it may be read, asking the user for the permission first where there is none. */
+  ensurePermission(): Promise<boolean>
+  /** The people whose name or address begins with what was typed, at most `limit`. */
+  search(typed: string, limit: number): Promise<Contact[]>
+}
+
+/**
+ * The people to suggest: those the phone has mail from first, since those are the ones written to, then the address book, each
+ * address once whatever case it is written in, and at most `limit`. A person that is in both is shown with the name that the address
+ * book has, which is the one the user gave them and is the more likely to be spelled right.
+ */
+export function mergeSuggestions(history: Contact[], book: Contact[], limit: number): Contact[] {
+  const named = new Map(book.map((contact) => [contact.address.toLowerCase(), contact.name]))
+  const seen = new Set<string>()
+  const merged: Contact[] = []
+  for (const contact of [...history, ...book]) {
+    const key = contact.address.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    merged.push({ address: contact.address, name: named.get(key) || contact.name })
+  }
+  return merged.slice(0, limit)
+}
+
 /** How many messages are looked at for a typed part: a short part matches a great many, and only the best are shown. */
 const CANDIDATES = 100
 
