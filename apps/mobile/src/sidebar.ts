@@ -2,6 +2,7 @@ import type { SqlDb } from '@peregrine/core/sqlDb'
 import { listAccounts, type Account } from './accounts'
 import { listFolders, type Folder } from './folders'
 import { unreadCounts } from './messages'
+import { listSavedSearches, type SavedSearch } from './savedSearches'
 import { unifiedUnread, type UnifiedRole } from './unified'
 
 /** One account of the sidebar: its folders, and how many messages of each are not read. */
@@ -18,6 +19,8 @@ export interface SidebarAccount {
  */
 export interface SidebarData {
   unified: Record<UnifiedRole, number>
+  /** The searches that were kept, which are one tap away. */
+  searches: SavedSearch[]
   accounts: SidebarAccount[]
 }
 
@@ -25,6 +28,7 @@ export async function loadSidebar(db: SqlDb): Promise<SidebarData> {
   const accounts = await listAccounts(db)
   return {
     unified: await unifiedUnread(db),
+    searches: await listSavedSearches(db),
     accounts: await Promise.all(
       accounts.map(async (account) => ({
         account,

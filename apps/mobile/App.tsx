@@ -108,6 +108,7 @@ export default function App() {
                 location={locationOf(state.screen)}
                 connected={state.connected}
                 onUnified={(role) => go(() => application.navigator.showUnified({ refresh: true, role }))}
+                onSearch={(query) => go(() => application.navigator.showSearch(query))}
                 onFolder={(account, folder) => go(() => application.navigator.openFolder(account, folder))}
                 onAccounts={() => go(() => application.navigator.showAccounts())}
                 onAddAccount={() => go(() => application.navigator.showLogin())}

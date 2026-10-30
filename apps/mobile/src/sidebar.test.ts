@@ -35,6 +35,7 @@ describe('what the sidebar shows', () => {
     const { db } = await migratedDatabase()
     expect(await loadSidebar(db)).toEqual({
       unified: { inbox: 0, snoozed: 0, drafts: 0, sent: 0, archive: 0, junk: 0, trash: 0 },
+      searches: [],
       accounts: []
     })
   })
