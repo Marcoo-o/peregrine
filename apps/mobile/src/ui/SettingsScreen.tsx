@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 import type { SettingsState } from '../app/screens'
+import { delayLabel, LOCK_DELAYS } from '../lock'
 import { hasQuietHours, INTERVAL_CHOICES, UNDO_CHOICES } from '../settings'
 import { APPEARANCE_CHOICES, appearance, type AppearanceMode } from '../appearance'
 import type { SafetySettings } from '../safety'
@@ -43,6 +44,8 @@ export function SettingsScreen(props: {
   onUndoSeconds: (seconds: number) => void
   onSafety: (change: Partial<SafetySettings>) => void
   onAppearance: (mode: AppearanceMode) => void
+  onLock: (on: boolean) => void
+  onLockDelay: (seconds: number) => void
   onTags: () => void
   onKeys: () => void
   onQuietHours: (on: boolean) => void
@@ -54,7 +57,7 @@ export function SettingsScreen(props: {
   onBatterySettings: () => void
 }) {
   const styles = useStyles()
-  const { settings, list, sending, contactsPermitted, accounts, permitted, push, notice } = props.state
+  const { settings, list, sending, lock, lockAvailable, contactsPermitted, accounts, permitted, push, notice } = props.state
   const safety = useSafety()
   const quiet = hasQuietHours(settings)
   const off = !settings.enabled
@@ -62,6 +65,27 @@ export function SettingsScreen(props: {
   return (
     <FormScroll>
       <Header title="Einstellungen" back={{ label: 'Konten', onPress: props.onBack }} />
+
+      <Text style={styles.section}>App-Sperre</Text>
+      <View style={styles.group}>
+        <SwitchRow
+          label="Mit der Bildschirmsperre sperren"
+          hint={lockAvailable ? 'Die App zeigt keine Nachrichten, bis die Bildschirmsperre des Telefons eingegeben ist, und bleibt aus Bildschirmfotos und der Liste der letzten Apps heraus.' : 'Dieses Telefon hat keine Bildschirmsperre. Richte in den Systemeinstellungen eine ein.'}
+          value={lock.enabled}
+          disabled={!lockAvailable && !lock.enabled}
+          onChange={props.onLock}
+        />
+      </View>
+      {lock.enabled ? (
+        <>
+          <Text style={styles.section}>Wieder fragen nach</Text>
+          <View style={styles.actions}>
+            {LOCK_DELAYS.map((seconds) => (
+              <Chip key={seconds} label={delayLabel(seconds)} active={lock.afterSeconds === seconds} onPress={() => props.onLockDelay(seconds)} />
+            ))}
+          </View>
+        </>
+      ) : null}
 
       <Text style={styles.section}>Erscheinungsbild</Text>
       <View style={styles.actions}>

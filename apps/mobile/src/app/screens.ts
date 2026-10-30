@@ -6,6 +6,7 @@ import type { Draft } from '../draft'
 import type { ListSettings, NotificationSettings, SendSettings } from '../settings'
 import type { Folder } from '../folders'
 import type { Identity } from '../identities'
+import type { LockSettings } from '../lock'
 import type { ContactKey, OwnKey } from '../pgp/keyStore'
 import type { KeyState, ScannedKey } from '../pgp/pgpService'
 import type { MessageAssessment } from '../reading/assessment'
@@ -133,6 +134,9 @@ export interface SettingsState {
   list: ListSettings
   /** What is set about sending. */
   sending: SendSettings
+  /** What is set about locking the application, and whether the device has a screen lock to do it with. */
+  lock: LockSettings
+  lockAvailable: boolean
   /** Whether the system lets the application read the address book, whatever is switched on here. */
   contactsPermitted: boolean
   accounts: Account[]

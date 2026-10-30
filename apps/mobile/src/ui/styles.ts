@@ -242,6 +242,8 @@ function createStyles({ colors }: Theme) {
     removeRow: { minHeight: SIZE.target, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: SIZE.padding, paddingHorizontal: 4 },
     removeText: { fontSize: 15, color: colors.danger },
     editText: { fontSize: 15, color: colors.accent },
+    lockScreen: { flex: 1, justifyContent: 'center', gap: 16, padding: SIZE.padding * 2, backgroundColor: colors.background },
+    lockTitle: { fontSize: 24, fontWeight: '700', color: colors.text },
     source: { fontFamily: 'monospace', fontSize: 12, color: colors.text },
     undoBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: SIZE.target, paddingHorizontal: SIZE.padding, backgroundColor: colors.sunken },
     undoText: { flex: 1, fontSize: 14, color: colors.text },

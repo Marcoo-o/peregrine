@@ -14,8 +14,10 @@ import {
   type NotificationSettings
 } from '../settings'
 import { saveSort, type ListSort } from '../listSort'
+import { loadLock } from '../lock'
 import { appearance, saveAppearance, type AppearanceMode } from '../appearance'
 import { saveSafety, type SafetySettings } from '../safety'
+import type { LockController } from './LockController'
 import type { Navigator } from './Navigator'
 import type { Services } from './services'
 import type { AppStore } from './store'
@@ -32,7 +34,8 @@ export class SettingsController {
   constructor(
     private readonly services: Services,
     private readonly store: AppStore,
-    private readonly navigator: Navigator
+    private readonly navigator: Navigator,
+    private readonly locking: LockController
   ) {}
 
   /** Shows the settings as they are stored, with a line about what was just done when there is one. */
@@ -43,6 +46,8 @@ export class SettingsController {
       settings: await loadNotificationSettings(db),
       list: await loadListSettings(db),
       sending: await loadSendSettings(db),
+      lock: await loadLock(db),
+      lockAvailable: await this.services.deviceLock.available(),
       accounts: await listAccounts(db),
       contactsPermitted: await this.services.deviceContacts.permitted(),
       permitted: await notifications.permitted(),
@@ -75,6 +80,16 @@ export class SettingsController {
   /** How long a message that was sent is held back so that it can be taken back, in seconds, 0 for not at all. */
   async setUndoSeconds(undoSeconds: number): Promise<void> {
     await saveSendSettings(this.services.db, { undoSeconds })
+    await this.show()
+  }
+
+  /** Locks the application with the screen lock of the phone, or not. It asks for the lock to do either, and says why when it did not. */
+  async setLock(enabled: boolean): Promise<void> {
+    await this.show(await this.locking.setEnabled(enabled))
+  }
+
+  async setLockDelay(afterSeconds: number): Promise<void> {
+    await this.locking.setDelay(afterSeconds)
     await this.show()
   }
 

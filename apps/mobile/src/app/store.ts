@@ -27,6 +27,8 @@ export interface AppState {
   sort: ListSort
   /** Which of the checks of links and attachments are on. */
   safety: SafetySettings
+  /** The application is locked: nothing of the mail is shown until the screen lock of the phone has been given. */
+  locked: boolean
 }
 
 /** A message that waits in the queue for a few seconds, which can be taken back until then. */
@@ -50,7 +52,7 @@ type Listener = () => void
  * changed in place, which is what lets a screen tell that it changed.
  */
 export class AppStore {
-  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null, tags: [], undo: null, sort: DEFAULT_SORT, safety: DEFAULT_SAFETY }
+  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null, tags: [], undo: null, sort: DEFAULT_SORT, safety: DEFAULT_SAFETY, locked: false }
   private readonly listeners = new Set<Listener>()
 
   get state(): AppState {
@@ -79,6 +81,10 @@ export class AppStore {
 
   setTags(tags: Tag[]): void {
     this.update({ tags })
+  }
+
+  setLocked(locked: boolean): void {
+    this.update({ locked })
   }
 
   setSafety(safety: SafetySettings): void {

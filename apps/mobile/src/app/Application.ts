@@ -4,6 +4,7 @@ import { describeError } from '../errors'
 import { ComposeController } from './ComposeController'
 import { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { FolderController } from './FolderController'
+import { LockController } from './LockController'
 import { SenderController } from './SenderController'
 import { loadSort } from '../listSort'
 import { appearance, loadAppearance } from '../appearance'
@@ -30,6 +31,7 @@ export class Application {
   readonly compose: ComposeController
   readonly accounts: AccountSetup
   readonly folders: FolderController
+  readonly lock: LockController
   readonly senders: SenderController
   readonly settings: SettingsController
   readonly selection: SelectionController
@@ -48,9 +50,10 @@ export class Application {
     this.messages = new MessageController(services, store, this.navigator)
     this.protection = new ProtectionDefaults(services.db)
     this.identities = new Identities(services.db)
+    this.lock = new LockController(services, store)
     this.compose = new ComposeController(services, store, this.navigator, this.protection, this.identities)
     this.accounts = new AccountSetup(services, store, this.navigator, this.identities)
-    this.settings = new SettingsController(services, store, this.navigator)
+    this.settings = new SettingsController(services, store, this.navigator, this.lock)
     this.selection = new SelectionController(services, store, this.navigator)
     this.tags = new TagController(services, store)
     this.keys = new KeysController(services, store, this.protection)
@@ -64,6 +67,8 @@ export class Application {
    * when it is that which started the application.
    */
   async start(): Promise<void> {
+    // Before anything is shown: a locked application does not flash its mail while it starts.
+    await this.lock.start()
     await this.services.sweepCopies()
     await this.settings.applySchedule()
     await this.settings.applyPush()
@@ -114,6 +119,7 @@ export class Application {
    * failed try would have been followed by.
    */
   async comeToFront(): Promise<void> {
+    await this.lock.cameBack()
     await this.openLaunchTarget()
     await this.openIncoming()
     await this.reconnector.wake()

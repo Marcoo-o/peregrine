@@ -1449,8 +1449,7 @@ the message, a look for mail while the application is closed, the keys sealed by
    that does not live in a web view. L, and a decision to make before work.
 10. *Tools for a message:* the source and saving it as an `.eml` are done (see "What sorting and the first tools found"); printing and saving as PDF are left (M, the platform has a print service).
 11. *The safety switches* (done, see "What sorting and the first tools found").
-12. *Locking the application.* The desktop's profiles can have a password and lock after some minutes of nobody there. The phone has the database sealed by the
-    Keystore and no lock of its own. What fits a phone: the screen lock or biometrics before the application shows mail, and a time after which it asks again (M).
+12. *Locking the application.* (Done: see "What locking the application found".)
 13. *Appearance:* light, dark or the system's is done; a choice of accents, a font scale, date formats and density are left (S for the font scale, the rest M).
 14. *Languages.* The desktop has English, German, Spanish, French and Portuguese (`src/renderer/src/i18n`); the phone's texts are German and written into the code. L:
     every text goes through a function, and the files of the languages can be the desktop's where the texts are the same.
@@ -1740,3 +1739,25 @@ Four small things that the desktop has and the phone had not.
 
 Covered by tests: every order and its ties, the stored order, the words, the choices of links (off, ask about all, left alone when the page did not say), the attachment check on and off, the source (shown, cut, saved, a failed save),
 and the modes. Not seen on the device: the screens of these four (the chip and sheet, the source, the switches, the modes).
+
+## What locking the application found
+
+The phone had the database sealed by the Keystore and no lock of its own: whoever held the unlocked phone and opened the application read the mail.
+
+- *The lock is the screen lock of the phone* (`PeregrineLockModule`, `KeyguardManager.createConfirmDeviceCredentialIntent`): a PIN, a pattern, a password or a biometric, whichever the phone is set to. The application keeps no secret of its
+  own, so there is nothing to store or forget, and it is as hard to open as the phone is. A phone without a screen lock cannot have the application locked, and the switch says so. The system's own screen for the lock is used, which is also
+  what asks for a biometric where the phone is set to one.
+- *When it locks.* At the start, before anything is shown, and when the application comes back after being away for the chosen time (at once, a minute, five or fifteen; a minute by default). While it is locked the screens show nothing of the
+  mail, the sidebar and the bar for undo are not there either, and the application goes on behind it (what arrives is fetched, the queue runs). The lock is asked for as soon as the locked screen appears, and by its button when it was cancelled.
+  Asking takes the application out of sight for the system's screen, which is not being away: it is not counted, or opening it would lock it again at once.
+- *Switching it on or off asks for the lock.* On, to prove that it works before the application depends on it; off, so that whoever has the unlocked phone cannot take it away. When it is not given it says so and nothing changes.
+- *The content is kept out of screenshots and out of the list of recent applications* while the lock is on (`FLAG_SECURE`), which a lock that shows the mail in the list of recent applications would defeat. The cost is that the user cannot take
+  a screenshot of the application either.
+- *What it does not do:* it does not seal the database with the lock (the key is in the Keystore as before and is not tied to the user having just unlocked), so it keeps out someone who uses the application and not someone who takes the
+  storage apart; and a notification still shows what the notification settings let it show, over the lock: switch the preview off under the notifications for that.
+
+Covered by tests: when it must lock (time away, none, a clock that went back), the settings, the controller (start, unlock, cancel, a system that cannot be asked, one question at a time, the time away, the question not counting as being away,
+on and off asking for the lock, a phone without one) and the settings screen.
+Seen on the emulator: without a screen lock the switch is off, disabled and says why; with a PIN set, switching it on opened the system's screen for the lock, and after the PIN the screenshot of the application was black
+(`FLAG_SECURE`: the check that it keeps the content out of screenshots); after the application was ended and started again the lock was asked for at once and the application opened after the PIN. Not seen: the locked screen itself (it is
+kept out of screenshots, which is what it is for), a time away of a minute, and a wrong PIN.
