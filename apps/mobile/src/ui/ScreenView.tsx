@@ -8,6 +8,7 @@ import { FolderToolsScreen } from './FolderToolsScreen'
 import { FoldersScreen } from './FoldersScreen'
 import { IdentitiesScreen } from './IdentitiesScreen'
 import { ScheduledScreen } from './ScheduledScreen'
+import { SourceScreen } from './SourceScreen'
 import { LoadingScreen } from './LoadingScreen'
 import { LoginScreen } from './LoginScreen'
 import { MessageScreen } from './MessageScreen'
@@ -123,6 +124,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onMove={() => messages.startMove(screen)}
           onArchive={() => messages.archive(screen)}
           onJunk={() => messages.markAsJunk(screen)}
+          onSource={() => messages.showSource(screen)}
+          onSaveSource={() => messages.saveSource(screen)}
           onDelete={() => messages.delete(screen)}
           onSave={(attachment) => messages.saveAttachment(screen, attachment)}
           onOpenAttachment={(attachment) => messages.openAttachment(screen, attachment)}
@@ -160,6 +163,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onDelete={(tag) => void tags.remove(tag.id)}
         />
       )
+    case 'source':
+      return <SourceScreen state={screen} onBack={() => messages.closeSource(screen)} />
     case 'scheduled':
       return <ScheduledScreen state={screen} onTakeBack={(id) => compose.takeBack(screen, id)} onBack={() => compose.leaveScheduled(screen)} />
     case 'identities':

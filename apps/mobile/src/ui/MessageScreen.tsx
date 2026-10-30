@@ -46,6 +46,8 @@ export function MessageScreen(props: {
   onMove: () => void
   onArchive: () => void
   onJunk: () => void
+  onSource: () => void
+  onSaveSource: () => void
   onDelete: () => void
   onSave: (attachment: AttachmentInfo) => void
   onOpenAttachment: (attachment: AttachmentInfo) => void
@@ -137,7 +139,13 @@ export function MessageScreen(props: {
             ? { label: 'Jetzt zurückholen', onPress: props.onUnsnooze }
             : { label: 'Später erinnern …', onPress: () => setSnoozing(true) },
           { label: 'Verschieben …', onPress: props.onMove },
-          { label: 'Als Spam markieren', onPress: props.onJunk }
+          { label: 'Als Spam markieren', onPress: props.onJunk },
+          ...(props.state.raw
+            ? [
+                { label: 'Quelltext anzeigen', onPress: props.onSource },
+                { label: 'Als .eml speichern', onPress: props.onSaveSource }
+              ]
+            : [])
         ]}
       />
       <SnoozeSheet visible={snoozing} onChoose={props.onSnooze} onClose={() => setSnoozing(false)} />
