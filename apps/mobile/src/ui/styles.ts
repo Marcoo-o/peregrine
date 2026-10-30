@@ -242,6 +242,7 @@ function createStyles({ colors }: Theme) {
     removeRow: { minHeight: SIZE.target, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: SIZE.padding, paddingHorizontal: 4 },
     removeText: { fontSize: 15, color: colors.danger },
     editText: { fontSize: 15, color: colors.accent },
+    toolsButton: { minHeight: SIZE.target, minWidth: SIZE.target, alignItems: 'center', justifyContent: 'center' },
 
     // The sidebar: the same rows as the desktop's, with a picture, a name, a count and what opens them.
     sidebar: { flex: 1, backgroundColor: colors.sunken },

@@ -3,6 +3,7 @@ import { AccountSetup } from './AccountSetup'
 import { describeError } from '../errors'
 import { ComposeController } from './ComposeController'
 import { ProtectionDefaults } from '../pgp/protectionDefaults'
+import { FolderController } from './FolderController'
 import { KeysController } from './KeysController'
 import { MessageController } from './MessageController'
 import { Navigator } from './Navigator'
@@ -23,6 +24,7 @@ export class Application {
   readonly messages: MessageController
   readonly compose: ComposeController
   readonly accounts: AccountSetup
+  readonly folders: FolderController
   readonly settings: SettingsController
   readonly selection: SelectionController
   readonly tags: TagController
@@ -44,6 +46,7 @@ export class Application {
     this.selection = new SelectionController(services, store, this.navigator)
     this.tags = new TagController(services, store)
     this.keys = new KeysController(services, store, this.protection)
+    this.folders = new FolderController(services, store, this.navigator)
   }
 
   /**

@@ -636,6 +636,39 @@ describe('what the server sent for each operation', () => {
   })
 })
 
+describe('changing a mailbox that is open', () => {
+  async function withOpen(path: string) {
+    const t = await connected((s) => {
+      s.on('SELECT', (c) => selectReply(c.tag, 2))
+      s.on('UID FETCH', (c) => FakeServer.ok(c.tag))
+      for (const verb of ['RENAME', 'DELETE']) s.on(verb, (c) => FakeServer.ok(c.tag))
+    })
+    await t.session.fetchFullMessage(path, 1)
+    // What came before is how the mailbox was opened; what is looked at is what the change sends.
+    const mark = t.server.commands.length
+    return { ...t, sent: () => t.server.commands.slice(mark) }
+  }
+
+  it('leaves it for the inbox before it is deleted, which a server may answer with an end of the connection', async () => {
+    const { sent, session } = await withOpen('Receipts')
+    await session.deleteMailbox('Receipts')
+    expect(sent()).toEqual(['SELECT "INBOX"', 'DELETE "Receipts"'])
+  })
+
+  it('leaves it before it is renamed, and also when it is a mailbox under the one that is', async () => {
+    const { sent, session } = await withOpen('Work/Old')
+    await session.renameMailbox('Work', 'Plans')
+    expect(sent()).toEqual(['SELECT "INBOX"', 'RENAME "Work" "Plans"'])
+  })
+
+  it('does not select anything for a mailbox that is not open', async () => {
+    const { sent, session } = await withOpen('Receipts')
+    await session.deleteMailbox('Other')
+    await session.renameMailbox('Receipts2', 'Receipts3')
+    expect(sent()).toEqual(['DELETE "Other"', 'RENAME "Receipts2" "Receipts3"'])
+  })
+})
+
 describe('what must never reach the wire', () => {
   it('refuses a flag that would end the command', async () => {
     const { server, session } = await connected((s) => s.on('SELECT', (c) => selectReply(c.tag, 3)))

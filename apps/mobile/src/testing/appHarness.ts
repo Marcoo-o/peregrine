@@ -46,6 +46,8 @@ export class FakeMailServer {
   readonly unreachable = new Set<string>()
   /** When set, the server refuses to change flags and says this. */
   refuseFlags: string | null = null
+  /** When set, the server refuses to make, rename or delete a folder and says this. */
+  refuseFolders: string | null = null
   readonly sessions: FakeSession[] = []
 
   addUser(user: string, mailbox: Mailbox): void {
@@ -86,13 +88,43 @@ class FakeSession {
   }
 
   async listMailboxes(): Promise<MailboxEntry[]> {
-    return Object.keys(this.mailbox).map((path) => ({
-      path,
-      name: path,
-      parentPath: null,
-      flags: [],
-      specialUse: ROLES[path] ?? null
-    }))
+    return Object.keys(this.mailbox).map((path) => {
+      const cut = path.lastIndexOf('/')
+      return {
+        path,
+        name: path.slice(cut + 1),
+        parentPath: cut === -1 ? null : path.slice(0, cut),
+        flags: [],
+        specialUse: ROLES[path] ?? null
+      }
+    })
+  }
+
+  async pathDelimiter(): Promise<string> {
+    return '/'
+  }
+
+  async createMailbox(path: string): Promise<void> {
+    this.server.calls.push(`create ${path}`)
+    if (this.server.refuseFolders) throw new Error(this.server.refuseFolders)
+    if (this.mailbox[path]) throw new Error('[ALREADYEXISTS] Mailbox already exists')
+    this.mailbox[path] = []
+  }
+
+  async renameMailbox(path: string, newPath: string): Promise<void> {
+    this.server.calls.push(`rename ${path} > ${newPath}`)
+    if (this.server.refuseFolders) throw new Error(this.server.refuseFolders)
+    for (const own of Object.keys(this.mailbox)) {
+      if (own !== path && !own.startsWith(`${path}/`)) continue
+      this.mailbox[newPath + own.slice(path.length)] = this.mailbox[own]
+      delete this.mailbox[own]
+    }
+  }
+
+  async deleteMailbox(path: string): Promise<void> {
+    this.server.calls.push(`delete-folder ${path}`)
+    if (this.server.refuseFolders) throw new Error(this.server.refuseFolders)
+    delete this.mailbox[path]
   }
 
   async syncFetch(path: string, decide: (status: { uidValidity: bigint; uidNext: number }) => string | Promise<string>) {

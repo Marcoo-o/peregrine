@@ -1,8 +1,10 @@
-import { ScrollView, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View } from 'react-native'
 import { countText, type ListFilter } from '../listFilter'
 import { Chip } from './controls'
+import { Icon } from './Icon'
 import { useTags } from './tags'
 import { useStyles } from './useStyles'
+import { useTheme } from './useTheme'
 
 /**
  * The line over a list, as the desktop has it over its own: what the list is, how many messages it has, and the
@@ -17,8 +19,11 @@ export function ListHead(props: {
   shown: number
   filter: ListFilter
   onFilter: (filter: ListFilter) => void
+  /** What can be done to the folder the list is of, when it is one: a button next to the count. */
+  onTools?: () => void
 }) {
   const styles = useStyles()
+  const { colors } = useTheme()
   const { filter } = props
   const tags = useTags()
   return (
@@ -29,6 +34,11 @@ export function ListHead(props: {
           {props.title}
         </Text>
         <Text style={styles.listCount}>{countText(props.shown, props.total)}</Text>
+        {props.onTools ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Ordner verwalten" hitSlop={8} style={styles.toolsButton} onPress={props.onTools}>
+            <Icon name="settings" size={20} color={colors.accent} />
+          </Pressable>
+        ) : null}
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         <Chip label="Ungelesen" icon="unread" active={filter.unread} onPress={() => props.onFilter({ ...filter, unread: !filter.unread })} />
