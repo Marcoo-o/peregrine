@@ -48,6 +48,7 @@ export function MessageScreen(props: {
   onArchive: () => void
   onJunk: () => void
   onSource: () => void
+  onPrint: () => void
   onSaveSource: () => void
   onDelete: () => void
   onSave: (attachment: AttachmentInfo) => void
@@ -142,6 +143,7 @@ export function MessageScreen(props: {
             : { label: 'Später erinnern …', onPress: () => setSnoozing(true) },
           { label: 'Verschieben …', onPress: props.onMove },
           { label: 'Als Spam markieren', onPress: props.onJunk },
+          ...(message ? [{ label: 'Drucken oder als PDF speichern', onPress: props.onPrint }] : []),
           ...(props.state.raw
             ? [
                 { label: 'Quelltext anzeigen', onPress: props.onSource },

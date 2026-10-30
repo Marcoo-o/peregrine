@@ -555,3 +555,25 @@ describe('a conversation', () => {
     expect(t.store.screen.name).toBe('thread')
   })
 })
+
+describe('printing a message', () => {
+  it('hands the message as it is read to the print service, under the name of its subject', async () => {
+    const t = await connectedInbox()
+    const state = await opened(t)
+    await t.app.messages.print(state)
+    expect(t.printer.printed).toHaveLength(1)
+    expect(t.printer.printed[0].jobName).toBe('Contract')
+    expect(t.printer.printed[0].html).toContain('Contract')
+  })
+
+  it('says why when it could not, and prints nothing before the message has arrived', async () => {
+    const t = await connectedInbox()
+    const state = await opened(t)
+    t.printer.failWith = new Error('no printing service')
+    await t.app.messages.print(state)
+    expect(t.store.screen).toMatchObject({ notice: expect.stringContaining('no printing service') })
+    await t.app.messages.print({ ...state, message: undefined })
+    expect(t.printer.printed).toEqual([])
+  })
+})
+

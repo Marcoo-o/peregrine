@@ -142,6 +142,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onArchive={() => messages.archive(screen)}
           onJunk={() => messages.markAsJunk(screen)}
           onSource={() => messages.showSource(screen)}
+          onPrint={() => messages.print(screen)}
           onSaveSource={() => messages.saveSource(screen)}
           onDelete={() => messages.delete(screen)}
           onSave={(attachment) => messages.saveAttachment(screen, attachment)}

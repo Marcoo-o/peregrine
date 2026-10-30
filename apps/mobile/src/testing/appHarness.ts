@@ -8,6 +8,7 @@ import type { ImapLogin } from '../app/accountForm'
 import type { Platform } from '../app/services'
 import { AppStore } from '../app/store'
 import type { DeviceLock } from '../lock'
+import type { Printer } from '../printing'
 import { saveSendSettings } from '../settings'
 import type { Contact, DeviceContacts } from '../contacts'
 import type { Files, PickedFile } from '../files'
@@ -254,6 +255,17 @@ export class FakeDeviceLock implements DeviceLock {
   }
 }
 
+/** The print service of the device: what was printed, and whether it can. */
+export class FakePrinter implements Printer {
+  readonly printed: Array<{ jobName: string; html: string }> = []
+  failWith: Error | null = null
+
+  async print(jobName: string, html: string): Promise<void> {
+    if (this.failWith) throw this.failWith
+    this.printed.push({ jobName, html })
+  }
+}
+
 /** The device's files, which keeps what it was asked to do and answers as it is told to. */
 export class FakeFiles implements Files {
   readonly picked: PickedFile[] = []
@@ -453,6 +465,7 @@ export async function appHarness() {
   const files = new FakeFiles()
   const deviceContacts = new FakeContacts()
   const deviceLock = new FakeDeviceLock()
+  const printer = new FakePrinter()
   const smtp = new FakeSmtpServer()
   const notifications = new FakeNotifications()
   const syncSchedule = new FakeSyncSchedule()
@@ -464,6 +477,7 @@ export async function appHarness() {
     files,
     deviceContacts,
     deviceLock,
+    printer,
     notifications,
     syncSchedule,
     push,
@@ -488,7 +502,7 @@ export async function appHarness() {
 
   const folderOf = (folders: Folder[], path: string): Folder => folders.find((f) => f.imapPath === path) as Folder
 
-  return { app, store, db, raw, server, files, deviceContacts, deviceLock, smtp, notifications, syncSchedule, push, logs, reconnectTimers, givenAccount, folderOf }
+  return { app, store, db, raw, server, files, deviceContacts, deviceLock, printer, smtp, notifications, syncSchedule, push, logs, reconnectTimers, givenAccount, folderOf }
 }
 
 /**

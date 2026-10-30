@@ -8,6 +8,8 @@ export interface MailDocumentOptions {
   allowRemoteImages: boolean
   /** The images the message carries, by content id, as data URLs. */
   inlineImages: Record<string, string>
+  /** HTML put above the message, written by the application and not by the sender: the lines of a message on paper. */
+  header?: string
 }
 
 /** What a page of HTML mail is read on. Mail is written for a light page, so it gets one in the dark theme too. */
@@ -52,6 +54,7 @@ export function buildMailDocument(options: MailDocumentOptions): string {
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     `<style>${PAGE_STYLE}</style>`,
     '</head><body>',
+    options.header ?? '',
     content,
     '</body></html>'
   ].join('')
