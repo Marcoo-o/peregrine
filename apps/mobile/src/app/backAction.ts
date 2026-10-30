@@ -24,6 +24,8 @@ export function backAction(
       return () => void messages.cancelMove(screen)
     case 'settings':
       return () => void settings.back()
+    case 'source':
+      return () => messages.closeSource(screen)
     case 'scheduled':
       return () => void application.compose.leaveScheduled(screen)
     case 'identities':

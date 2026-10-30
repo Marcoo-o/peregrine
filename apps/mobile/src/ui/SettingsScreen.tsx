@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { Text, View } from 'react-native'
 import type { SettingsState } from '../app/screens'
 import { hasQuietHours, INTERVAL_CHOICES, UNDO_CHOICES } from '../settings'
+import { APPEARANCE_CHOICES, appearance, type AppearanceMode } from '../appearance'
+import type { SafetySettings } from '../safety'
+import { useSafety } from './safety'
 import { Button, Chip, SwitchRow } from './controls'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
@@ -38,6 +41,8 @@ export function SettingsScreen(props: {
   onShowPreview: (show: boolean) => void
   onDeviceContacts: (on: boolean) => void
   onUndoSeconds: (seconds: number) => void
+  onSafety: (change: Partial<SafetySettings>) => void
+  onAppearance: (mode: AppearanceMode) => void
   onTags: () => void
   onKeys: () => void
   onQuietHours: (on: boolean) => void
@@ -50,12 +55,20 @@ export function SettingsScreen(props: {
 }) {
   const styles = useStyles()
   const { settings, list, sending, contactsPermitted, accounts, permitted, push, notice } = props.state
+  const safety = useSafety()
   const quiet = hasQuietHours(settings)
   const off = !settings.enabled
 
   return (
     <FormScroll>
       <Header title="Einstellungen" back={{ label: 'Konten', onPress: props.onBack }} />
+
+      <Text style={styles.section}>Erscheinungsbild</Text>
+      <View style={styles.actions}>
+        {APPEARANCE_CHOICES.map((choice) => (
+          <Chip key={choice.mode} label={choice.label} active={appearance.mode === choice.mode} onPress={() => props.onAppearance(choice.mode)} />
+        ))}
+      </View>
 
       <Text style={styles.section}>Listen</Text>
       <View style={styles.group}>
@@ -89,6 +102,28 @@ export function SettingsScreen(props: {
       {list.deviceContacts && !contactsPermitted ? (
         <Text style={styles.error}>Das System lässt das Lesen der Kontakte nicht zu. Das lässt sich in den Systemeinstellungen ändern.</Text>
       ) : null}
+
+      <Text style={styles.section}>Sicherheit beim Lesen</Text>
+      <View style={styles.group}>
+        <SwitchRow
+          label="Vor verdächtigen Links warnen"
+          hint="Ein Link, der nach einer anderen Adresse aussieht, als er führt, wird erst nach einer Rückfrage geöffnet."
+          value={safety.warnSuspiciousLinks}
+          onChange={(warnSuspiciousLinks) => props.onSafety({ warnSuspiciousLinks })}
+        />
+        <SwitchRow
+          label="Vor jedem Link fragen"
+          hint="Auch die Links, an denen nichts auffällt."
+          value={safety.confirmAllLinks}
+          onChange={(confirmAllLinks) => props.onSafety({ confirmAllLinks })}
+        />
+        <SwitchRow
+          label="Vor riskanten Anhängen warnen"
+          hint="Ein Anhang, der ein Programm starten würde oder nicht ist, was sein Name sagt, wird nicht an eine andere App weitergegeben."
+          value={safety.warnRiskyAttachments}
+          onChange={(warnRiskyAttachments) => props.onSafety({ warnRiskyAttachments })}
+        />
+      </View>
 
       <Text style={styles.section}>Verschlüsselung</Text>
       <Button label="Schlüssel verwalten" variant="secondary" onPress={props.onKeys} />

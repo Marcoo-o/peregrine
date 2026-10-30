@@ -22,6 +22,7 @@ import { SnoozeSheet } from './SnoozeSheet'
 import { TagChips } from './TagChips'
 import { TagSheet } from './TagSheet'
 import { useTags } from './tags'
+import { useSafety } from './safety'
 import { useStyles } from './useStyles'
 
 /** When a message was written, for the line under who it is from. */
@@ -46,6 +47,8 @@ export function MessageScreen(props: {
   onMove: () => void
   onArchive: () => void
   onJunk: () => void
+  onSource: () => void
+  onSaveSource: () => void
   onDelete: () => void
   onSave: (attachment: AttachmentInfo) => void
   onOpenAttachment: (attachment: AttachmentInfo) => void
@@ -54,6 +57,7 @@ export function MessageScreen(props: {
   const styles = useStyles()
   const { account, summary, message, attachments, assessment, notice, error } = props.state
   const known = props.state.knownDomains ?? []
+  const safety = useSafety()
   const flagged = summary.flags.includes(FLAGGED)
 
   const [showImages, setShowImages] = useState(false)
@@ -73,7 +77,7 @@ export function MessageScreen(props: {
   const hints = hintsFor({ assessment, page, remoteImages, showingImages: showImages, pgp: props.state.protection })
 
   const followLink = (url: string) => {
-    const decision = decideLink(url, facts?.links ?? [], known)
+    const decision = decideLink(url, facts?.links ?? [], known, { warnSuspicious: safety.warnSuspiciousLinks, confirmAll: safety.confirmAllLinks })
     if (decision.action === 'open') Linking.openURL(decision.url).catch(() => undefined)
     else if (decision.action === 'confirm') setPendingLink(decision.analysis)
   }
@@ -137,7 +141,13 @@ export function MessageScreen(props: {
             ? { label: 'Jetzt zurückholen', onPress: props.onUnsnooze }
             : { label: 'Später erinnern …', onPress: () => setSnoozing(true) },
           { label: 'Verschieben …', onPress: props.onMove },
-          { label: 'Als Spam markieren', onPress: props.onJunk }
+          { label: 'Als Spam markieren', onPress: props.onJunk },
+          ...(props.state.raw
+            ? [
+                { label: 'Quelltext anzeigen', onPress: props.onSource },
+                { label: 'Als .eml speichern', onPress: props.onSaveSource }
+              ]
+            : [])
         ]}
       />
       <SnoozeSheet visible={snoozing} onChoose={props.onSnooze} onClose={() => setSnoozing(false)} />

@@ -1443,17 +1443,15 @@ the message, a look for mail while the application is closed, the keys sealed by
 
 5. *Signature text for each account and several identities.* (Done: see "What identities, a signature and undo send found".)
 6. *Sending at a later time.* (Done: see "What sending later found".)
-7. *Sorting* by field and direction (S) and *conversations*, which group replies (L).
+7. *Sorting* (done, see "What sorting and the first tools found") and *conversations*, which group replies (L).
 8. *Saved searches* shown as folders (S to M: the search exists).
 9. *Formatted text when writing.* Reading HTML is done; writing is plain text and a formatted draft is refused. There is no good rich editor for the platform
    that does not live in a web view. L, and a decision to make before work.
-10. *Tools for a message:* the source of a message and saving it as an `.eml` (S each; the source is in hand), printing and saving as PDF (M, the platform has a
-    print service).
-11. *The safety switches*: the checks of links and of risky attachments are always on; the desktop lets each be switched off, and has "ask before any link" (S).
+10. *Tools for a message:* the source and saving it as an `.eml` are done (see "What sorting and the first tools found"); printing and saving as PDF are left (M, the platform has a print service).
+11. *The safety switches* (done, see "What sorting and the first tools found").
 12. *Locking the application.* The desktop's profiles can have a password and lock after some minutes of nobody there. The phone has the database sealed by the
     Keystore and no lock of its own. What fits a phone: the screen lock or biometrics before the application shows mail, and a time after which it asks again (M).
-13. *Appearance:* the phone follows the system's light or dark and has one accent; the desktop has a choice of mode, accents, a font scale, date formats and
-    density (S for mode and font scale, the rest M).
+13. *Appearance:* light, dark or the system's is done; a choice of accents, a font scale, date formats and density are left (S for the font scale, the rest M).
 14. *Languages.* The desktop has English, German, Spanish, French and Portuguese (`src/renderer/src/i18n`); the phone's texts are German and written into the code. L:
     every text goes through a function, and the files of the languages can be the desktop's where the texts are the same.
 15. *Contacts:* a list, adding and changing, vCard in and out (M). On a phone the contacts of the system are the better place to look; see 2.
@@ -1723,3 +1721,22 @@ The composer refused a message for a later time. Undo send had already made the 
 
 Covered by tests: queuing until the moment, nothing sent before and the message sent at it, by itself through the timer, a moment that is not ahead, the status text, the list, taking one back and too late, and the draft made from a queued message.
 Not seen on the device: the sheet and the list on the screen.
+
+## What sorting and the first tools found
+
+Four small things that the desktop has and the phone had not.
+
+- *Sorting* (`listSort.ts`). One order for all the lists, as the desktop has one setting: a chip at the start of the filters opens the eight choices (newest or oldest first, sender A to Z or Z to A, subject, largest or smallest
+  first), and it is kept. It orders the list of a folder and the list of all accounts, in the phone, from what is loaded; it does not ask the server, so with older messages not yet loaded the first of a sort is the first of
+  what the phone has. The sender is ordered by its name when it has one, the subject without the `Re:` and `Fwd:` in front, numbers as numbers; what is equal stays newest first, and a message without a date is the oldest. The
+  search keeps its own order. Not done: sorting on the server, and a different order for each folder.
+- *The source of a message* is shown ("Quelltext anzeigen" in the menu behind the last button) as the server has it, selectable, in a type of equal width, cut at 200,000 characters for what is large; "Als .eml speichern" writes
+  the whole of it where the user chooses, named from the subject. A message that was opened from an encrypted one has its source shown as the server has it, which is the encrypted one.
+- *The safety switches*: the check of links that look wrong, "ask before every link", and the check of attachments that would start a program, each switched under "Sicherheit beim Lesen", as on the desktop and with its defaults (the first and
+  last on, the middle off). Switching one off is the user's decision and takes the check away entirely: that is what the setting is. What the page did not say as a link, and every kind of link but the web and the telephone, is
+  never opened, whatever is chosen.
+- *Light or dark*: "Hell", "Dunkel" or "Wie das System" at the top of the settings, in force at once everywhere (the mode is kept outside React so that the status bar and the first screen follow it too). A font scale, accents and
+  date formats are not done.
+
+Covered by tests: every order and its ties, the stored order, the words, the choices of links (off, ask about all, left alone when the page did not say), the attachment check on and off, the source (shown, cut, saved, a failed save),
+and the modes. Not seen on the device: the screens of these four (the chip and sheet, the source, the switches, the modes).

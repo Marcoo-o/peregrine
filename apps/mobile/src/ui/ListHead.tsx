@@ -1,8 +1,12 @@
 import { Pressable, ScrollView, Text, View } from 'react-native'
+import { useState } from 'react'
 import { countText, type ListFilter } from '../listFilter'
+import { SORT_CHOICES, sortLabel } from '../listSort'
+import { ActionSheet } from './ActionSheet'
 import { Chip } from './controls'
 import { Icon } from './Icon'
 import { useTags } from './tags'
+import { useSort } from './sort'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
 
@@ -26,6 +30,8 @@ export function ListHead(props: {
   const { colors } = useTheme()
   const { filter } = props
   const tags = useTags()
+  const { sort, setSort } = useSort()
+  const [choosing, setChoosing] = useState(false)
   return (
     <View>
       {props.subtitle ? <Text style={styles.listSubtitle}>{props.subtitle}</Text> : null}
@@ -41,6 +47,7 @@ export function ListHead(props: {
         ) : null}
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+        <Chip label={sortLabel(sort)} active={false} onPress={() => setChoosing(true)} />
         <Chip label="Ungelesen" icon="unread" active={filter.unread} onPress={() => props.onFilter({ ...filter, unread: !filter.unread })} />
         <Chip label="Markiert" icon="star" active={filter.starred} onPress={() => props.onFilter({ ...filter, starred: !filter.starred })} />
         <Chip
@@ -59,6 +66,11 @@ export function ListHead(props: {
           />
         ))}
       </ScrollView>
+      <ActionSheet
+        visible={choosing}
+        actions={SORT_CHOICES.map((choice) => ({ label: choice.label, onPress: () => setSort(choice.sort) }))}
+        onClose={() => setChoosing(false)}
+      />
     </View>
   )
 }

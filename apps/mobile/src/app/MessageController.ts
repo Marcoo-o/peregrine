@@ -1,5 +1,8 @@
 import type { PgpStatus } from '@peregrine/core/types'
+import { decodeUtf8 } from '@peregrine/imap/utf8'
+import { safeFilename } from '@peregrine/core/safeFilename'
 import { parseAddress } from '@peregrine/smtp/headers'
+import { loadSafety } from '../safety'
 import { refusalForOpening } from '@peregrine/core/attachmentSafety'
 import { SNIFF_BYTES } from '@peregrine/core/fileType'
 import type { Account } from '../accounts'
@@ -20,7 +23,7 @@ import { isFirstContact, messagesFrom } from '../senderHistory'
 import type { UnifiedMessage } from '../unified'
 import type { MessageTarget } from '../background/notifications'
 import type { Navigator } from './Navigator'
-import type { MessageOrigin, MessageState, MoveState } from './screens'
+import type { MessageOrigin, MessageState, MoveState, SourceState } from './screens'
 import type { Services } from './services'
 import type { AppStore } from './store'
 
@@ -108,6 +111,7 @@ export class MessageController {
         knownDomains,
         protection: reading.status,
         source,
+        raw: full.source,
         attachments: this.attachmentsShown(this.attachmentsOf(source), reading.status)
       })
     } catch (error) {
@@ -238,6 +242,32 @@ export class MessageController {
     await this.leave(state)
   }
 
+  /** The most of a source that is shown: a message with a large attachment is not a text to read, and would hold the screen. */
+  static readonly SOURCE_LIMIT = 200_000
+
+  /** Shows the message as the server has it, which is how a header or a part that the other screens leave out is looked at. */
+  showSource(state: MessageState): void {
+    if (!state.raw) return
+    const bytes = state.raw.subarray(0, MessageController.SOURCE_LIMIT)
+    this.store.showScreen({ name: 'source', message: state, text: decodeUtf8(bytes), truncated: state.raw.length > bytes.length })
+  }
+
+  closeSource(state: SourceState): void {
+    this.store.showScreen(state.message)
+  }
+
+  /** Saves the message as a file, `.eml`, where the user chooses: what mail programs open and what a bug report or a lawyer asks for. */
+  async saveSource(state: MessageState): Promise<void> {
+    if (!state.raw) return
+    const name = `${safeFilename(state.message?.subject || state.summary.subject, 'nachricht').replace(/\.eml$/i, '')}.eml`
+    try {
+      const saved = await this.services.files.save(name, 'message/rfc822', state.raw)
+      this.showNotice(state, saved ? `Gespeichert: ${name}` : undefined)
+    } catch (error) {
+      this.showNotice(state, `Speichern ging nicht: ${explainError(error)}`)
+    }
+  }
+
   /** Saves an attachment where the user chooses. Keeping a file is their decision, so there is no check. */
   async saveAttachment(state: MessageState, info: AttachmentInfo): Promise<void> {
     const content = this.contentOf(state, info)
@@ -254,7 +284,7 @@ export class MessageController {
   async openAttachment(state: MessageState, info: AttachmentInfo): Promise<void> {
     const content = this.contentOf(state, info)
     if (!content) return
-    const refused = refusalForOpening(info.filename, content.subarray(0, SNIFF_BYTES))
+    const refused = (await loadSafety(this.services.db)).warnRiskyAttachments ? refusalForOpening(info.filename, content.subarray(0, SNIFF_BYTES)) : null
     if (refused) {
       this.showNotice(state, refusalText(refused))
       return

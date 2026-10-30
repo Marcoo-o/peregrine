@@ -104,6 +104,8 @@ export interface MessageState extends OpenMessage {
   message?: ReadableMessage
   /** The source of the message and the attachments found in it, for saving and opening them. */
   source?: Uint8Array
+  /** The message as the server has it, which is what is shown as its source and saved as a file; it is `source` unless that was opened from an encrypted one. */
+  raw?: Uint8Array
   attachments?: AttachmentInfo[]
   /** What is known of the message from its headers: what the server made of it and who it says it is from. */
   assessment?: MessageAssessment
@@ -191,6 +193,16 @@ export interface KeysState {
   error?: string
 }
 
+/** The source of a message, as it is on the server: the headers and the parts, to read what the other screens leave out. */
+export interface SourceState {
+  name: 'source'
+  /** The message it is of, which is shown again when this is left. */
+  message: MessageState
+  text: string
+  /** Only the first part of a message that is very large is shown. */
+  truncated: boolean
+}
+
 /** The messages that wait for a moment, which can be taken back to be written on again. */
 export interface ScheduledState {
   name: 'scheduled'
@@ -255,6 +267,7 @@ export type Screen =
   | EditAccountState
   | IdentitiesState
   | ScheduledState
+  | SourceState
   | FolderToolsState
   | TagsState
 

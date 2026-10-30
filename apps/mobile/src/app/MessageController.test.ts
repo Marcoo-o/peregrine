@@ -460,3 +460,71 @@ describe('a message that a search found', () => {
     expect(t.store.screen).toMatchObject({ name: 'search', query: 'contract' })
   })
 })
+
+describe('the source of a message', () => {
+  it('is shown as the server has it, and the screen goes back to the message as it was', async () => {
+    const t = await connectedInbox()
+    const state = await opened(t)
+    t.app.messages.showSource(state)
+    expect(t.store.screen).toMatchObject({ name: 'source', message: state, truncated: false, text: expect.stringContaining('Subject:') })
+    t.app.messages.closeSource(t.store.screen as never)
+    expect(t.store.screen).toBe(state)
+  })
+
+  it('is cut where it is very large, and says so', async () => {
+    const t = await connectedInbox()
+    const state = await opened(t)
+    t.app.messages.showSource({ ...state, raw: new Uint8Array(300_000).fill(65) })
+    const shown = t.store.screen as { text: string; truncated: boolean }
+    expect(shown.truncated).toBe(true)
+    expect(shown.text).toHaveLength(200_000)
+  })
+
+  it('is nothing before the message has arrived', async () => {
+    const t = await connectedInbox()
+    const state = await opened(t)
+    t.app.messages.showSource({ ...state, raw: undefined })
+    expect(t.store.screen.name).toBe('message')
+  })
+
+  it('is saved as an .eml with the subject for its name, as the server has it', async () => {
+    const t = await connectedInbox()
+    const state = await opened(t)
+    await t.app.messages.saveSource(state)
+    expect(t.files.saved).toHaveLength(1)
+    expect(t.files.saved[0].name).toMatch(/\.eml$/)
+    expect(t.files.saved[0].contentType).toBe('message/rfc822')
+    expect(new TextDecoder().decode(t.files.saved[0].content)).toContain('Subject:')
+    expect(t.store.screen).toMatchObject({ notice: expect.stringMatching(/^Gespeichert: .*\.eml$/) })
+  })
+
+  it('says why when saving failed, and nothing when no place was chosen', async () => {
+    const t = await connectedInbox()
+    const state = await opened(t)
+    t.files.saveAnswer = false
+    await t.app.messages.saveSource(state)
+    expect((t.store.screen as MessageState).notice).toBeUndefined()
+    t.files.failWith = new Error('no space left')
+    await t.app.messages.saveSource(t.store.screen as MessageState)
+    expect(t.store.screen).toMatchObject({ notice: expect.stringContaining('no space left') })
+  })
+})
+
+describe('the checks that can be switched off', () => {
+  const info = (state: MessageState, filename: string) => state.attachments!.find((a) => a.filename === filename)!
+
+  it('hand a program to another application when the check for risky attachments is off', async () => {
+    const t = await connectedInbox()
+    await t.app.settings.setSafety({ warnRiskyAttachments: false })
+    const state = await opened(t)
+    await t.app.messages.openAttachment(state, info(state, 'invoice.pdf.exe'))
+    expect(t.files.opened.map((file) => file.name)).toEqual(['invoice.pdf.exe'])
+  })
+
+  it('keep refusing it while the check is on, which it is until the user says otherwise', async () => {
+    const t = await connectedInbox()
+    const state = await opened(t)
+    await t.app.messages.openAttachment(state, info(state, 'invoice.pdf.exe'))
+    expect(t.files.opened).toEqual([])
+  })
+})

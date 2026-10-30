@@ -1,4 +1,8 @@
 import type { PendingSummary } from '@peregrine/core/pendingActions'
+import type { ListSort } from '../listSort'
+import { DEFAULT_SORT } from '../listSort'
+import type { SafetySettings } from '../safety'
+import { DEFAULT_SAFETY } from '../safety'
 import type { Tag } from '../tags'
 import type { Screen } from './screens'
 
@@ -19,6 +23,10 @@ export interface AppState {
   tags: Tag[]
   /** The message that was sent last and can still be taken back, or null. */
   undo: UndoState | null
+  /** How the lists of messages are ordered. */
+  sort: ListSort
+  /** Which of the checks of links and attachments are on. */
+  safety: SafetySettings
 }
 
 /** A message that waits in the queue for a few seconds, which can be taken back until then. */
@@ -42,7 +50,7 @@ type Listener = () => void
  * changed in place, which is what lets a screen tell that it changed.
  */
 export class AppStore {
-  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null, tags: [], undo: null }
+  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null, tags: [], undo: null, sort: DEFAULT_SORT, safety: DEFAULT_SAFETY }
   private readonly listeners = new Set<Listener>()
 
   get state(): AppState {
@@ -71,6 +79,14 @@ export class AppStore {
 
   setTags(tags: Tag[]): void {
     this.update({ tags })
+  }
+
+  setSafety(safety: SafetySettings): void {
+    this.update({ safety })
+  }
+
+  setSort(sort: ListSort): void {
+    this.update({ sort })
   }
 
   setUndo(undo: UndoState | null): void {

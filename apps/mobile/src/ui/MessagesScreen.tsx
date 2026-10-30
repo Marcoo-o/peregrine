@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { FlatList, Text, View } from 'react-native'
 import type { MessagesState } from '../app/screens'
 import { filterMessages, NO_FILTER } from '../listFilter'
+import { sortMessages } from '../listSort'
 import type { StoredMessage } from '../messages'
 import type { Tag } from '../tags'
 import { Fab, Spinner } from './controls'
@@ -9,6 +10,7 @@ import { EmptyListNote } from './EmptyListNote'
 import { OlderFooter } from './OlderFooter'
 import { folderLabel } from './folderLabel'
 import { ListHead } from './ListHead'
+import { useSort } from './sort'
 import { MessageRow } from './MessageRow'
 import { SelectionBar, SelectionHeader } from './SelectionBar'
 import { SwipeableRow } from './SwipeableRow'
@@ -39,11 +41,12 @@ export function MessagesScreen(props: {
   const styles = useStyles()
   const { account, folder, messages, showPreview, folderNames, busy, error, hasOlder, loadingOlder } = props.state
   const [filter, setFilter] = useState(NO_FILTER)
+  const { sort } = useSort()
   // What the choice needs of a message: where it is, which the list of one folder does not say of each of them.
   const rows = useMemo(
     () =>
-      filterMessages(messages, filter).map((message) => ({ message, accountId: account.id, folderId: folder.id, uid: message.uid })),
-    [messages, filter, account.id, folder.id]
+      sortMessages(filterMessages(messages, filter), sort).map((message) => ({ message, accountId: account.id, folderId: folder.id, uid: message.uid })),
+    [messages, filter, sort, account.id, folder.id]
   )
   const selection = useSelection(rows, props.actions)
 

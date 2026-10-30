@@ -242,6 +242,7 @@ function createStyles({ colors }: Theme) {
     removeRow: { minHeight: SIZE.target, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: SIZE.padding, paddingHorizontal: 4 },
     removeText: { fontSize: 15, color: colors.danger },
     editText: { fontSize: 15, color: colors.accent },
+    source: { fontFamily: 'monospace', fontSize: 12, color: colors.text },
     undoBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: SIZE.target, paddingHorizontal: SIZE.padding, backgroundColor: colors.sunken },
     undoText: { flex: 1, fontSize: 14, color: colors.text },
     undoAction: { fontSize: 14, fontWeight: '600', color: colors.accent },
