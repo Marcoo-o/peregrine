@@ -49,6 +49,7 @@ export function SettingsScreen(props: {
   onFontScale: (scale: FontScale) => void
   onLook: (change: Partial<Look>) => void
   onLock: (on: boolean) => void
+  onContacts: () => void
   onConversations: (on: boolean) => void
   onLockDelay: (seconds: number) => void
   onTags: () => void
@@ -157,6 +158,7 @@ export function SettingsScreen(props: {
       </Text>
 
       <Text style={styles.section}>Adressen</Text>
+      <Button label="Kontakte verwalten" variant="secondary" onPress={props.onContacts} />
       <View style={styles.group}>
         <SwitchRow label="Kontakte des Geräts vorschlagen" value={list.deviceContacts} onChange={props.onDeviceContacts} />
       </View>

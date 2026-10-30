@@ -3,6 +3,7 @@ import { AccountSetup } from './AccountSetup'
 import { describeError } from '../errors'
 import { ComposeController } from './ComposeController'
 import { ProtectionDefaults } from '../pgp/protectionDefaults'
+import { ContactsController } from './ContactsController'
 import { FolderController } from './FolderController'
 import { LockController } from './LockController'
 import { SenderController } from './SenderController'
@@ -32,6 +33,7 @@ export class Application {
   readonly compose: ComposeController
   readonly accounts: AccountSetup
   readonly folders: FolderController
+  readonly contacts: ContactsController
   readonly lock: LockController
   readonly senders: SenderController
   readonly settings: SettingsController
@@ -59,6 +61,7 @@ export class Application {
     this.tags = new TagController(services, store)
     this.keys = new KeysController(services, store, this.protection)
     this.folders = new FolderController(services, store, this.navigator)
+    this.contacts = new ContactsController(services, store)
     this.senders = new SenderController(services, store, this.navigator, this.identities)
   }
 

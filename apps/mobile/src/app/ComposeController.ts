@@ -1,4 +1,5 @@
 import { listAccounts, type Account } from '../accounts'
+import { listBook, matchBook } from '../contactBook'
 import { mergeSuggestions, suggestContacts, SUGGESTIONS, type Contact } from '../contacts'
 import { draftFromInput, editableDraft, emptyDraft, forwardDraft, recipientAddresses, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
 import { bringAttachments, notBroughtText } from '../draftAttachments'
@@ -97,14 +98,19 @@ export class ComposeController {
     const accounts = await listAccounts(db)
     const own = accounts.map((account) => account.emailAddress.toLowerCase())
     const history = await suggestContacts(db, typed, accounts.map((account) => account.emailAddress))
-    if (!(await loadListSettings(db)).deviceContacts) return history
+    // What the user keeps themselves: after the people they have mail from, and its names are the ones that are shown for them.
+    const kept: Contact[] = matchBook(await listBook(db), typed)
+      .filter((contact) => !own.includes(contact.address.toLowerCase()))
+      .map(({ name, address }) => ({ name, address }))
+    if (!(await loadListSettings(db)).deviceContacts) return mergeSuggestions(history, kept, SUGGESTIONS)
     try {
-      if (!(await deviceContacts.permitted())) return history
-      const book = (await deviceContacts.search(typed, SUGGESTIONS * 2)).filter((contact) => !own.includes(contact.address.toLowerCase()))
-      return mergeSuggestions(history, book, SUGGESTIONS)
+      if (!(await deviceContacts.permitted())) return mergeSuggestions(history, kept, SUGGESTIONS)
+      const device = (await deviceContacts.search(typed, SUGGESTIONS * 2)).filter((contact) => !own.includes(contact.address.toLowerCase()))
+      // The kept ones are last in the list that names win from, so a name the user gave is not replaced by the address book's.
+      return mergeSuggestions(history, [...device, ...kept], SUGGESTIONS)
     } catch (error) {
       this.services.log.warn(`the address book could not be read: ${explainError(error)}`)
-      return history
+      return mergeSuggestions(history, kept, SUGGESTIONS)
     }
   }
 

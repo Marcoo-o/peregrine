@@ -50,6 +50,8 @@ export function MessageScreen(props: {
   onJunk: () => void
   onSource: () => void
   onPrint: () => void
+  /** Keeps the sender as a contact. */
+  onAddContact: () => void
   /** Looks for the public key of the sender, on the keyserver and in the directory of the sender's domain. */
   onFindKey: (address: string) => void
   onSaveSource: () => void
@@ -148,6 +150,7 @@ export function MessageScreen(props: {
           { label: 'Verschieben …', onPress: props.onMove },
           { label: 'Als Spam markieren', onPress: props.onJunk },
           ...(message ? [{ label: 'Drucken oder als PDF speichern', onPress: props.onPrint }] : []),
+          ...(message ? [{ label: 'Zu Kontakten hinzufügen', onPress: props.onAddContact }] : []),
           ...(senderAddress ? [{ label: 'Schlüssel des Absenders suchen', onPress: () => props.onFindKey(senderAddress) }] : []),
           ...(props.state.raw
             ? [
