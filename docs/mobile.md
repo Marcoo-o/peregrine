@@ -1432,10 +1432,9 @@ the message, a look for mail while the application is closed, the keys sealed by
 
 **First, because the phone is not a client that can stand alone without them**
 
-1. *History.* A sync fetches the headers of the newest 50 messages of a folder (`NEWEST` in `sync.ts`) and nothing older, ever; there is no
-   "older messages". Search looks only through what was fetched, and there is no search on the server. The desktop synchronises the whole
-   folder. Needed: fetching older messages by page as the list is scrolled, a sync of the flags of what is already there (CONDSTORE
-   where the server has it), and an IMAP search for what is not on the phone. L, and the one with the most to gain.
+1. *History.* (Done as far as loading goes: see "What loading older messages found". What is left is an IMAP search for what is not on the
+   phone, and CONDSTORE for the flags, which now come with every sync as a list of the whole folder.) A sync fetched the headers of the newest 50
+   messages of a folder and nothing older, ever; search looks only through what was fetched. The desktop synchronises the whole folder.
 2. *The phone's own place in the system.* `mailto:` links, sharing text and files to a new message, being offered as an application for mail,
    and the people of the phone's contacts as suggestions for recipients. None of it is in the manifest. The desktop has no counterpart; a mail
    client on a phone without it is used less than one that has it. M.
@@ -1486,6 +1485,37 @@ the message, a look for mail while the application is closed, the keys sealed by
 
 History (1), then setting up and editing accounts (3), then the system's place (2) and folders (4); then undo send and the signature (5, 6), sorting (7) and the tools of a
 message (10); OAuth2 as a decision of its own, taken before the phone is shown to anyone who does not have a provider that accepts a password; the rest by what is missed.
+
+## What loading older messages found
+
+A sync fetched the newest 50 messages of a folder and nothing older, ever. The session already asked the server for the flags of *every*
+message of the folder at each sync (the desktop uses it to notice removals), and the phone threw that list away.
+
+- *The list of what the server has is used.* After each sync (`reconcile`, in `folderChanges.ts`) every cached message the server no longer has
+  is taken out, whatever its age (before, only the newest range was looked at, and a message deleted on another device stayed for good); what was
+  read or starred elsewhere shows so; and the number of messages the server has is kept for the folder (migration 11). A message that has a change
+  waiting for it in the queue keeps the flags it has here, so that a sync does not undo what the user decided before the queue has told the server.
+- *What is new is fetched from the newest message the phone has on*, not the newest 50 each time. If the numbers have run on by more than 500 since
+  (the phone was off for a long time), the folder is started anew with the newest 50, since the messages in between would be a hole that loading
+  older ones never fills.
+- *Older messages are loaded by page* (`loadOlder`, in `sync.ts`): after a sync, which says which UIDs the server has, the highest 50 below the oldest
+  the phone has, fetched by number with the new `fetchMessages` of the session (`UID FETCH` of a set, in both the phone's client and the
+  desktop's). Taken from that list and not counted down from a UID, so that a folder with gaps in its numbering still gives full pages. The
+  folder knows there is more when the server has more messages than the phone has, so there is no button for nothing.
+- *In the screens.* A list of a folder ends with "Ältere Nachrichten laden", a spinner while it loads, and scrolling to the end loads on by itself,
+  except under a filter (a filter that shows little would otherwise load a whole mailbox to fill itself). The list of all accounts shows 200 at
+  first and 100 more each time: more of those the phone has when it has more, and else a page of older ones fetched for the folder of the role of
+  each account, one account not holding up the others.
+- *Not done:* search on the server for what is not loaded (the search still looks through what the phone has, which now grows), CONDSTORE (the list of
+  the whole folder with its flags is asked for at every sync, which is cheap for a mailbox of thousands and not for one of a hundred thousand), and
+  the unified list's limit growing without bound as it is scrolled.
+
+Covered by tests: the session's fetch of a set, the reconciling (gone, flags, the queue's changes, flags in another order), what is new since the
+last sync, the hole, pages of older messages (the highest below the oldest, in full from a folder with gaps, a message deleted meanwhile, the end), and
+the screens' state (the folder and the list of all accounts, one load at a time, no connection).
+Seen on the emulator: a folder of 130 messages showed the newest 50 first; scrolling to the end loaded the rest by itself in pages until the list said 130
+messages and ended at the first, with no button for nothing; after one message was read and another deleted on the server, a refresh showed the first as
+read and the second gone (129 messages). Not seen on the device: the unified list's loading, which is covered by tests.
 
 ## What stage 4 found
 
