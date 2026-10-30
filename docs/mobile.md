@@ -1394,6 +1394,34 @@ Seen on the emulator, on the real network: the address of the GnuPG maintainer's
 was offered; the file is binary, so this also shows that the response of `fetch` can be read as bytes on the phone. Not seen on the device: the
 keyserver, and the ways it fails (covered by tests with a fetcher that answers as told, and by the same lookup run against the real directory from a PC).
 
+## What a folder that changes under the phone found
+
+The phone kept the messages of a folder by their UID and never asked whether the UIDs still meant what they did. Found when the test
+server was reset and the list on the emulator showed rows of messages that were gone.
+
+- *UIDVALIDITY was never kept.* A server that numbers a folder anew (a restore, a mailbox made again, a move to another server) says
+  so with a new UIDVALIDITY, and every UID the phone knew then names another message, or none. The list showed messages that were not
+  what they said, and what was done to one (starring it, moving it, deleting it) was done to whichever message had that number
+  now, also by what waited in the queue. The folder has a column for it (migration 10), as text since the number is 32 bits.
+- *A sync forgets what it cannot trust.* `syncFolder` asks the server for the UIDVALIDITY when it decides the range, and when it is not the
+  one the folder had, drops the messages of the folder and the actions that waited to be made to them (`resetFolder`): flags, deletes and
+  moves that name the folder, which would hit others. A draft that waited to replace a revision in that folder is kept as a draft that
+  replaces nothing, so that what the user wrote is not lost and the old revision is left where it is. The folder is then fetched as if it
+  were new, and the log says what it cost (`resetText`). A folder that was never synced since this was kept has no UIDVALIDITY to compare
+  with: the first sync trusts what is there and records the number, which is all that can be done for the messages of an older version.
+- *Messages that were deleted elsewhere stay.* A sync only added and updated what it fetched. After a sync the messages in the range that was
+  asked for (the newest 50 and what is newer) that the server did not give are taken out (`dropGone`); what is older than the range is not
+  asked about and stays, since not being fetched is not being gone.
+- *Not done:* telling the user that changes were given up (it is in the log), and looking at flags of what is older than the range.
+
+Covered by tests: the number kept for each folder, a folder numbered anew (what goes, what stays, the log), the first sync of a folder with
+messages and no number, the queue (which actions go, a draft that stays), messages gone elsewhere, an empty folder, and the edge of the range.
+Seen on the emulator: three messages synced; the server's inbox then numbered anew (its index removed) with two other messages in it: the next
+sync logged that the phone forgot three messages and the list showed the two that the server has. A message deleted on the server then
+went from the list at the next refresh. Not seen: the queue part, which is covered by tests only. One more thing seen, and not looked at: after
+the test server was restarted the screen said "Keine Verbindung" and the refresh button did not bring the connection back for a minute or more,
+only restarting the application did.
+
 ## What stage 4 found
 
 **The TCP library cannot be used as it is.** `react-native-tcp-socket` was read before it was
