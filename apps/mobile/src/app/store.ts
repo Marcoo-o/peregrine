@@ -4,6 +4,7 @@ import { DEFAULT_SORT } from '../listSort'
 import type { SafetySettings } from '../safety'
 import { DEFAULT_SAFETY } from '../safety'
 import type { Tag } from '../tags'
+import { paneAfter } from './panes'
 import type { Screen } from './screens'
 
 /** What waits in the queue, and why the first action that failed did. */
@@ -27,6 +28,8 @@ export interface AppState {
   sort: ListSort
   /** Which of the checks of links and attachments are on. */
   safety: SafetySettings
+  /** The list that was shown when the message on the screen was opened, which a wide window shows beside it; null when there is none. */
+  pane: Screen | null
   /** Whether replies are grouped into conversations in the lists. */
   conversations: boolean
   /** The application is locked: nothing of the mail is shown until the screen lock of the phone has been given. */
@@ -54,7 +57,7 @@ type Listener = () => void
  * changed in place, which is what lets a screen tell that it changed.
  */
 export class AppStore {
-  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null, tags: [], undo: null, sort: DEFAULT_SORT, safety: DEFAULT_SAFETY, conversations: true, locked: false }
+  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null, tags: [], undo: null, sort: DEFAULT_SORT, safety: DEFAULT_SAFETY, conversations: true, pane: null, locked: false }
   private readonly listeners = new Set<Listener>()
 
   get state(): AppState {
@@ -66,7 +69,7 @@ export class AppStore {
   }
 
   showScreen(screen: Screen): void {
-    this.update({ screen })
+    this.update({ screen, pane: paneAfter(this.current, screen) })
   }
 
   setConnected(connected: string[]): void {

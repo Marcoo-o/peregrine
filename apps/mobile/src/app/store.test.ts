@@ -15,6 +15,7 @@ describe('the store', () => {
       sort: { field: 'date', direction: 'desc' },
       safety: { warnSuspiciousLinks: true, confirmAllLinks: false, warnRiskyAttachments: true },
       conversations: true,
+      pane: null,
       locked: false
     })
   })
