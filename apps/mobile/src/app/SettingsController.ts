@@ -15,7 +15,7 @@ import {
 } from '../settings'
 import { saveSort, type ListSort } from '../listSort'
 import { loadLock } from '../lock'
-import { appearance, fontScale, saveAppearance, saveFontScale, type AppearanceMode, type FontScale } from '../appearance'
+import { appearance, fontScale, look, saveAppearance, saveFontScale, saveLook, type AppearanceMode, type FontScale, type Look } from '../appearance'
 import { saveConversations } from '../threads'
 import { saveSafety, type SafetySettings } from '../safety'
 import type { LockController } from './LockController'
@@ -91,6 +91,12 @@ export class SettingsController {
 
   async setLockDelay(afterSeconds: number): Promise<void> {
     await this.locking.setDelay(afterSeconds)
+    await this.show()
+  }
+
+  /** The accent, the way dates are written and how close the lines of a list sit: kept, and in force at once. */
+  async setLook(change: Partial<Look>): Promise<void> {
+    look.set(await saveLook(this.services.db, change))
     await this.show()
   }
 

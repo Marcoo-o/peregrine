@@ -3,7 +3,8 @@ import { Text, View } from 'react-native'
 import type { SettingsState } from '../app/screens'
 import { delayLabel, LOCK_DELAYS } from '../lock'
 import { hasQuietHours, INTERVAL_CHOICES, UNDO_CHOICES } from '../settings'
-import { APPEARANCE_CHOICES, appearance, FONT_SCALES, fontScale, type AppearanceMode, type FontScale } from '../appearance'
+import { APPEARANCE_CHOICES, appearance, DATE_FORMATS, DENSITIES, FONT_SCALES, fontScale, look, type AppearanceMode, type FontScale, type Look } from '../appearance'
+import { ACCENTS, type AccentName } from './theme'
 import type { SafetySettings } from '../safety'
 import { useSafety } from './safety'
 import { useSort } from './sort'
@@ -46,6 +47,7 @@ export function SettingsScreen(props: {
   onSafety: (change: Partial<SafetySettings>) => void
   onAppearance: (mode: AppearanceMode) => void
   onFontScale: (scale: FontScale) => void
+  onLook: (change: Partial<Look>) => void
   onLock: (on: boolean) => void
   onConversations: (on: boolean) => void
   onLockDelay: (seconds: number) => void
@@ -95,6 +97,27 @@ export function SettingsScreen(props: {
       <View style={styles.actions}>
         {APPEARANCE_CHOICES.map((choice) => (
           <Chip key={choice.mode} label={choice.label} active={appearance.mode === choice.mode} onPress={() => props.onAppearance(choice.mode)} />
+        ))}
+      </View>
+
+      <Text style={styles.section}>Akzentfarbe</Text>
+      <View style={styles.actions}>
+        {(Object.keys(ACCENTS) as AccentName[]).map((accent) => (
+          <Chip key={accent} label={ACCENTS[accent].label} dot={ACCENTS[accent].light} active={look.current.accent === accent} onPress={() => props.onLook({ accent })} />
+        ))}
+      </View>
+
+      <Text style={styles.section}>Datum in den Listen</Text>
+      <View style={styles.actions}>
+        {DATE_FORMATS.map((choice) => (
+          <Chip key={choice.format} label={choice.label} active={look.current.dateFormat === choice.format} onPress={() => props.onLook({ dateFormat: choice.format })} />
+        ))}
+      </View>
+
+      <Text style={styles.section}>Abstand in den Listen</Text>
+      <View style={styles.actions}>
+        {DENSITIES.map((choice) => (
+          <Chip key={choice.density} label={choice.label} active={look.current.density === choice.density} onPress={() => props.onLook({ density: choice.density })} />
         ))}
       </View>
 

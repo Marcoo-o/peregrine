@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native'
-import { scaled } from './scaleStyles'
+import { densified, scaled, type Density } from './scaleStyles'
 import { SIZE, withAlpha, type Theme } from './theme'
 
 /**
@@ -346,11 +346,11 @@ export type Styles = ReturnType<typeof createStyles>
 const cache = new Map<string, Styles>()
 
 /** The styles of a theme at a scale, made once: a theme is a constant, and a style sheet is not made on every render. */
-export function stylesFor(theme: Theme, factor: number = 1): Styles {
-  const key = `${theme.scheme}:${factor}`
+export function stylesFor(theme: Theme, factor: number = 1, density: Density = 'cozy'): Styles {
+  const key = `${theme.scheme}:${theme.colors.accent}:${factor}:${density}`
   let styles = cache.get(key)
   if (!styles) {
-    styles = scaled(createStyles(theme), factor) as Styles
+    styles = densified(scaled(createStyles(theme), factor), density) as Styles
     cache.set(key, styles)
   }
   return styles

@@ -33,8 +33,20 @@ export interface Theme {
   colors: Palette
 }
 
-/** The accent is the one of the desktop's default, blue. A light and a dark value of it. */
-const ACCENT = { light: '#2f5d9f', dark: '#6d9eeb' } as const
+/** The accents to choose from: a light and a dark value of each, each readable as text on the pages of its scheme (the test in `theme.test.ts` measures it). */
+export type AccentName = 'blue' | 'teal' | 'purple' | 'amber' | 'rose' | 'slate'
+
+export const ACCENTS: Record<AccentName, { light: string; dark: string; label: string }> = {
+  blue: { light: '#2f5d9f', dark: '#6d9eeb', label: 'Blau' },
+  teal: { light: '#16736b', dark: '#5ec4ba', label: 'Petrol' },
+  purple: { light: '#6341b8', dark: '#a58bf0', label: 'Violett' },
+  amber: { light: '#8a5a00', dark: '#e0aa4a', label: 'Bernstein' },
+  rose: { light: '#b03a5b', dark: '#e88aa4', label: 'Rosé' },
+  slate: { light: '#4a5568', dark: '#a0aec0', label: 'Schiefer' }
+}
+
+/** The one of the desktop's default. */
+export const DEFAULT_ACCENT: AccentName = 'blue'
 
 /** `#rrggbb` with an opacity, which React Native reads as `#rrggbbaa`. */
 export function withAlpha(hex: string, opacity: number): string {
@@ -42,48 +54,61 @@ export function withAlpha(hex: string, opacity: number): string {
   return `${hex}${alpha.toString(16).padStart(2, '0')}`
 }
 
-const LIGHT: Theme = {
-  scheme: 'light',
-  colors: {
-    background: '#f4f5f7',
-    surface: '#ffffff',
-    sunken: '#eceef1',
-    text: '#1b1f24',
-    muted: '#5c6570',
-    border: '#dbdfe4',
-    accent: ACCENT.light,
-    onAccent: '#ffffff',
-    accentSoft: withAlpha(ACCENT.light, 0.12),
-    danger: '#b23b3b',
-    dangerSoft: '#fbeaea',
-    success: '#2a7a4f',
-    // The desktop's #b0791f is 3.4 to 1 on this background, which is not enough for text.
-    warning: '#926318'
+function build(scheme: SchemeName, accentName: AccentName): Theme {
+  const accent = ACCENTS[accentName][scheme]
+  if (scheme === 'dark') {
+    return {
+      scheme: 'dark',
+      colors: {
+        background: '#1b1e23',
+        surface: '#23272e',
+        sunken: '#16181c',
+        text: '#e7e9ec',
+        muted: '#9aa3ad',
+        border: '#343a42',
+        accent,
+        onAccent: '#0f1216',
+        accentSoft: withAlpha(accent, 0.12),
+        danger: '#e08080',
+        dangerSoft: '#3a2323',
+        success: '#7ec89a',
+        warning: '#d9a441'
+      }
+    }
+  }
+  return {
+    scheme: 'light',
+    colors: {
+      background: '#f4f5f7',
+      surface: '#ffffff',
+      sunken: '#eceef1',
+      text: '#1b1f24',
+      muted: '#5c6570',
+      border: '#dbdfe4',
+      accent,
+      onAccent: '#ffffff',
+      accentSoft: withAlpha(accent, 0.12),
+      danger: '#b23b3b',
+      dangerSoft: '#fbeaea',
+      success: '#2a7a4f',
+      // The desktop's #b0791f is 3.4 to 1 on this background, which is not enough for text.
+      warning: '#926318'
+    }
   }
 }
 
-const DARK: Theme = {
-  scheme: 'dark',
-  colors: {
-    background: '#1b1e23',
-    surface: '#23272e',
-    sunken: '#16181c',
-    text: '#e7e9ec',
-    muted: '#9aa3ad',
-    border: '#343a42',
-    accent: ACCENT.dark,
-    onAccent: '#0f1216',
-    accentSoft: withAlpha(ACCENT.dark, 0.12),
-    danger: '#e08080',
-    dangerSoft: '#3a2323',
-    success: '#7ec89a',
-    warning: '#d9a441'
-  }
-}
+const themes = new Map<string, Theme>()
 
 /** The theme for what the system has chosen. It has chosen light when it does not say. */
-export function themeFor(scheme: string | null | undefined): Theme {
-  return scheme === 'dark' ? DARK : LIGHT
+export function themeFor(scheme: string | null | undefined, accent: AccentName = DEFAULT_ACCENT): Theme {
+  const name: SchemeName = scheme === 'dark' ? 'dark' : 'light'
+  const key = `${name}:${accent}`
+  let theme = themes.get(key)
+  if (!theme) {
+    theme = build(name, ACCENTS[accent] ? accent : DEFAULT_ACCENT)
+    themes.set(key, theme)
+  }
+  return theme
 }
 
 /** The sizes the screens are made of, so that a gap or a corner is the same wherever it is. */

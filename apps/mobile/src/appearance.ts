@@ -1,4 +1,6 @@
 import type { SqlDb } from '@peregrine/core/sqlDb'
+import type { Density } from './ui/scaleStyles'
+import { ACCENTS, DEFAULT_ACCENT, type AccentName } from './ui/theme'
 
 /** Whether the application is light or dark whatever the system is, or follows it. */
 export type AppearanceMode = 'system' | 'light' | 'dark'
@@ -117,5 +119,78 @@ export const fontScale = {
   subscribe(listener: Listener): () => void {
     scaleListeners.add(listener)
     return () => scaleListeners.delete(listener)
+  }
+}
+
+/** How a date is written in a list: the time for today and the day for the rest, a short date, a long one with the time, or the ISO date. */
+export type DateFormat = 'relative' | 'short' | 'long' | 'iso'
+
+export const DATE_FORMATS: ReadonlyArray<{ format: DateFormat; label: string }> = [
+  { format: 'relative', label: 'Heute die Uhrzeit' },
+  { format: 'short', label: 'Kurz' },
+  { format: 'long', label: 'Lang' },
+  { format: 'iso', label: 'ISO' }
+]
+
+export const DENSITIES: ReadonlyArray<{ density: Density; label: string }> = [
+  { density: 'comfortable', label: 'Locker' },
+  { density: 'cozy', label: 'Normal' },
+  { density: 'compact', label: 'Eng' }
+]
+
+/** What the user chose of how the application looks besides light and dark and the size of the text. */
+export interface Look {
+  accent: AccentName
+  dateFormat: DateFormat
+  density: Density
+}
+
+export const DEFAULT_LOOK: Look = { accent: DEFAULT_ACCENT, dateFormat: 'relative', density: 'cozy' }
+
+const LOOK_NAME = 'look'
+
+/** The look as stored, each part that is missing or is not a choice taking its default. */
+export async function loadLook(db: SqlDb): Promise<Look> {
+  const row = await db.get<{ value: string }>('SELECT value FROM settings WHERE name = ?', LOOK_NAME)
+  if (!row) return DEFAULT_LOOK
+  try {
+    const given = (JSON.parse(row.value) as Record<string, unknown> | null) ?? {}
+    return {
+      accent: typeof given.accent === 'string' && given.accent in ACCENTS ? (given.accent as AccentName) : DEFAULT_LOOK.accent,
+      dateFormat: DATE_FORMATS.some((choice) => choice.format === given.dateFormat) ? (given.dateFormat as DateFormat) : DEFAULT_LOOK.dateFormat,
+      density: DENSITIES.some((choice) => choice.density === given.density) ? (given.density as Density) : DEFAULT_LOOK.density
+    }
+  } catch {
+    return DEFAULT_LOOK
+  }
+}
+
+export async function saveLook(db: SqlDb, change: Partial<Look>): Promise<Look> {
+  const next = { ...(await loadLook(db)), ...change }
+  await db.run(
+    `INSERT INTO settings (name, value) VALUES (?, ?)
+     ON CONFLICT (name) DO UPDATE SET value = excluded.value`,
+    LOOK_NAME,
+    JSON.stringify(next)
+  )
+  return next
+}
+
+let currentLook: Look = DEFAULT_LOOK
+const lookListeners = new Set<Listener>()
+
+/** The look in force, outside React for the same reason as the mode. A new object for each change, so that what reads it can tell. */
+export const look = {
+  get current(): Look {
+    return currentLook
+  },
+  set(next: Look): void {
+    if (next.accent === currentLook.accent && next.dateFormat === currentLook.dateFormat && next.density === currentLook.density) return
+    currentLook = next
+    lookListeners.forEach((listener) => listener())
+  },
+  subscribe(listener: Listener): () => void {
+    lookListeners.add(listener)
+    return () => lookListeners.delete(listener)
   }
 }

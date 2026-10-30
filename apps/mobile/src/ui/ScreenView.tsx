@@ -253,6 +253,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSafety={(change) => settings.setSafety(change)}
           onAppearance={(mode) => settings.setAppearance(mode)}
           onFontScale={(scale) => settings.setFontScale(scale)}
+          onLook={(change) => settings.setLook(change)}
           onLock={(on) => settings.setLock(on)}
           onConversations={(on) => settings.setConversations(on)}
           onLockDelay={(seconds) => settings.setLockDelay(seconds)}
