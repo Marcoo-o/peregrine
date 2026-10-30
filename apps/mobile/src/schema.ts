@@ -157,7 +157,23 @@ const MIGRATIONS: string[][] = [
   ['ALTER TABLE folders ADD COLUMN uid_validity TEXT'],
   // 11. How many messages the server had in a folder at the last sync. What the phone has of them is the messages table, and the
   // difference is what there is to load: null for a folder that was never synced since this was kept.
-  ['ALTER TABLE folders ADD COLUMN server_messages INTEGER']
+  ['ALTER TABLE folders ADD COLUMN server_messages INTEGER'],
+  // 12. The addresses an account sends under, each with its name and signature. Every account that is there gets the one it has always
+  // had, from its own name and address, as the default, so that nothing changes until a second one is added.
+  [
+    `CREATE TABLE identities (
+       id TEXT PRIMARY KEY,
+       account_id TEXT NOT NULL,
+       display_name TEXT NOT NULL DEFAULT '',
+       email_address TEXT NOT NULL,
+       signature TEXT NOT NULL DEFAULT '',
+       is_default INTEGER NOT NULL DEFAULT 0,
+       sort_order INTEGER NOT NULL DEFAULT 0
+     )`,
+    'CREATE INDEX idx_identities_account ON identities(account_id, sort_order)',
+    `INSERT INTO identities (id, account_id, display_name, email_address, signature, is_default, sort_order)
+     SELECT id || '-default', id, display_name, email_address, '', 1, 0 FROM accounts`
+  ]
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */

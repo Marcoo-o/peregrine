@@ -2,6 +2,7 @@ import { nextAccountColor } from '@peregrine/core/accountColors'
 import type { SecureMode } from '@peregrine/core/types'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import { newId } from './ids'
+import { addIdentity } from './identities'
 
 export interface Account {
   id: string
@@ -108,6 +109,7 @@ export async function addAccount(
     color,
     createdAt
   )
+  await addIdentity(db, { accountId: id, displayName: input.displayName, emailAddress: input.emailAddress, signature: '' }, { id: `${id}-default` })
   return { ...input, id, createdAt, color }
 }
 
@@ -154,6 +156,7 @@ export async function removeAccount(db: SqlDb, id: string): Promise<void> {
     await tx.run('DELETE FROM messages WHERE account_id = ?', id)
     await tx.run('DELETE FROM folders WHERE account_id = ?', id)
     await tx.run('DELETE FROM own_keys WHERE account_id = ?', id)
+    await tx.run('DELETE FROM identities WHERE account_id = ?', id)
     await tx.run('DELETE FROM accounts WHERE id = ?', id)
   })
 }

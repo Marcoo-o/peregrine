@@ -87,6 +87,15 @@ describe('the settings screen', () => {
     expect(t.store.screen).toMatchObject({ name: 'search', showPreview: false })
   })
 
+  it('has the time a sent message can be taken back in chosen, and the screen carries it', async () => {
+    const t = await onSettings()
+    expect(t.screen().sending).toEqual({ undoSeconds: 0 })
+    await t.app.settings.setUndoSeconds(20)
+    expect(t.screen().sending).toEqual({ undoSeconds: 20 })
+    await t.app.settings.setUndoSeconds(0)
+    expect(t.screen().sending).toEqual({ undoSeconds: 0 })
+  })
+
   describe('the address book of the device', () => {
     it('is switched on once the user allowed reading it, and off again', async () => {
       const t = await onSettings()

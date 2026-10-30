@@ -1441,9 +1441,8 @@ the message, a look for mail while the application is closed, the keys sealed by
 
 **Second, what the desktop's daily use has**
 
-5. *Signature text for each account* (S) and *several identities* with a default and the choice on a message (M).
-6. *Undo send* (the desktop holds a message for a few seconds; S, the queue has what it needs) and *sending at a later time* (the queue has `dueAt`, which snooze
-   uses; the composer refuses it now with "Sending at a later time is not on the phone yet"; M).
+5. *Signature text for each account and several identities.* (Done: see "What identities, a signature and undo send found".)
+6. *Sending at a later time* (the queue has `dueAt`, which snooze and undo send use; the composer refuses it now with "Sending at a later time is not on the phone yet"; S now that the queue holds messages). Undo send is done, see 5.
 7. *Sorting* by field and direction (S) and *conversations*, which group replies (L).
 8. *Saved searches* shown as folders (S to M: the search exists).
 9. *Formatted text when writing.* Reading HTML is done; writing is plain text and a formatted draft is refused. There is no good rich editor for the platform
@@ -1677,3 +1676,35 @@ and the controller against the fake server (make, rename, delete, a refusal, no 
 
 Seen on the emulator: making a folder, opening it, renaming it, and deleting it after the question, which says what is lost and has the harmless answer filled. Not seen on the device:
 mark all as read and empty the trash (covered by the controller's tests against the fake server) and a folder under another.
+
+## What identities, a signature and undo send found
+
+The phone sent from the account's one address, with no signature, at once.
+
+- *Identities* (migration 12, `identities.ts`). A name, an address and a signature, several for each account, one of them the default. Every account has the one
+  it has always had, made from its own name and address (the migration makes it for the accounts that are there, and adding an account makes it), and
+  it follows the account when its address is changed, unless the user gave it another. Removing the last is refused: an account without one could not
+  send. The compose screen offers the account's identities as chips once there are two, and the message goes out from the one that is chosen, with its
+  name in `From`; an identity that was taken away since or belongs to another account is the account's own. A draft that is written on again is from the identity
+  whose address it was written from. The screen for them is "Absender und Signatur", at the foot of the folders.
+- *The signature* is stored with the identity, as the desktop's was moved into its default identity, and is put under the text of a new message, a
+  reply and a forward after a line of `-- ` (two hyphens and a space), a reply under what it quotes as on the desktop. It is swapped when the sender is changed, but only when
+  it is still as it was put there: a signature that was edited by hand is left, and no second one is put over it.
+- *Undo send.* "Senden, Rückgängig möglich für" in the settings (off, 5, 10, 20, 30 seconds; 5 as on the desktop). A message that is sent is queued with a moment before which
+  it must not run (`dueAt`, which snooze uses), so it goes by itself when the time is over, from the queue, with or without the screen. A bar over
+  every screen says that it is being sent and offers "Rückgängig" with the seconds left. Taking it back removes the action and writes the message on again where it was
+  written, with its files, and the server's draft of it is not restored (it had been deleted with the sending). Once the moment has passed it is an action like any
+  other and may be under way, so it says "Zu spät" and leaves it. Only the newest message can be taken back.
+- *The queue is woken at the moment a held message is due.* Found on the emulator: the first build sent nothing after the time was over. The queue's timer for scheduled
+  actions (`rescheduleDue`) was armed only by the desktop's `AccountManager`; on the phone a held message would have gone at the next reconnect, which for a phone that stays
+  connected can be never. `MailActions.armDue` sets the timer after each change to the queue and when the application starts (a message held when it was closed is due when it
+  is opened), and the timer runs the queue of the accounts that have something scheduled; a test that moves the clock fails without it.
+- *Not done:* a signature for HTML (the phone writes plain text), choosing the identity of an answer by the address it was sent to (it starts from the default; the
+  sender can be changed), and sending at a later time.
+
+Covered by tests: the identities (add, change, default, remove, the last one kept), the migration of existing accounts, the signature (put, taken out, exchanged,
+left when edited), the compose screen's start and the sender of what goes out, the account following, the controller of the senders, the time that is held, and taking
+a message back (in time, too late, the newest only, with attachments), against a clock that is moved.
+Seen on the emulator: the screen for the senders (an account has its identity, a signature saved and the list coming back), a new message with the signature under the text after the
+`-- ` line, the bar "Wird gesendet: ... Rückgängig (4)" counting down, the message arriving at the SMTP server by itself after the five seconds with the signature, and a second message
+taken back with "Rückgängig" that came back into the editor with everything and was never sent. Not seen on the device: choosing between two identities on the compose screen (covered by tests).

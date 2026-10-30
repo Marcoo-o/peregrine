@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 import type { SettingsState } from '../app/screens'
-import { hasQuietHours, INTERVAL_CHOICES } from '../settings'
+import { hasQuietHours, INTERVAL_CHOICES, UNDO_CHOICES } from '../settings'
 import { Button, Chip, SwitchRow } from './controls'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
@@ -37,6 +37,7 @@ export function SettingsScreen(props: {
   onPreview: (preview: boolean) => void
   onShowPreview: (show: boolean) => void
   onDeviceContacts: (on: boolean) => void
+  onUndoSeconds: (seconds: number) => void
   onTags: () => void
   onKeys: () => void
   onQuietHours: (on: boolean) => void
@@ -48,7 +49,7 @@ export function SettingsScreen(props: {
   onBatterySettings: () => void
 }) {
   const styles = useStyles()
-  const { settings, list, contactsPermitted, accounts, permitted, push, notice } = props.state
+  const { settings, list, sending, contactsPermitted, accounts, permitted, push, notice } = props.state
   const quiet = hasQuietHours(settings)
   const off = !settings.enabled
 
@@ -61,6 +62,21 @@ export function SettingsScreen(props: {
         <SwitchRow label="Text unter dem Betreff zeigen" value={list.showPreview} onChange={props.onShowPreview} />
       </View>
       <Button label="Tags verwalten" variant="secondary" onPress={props.onTags} />
+
+      <Text style={styles.section}>Senden, Rückgängig möglich für</Text>
+      <View style={styles.actions}>
+        {UNDO_CHOICES.map((seconds) => (
+          <Chip
+            key={seconds}
+            label={seconds === 0 ? 'Aus' : `${seconds} Sekunden`}
+            active={sending.undoSeconds === seconds}
+            onPress={() => props.onUndoSeconds(seconds)}
+          />
+        ))}
+      </View>
+      <Text style={styles.hint}>
+        Eine gesendete Nachricht wartet so lange, und bis dahin lässt sie sich zurücknehmen und weiterschreiben. Ist die Zeit um, geht sie ab.
+      </Text>
 
       <Text style={styles.section}>Adressen</Text>
       <View style={styles.group}>

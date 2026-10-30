@@ -21,6 +21,7 @@ export function FoldersScreen(props: {
   onRemove: () => void
   onEdit: () => void
   onNewFolder: () => void
+  onSenders: () => void
   onConnect: () => void
   onCompose: () => void
 }) {
@@ -81,6 +82,10 @@ export function FoldersScreen(props: {
             <Pressable accessibilityRole="button" style={styles.removeRow} onPress={props.onNewFolder}>
               <Icon name="folder" size={18} color={colors.accent} />
               <Text style={styles.editText}>Ordner anlegen</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" style={styles.removeRow} onPress={props.onSenders}>
+              <Icon name="signature" size={18} color={colors.accent} />
+              <Text style={styles.editText}>Absender und Signatur</Text>
             </Pressable>
             <Pressable accessibilityRole="button" style={styles.removeRow} onPress={props.onEdit}>
               <Icon name="settings" size={18} color={colors.accent} />

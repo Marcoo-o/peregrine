@@ -9,8 +9,10 @@ import { explainError } from '../errors'
 import { protectionProblem } from '../pgp/protect'
 import type { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { smtpSettingsOf } from '../send'
-import { loadListSettings } from '../settings'
+import { identityForSender, withIdentity } from '../signature'
+import { loadListSettings, loadSendSettings } from '../settings'
 import { autosaveDue } from './autosave'
+import type { Identities } from './Identities'
 import type { Navigator } from './Navigator'
 import type { ComposeState, MessageState, Screen } from './screens'
 import type { Services } from './services'
@@ -28,11 +30,18 @@ export class ComposeController {
   /** The draft that was last handed to the queue for each writing of a message, which is what is kept once the queue has run. */
   private readonly keeping = new Map<string, Draft>()
 
+  /**
+   * The messages that are held back and can be taken back, by the action that carries each: what is needed to write them on again, which the
+   * queue does not keep in this shape (the sizes of the attached files, and where to go back to).
+   */
+  private readonly held = new Map<number, { account: Account; returnTo: Screen; draft: Draft }>()
+
   constructor(
     private readonly services: Services,
     private readonly store: AppStore,
     private readonly navigator: Navigator,
-    private readonly protection: ProtectionDefaults
+    private readonly protection: ProtectionDefaults,
+    private readonly identities: Identities
   ) {
     // A draft that waited for a connection is kept when the queue runs, which can be while the message is still on the screen.
     services.mail.onDraftKept((session, kept) => {
@@ -157,6 +166,7 @@ export class ComposeController {
     const protection = state.protection ?? 'none'
     let draft: Draft = {
       ...found.draft,
+      identityId: identityForSender(this.identities.forAccount(state.account.id), state.message.from)?.id,
       encrypt: protection.startsWith('encrypted') ? true : undefined,
       sign: protection.startsWith('signed') ? true : undefined
     }
@@ -201,15 +211,54 @@ export class ComposeController {
     }
     this.store.showScreen({ ...state, draft, busy: true, error: undefined })
     try {
-      await this.services.mail.send(toComposeInput(state.account.id, draft))
+      // The message waits for a few seconds, which is when it can be taken back, and then goes as any queued message goes.
+      const holdSeconds = (await loadSendSettings(this.services.db)).undoSeconds
+      const actionId = await this.services.mail.send(toComposeInput(state.account.id, draft), { holdSeconds })
       // The message is on its way, and a draft of it is not wanted any more: not the one that waits, and not the one kept.
       await this.services.mail.forgetDraft(state.account.id, state.session)
       await this.dropSavedRevision(state)
       await this.leave(state)
+      this.holdForUndo(actionId, holdSeconds, state, draft)
       this.navigator.refreshStatus()
     } catch (error) {
       this.store.showScreen({ ...state, draft, busy: false, error: explainError(error) })
     }
+  }
+
+  /** What is said of a message that is held back: only the newest can be taken back, and the ones before it are on their way. */
+  private holdForUndo(actionId: number, holdSeconds: number, state: ComposeState, draft: Draft): void {
+    this.held.clear()
+    if (holdSeconds <= 0) {
+      this.store.setUndo(null)
+      return
+    }
+    this.held.set(actionId, { account: state.account, returnTo: state.returnTo, draft })
+    this.store.setUndo({ actionId, subject: draft.subject, until: Date.now() + holdSeconds * 1000 })
+  }
+
+  /**
+   * Takes the message that was sent last back, and writes it on again where it was written, with everything it had. When it is too late,
+   * because the moment it was held until has passed, it says so and leaves the message to go.
+   */
+  async undoSend(): Promise<void> {
+    const undo = this.store.state.undo
+    if (!undo || undo.late) return
+    const held = this.held.get(undo.actionId)
+    const taken = held !== undefined && (await this.services.mail.cancelSend(undo.actionId))
+    if (!taken) {
+      this.store.setUndo({ ...undo, late: true })
+      return
+    }
+    this.held.delete(undo.actionId)
+    this.store.setUndo(null)
+    this.navigator.refreshStatus()
+    this.show({ account: held.account, returnTo: held.returnTo, draft: held.draft })
+  }
+
+  /** The time to take a message back is over, or what was said of it was read: nothing is offered any more. */
+  clearUndo(): void {
+    this.held.clear()
+    this.store.setUndo(null)
   }
 
   /**
@@ -315,9 +364,14 @@ export class ComposeController {
     )
   }
 
-  /** A message that is started, with signing and encrypting on where the user wants them for every message and the account can. */
+  /**
+   * A message that is started, with signing and encrypting on where the user wants them for every message and the account can, and from
+   * the default identity of the account, with its signature under the text: a reply and a forward have it under what is quoted, as on the desktop.
+   */
   private started(account: Account, draft: Draft): Draft {
-    return { ...draft, ...this.protection.forAccount(account.id) }
+    const protected_ = { ...draft, ...this.protection.forAccount(account.id) }
+    const identity = this.identities.defaultFor(account.id)
+    return identity ? withIdentity(protected_, undefined, identity) : protected_
   }
 
   /** The state it was given with what has been kept since, which is on the screen while the writing of it is. */
@@ -351,6 +405,6 @@ export class ComposeController {
   }
 
   private show(start: Pick<ComposeState, 'account' | 'returnTo' | 'draft' | 'fromDraft' | 'saved' | 'savedDraft' | 'error'>): void {
-    this.store.showScreen({ name: 'compose', session: newId(), ...start, busy: false })
+    this.store.showScreen({ name: 'compose', session: newId(), ...start, identities: this.identities.forAccount(start.account.id), busy: false })
   }
 }

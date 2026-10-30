@@ -5,9 +5,12 @@ import {
   dropQueuedDraftSaves,
   dropQueuedMoves,
   enqueueAction,
+  listAllActions,
   listPendingActions,
+  listScheduled,
   pendingSummary,
-  queuedDraftSave
+  queuedDraftSave,
+  removePendingAction
 } from '@peregrine/core/pendingActionsStore'
 import type { PendingSummary } from '@peregrine/core/pendingActions'
 import type { SqlDb } from '@peregrine/core/sqlDb'
@@ -100,9 +103,25 @@ export class MailActions {
    * Puts a message to be sent into the queue. The message is the whole of what was written, and goes
    * out with the next run of the queue for its account, which is now when there is a connection.
    */
-  async send(input: ComposeInput): Promise<void> {
-    await enqueueAction(this.context.db, input.accountId, 'send', { input })
+  async send(input: ComposeInput, options: { holdSeconds?: number } = {}): Promise<number> {
+    const hold = options.holdSeconds ?? 0
+    const id = await enqueueAction(this.context.db, input.accountId, 'send', { input }, hold > 0 ? Date.now() + hold * 1000 : null)
     await this.settle(input.accountId)
+    return id
+  }
+
+  /**
+   * Takes a message that is held back out of the queue, and says whether it did. It does while the moment it was held until is still
+   * ahead; from then on it is an action like any other, which may be under way, and a message that went out cannot be taken back.
+   * Raises nothing for what is not there: that is the same as too late.
+   */
+  async cancelSend(actionId: number): Promise<boolean> {
+    const { db } = this.context
+    const held = (await listAllActions(db)).find((action) => action.id === actionId)
+    if (!held || held.kind !== 'send' || held.dueAt === null || held.dueAt <= Date.now()) return false
+    await removePendingAction(db, actionId)
+    await this.context.queue.notify()
+    return true
   }
 
   /**
@@ -185,5 +204,22 @@ export class MailActions {
   private async settle(accountId: string): Promise<void> {
     await this.context.queue.notify()
     await this.flush(accountId)
+    await this.armDue()
+  }
+
+  /**
+   * Has the queue wake up when the next action that is held back for a moment becomes due, which is a message that can still be taken
+   * back. Without it such an action would only go at the next time something runs the queue, which for a phone that stays connected can
+   * be never. One timer for everything, armed again after each change and each time it fires. Called by whatever changes the queue and when
+   * the application starts, since the actions that were held when it was closed are due when it is opened again.
+   */
+  async armDue(): Promise<void> {
+    await this.context.queue.rescheduleDue(() => void this.flushScheduled())
+  }
+
+  /** Runs the queue of every account that has an action that is held back, the due ones among them going out. */
+  private async flushScheduled(): Promise<void> {
+    const accountIds = new Set((await listScheduled(this.context.db)).map((action) => action.accountId))
+    await Promise.all([...accountIds].map((accountId) => this.flush(accountId)))
   }
 }

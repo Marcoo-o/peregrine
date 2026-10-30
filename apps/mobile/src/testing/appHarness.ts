@@ -7,6 +7,7 @@ import type { MailNotification, MessageTarget } from '../background/notification
 import type { ImapLogin } from '../app/accountForm'
 import type { Platform } from '../app/services'
 import { AppStore } from '../app/store'
+import { saveSendSettings } from '../settings'
 import type { Contact, DeviceContacts } from '../contacts'
 import type { Files, PickedFile } from '../files'
 import type { Incoming } from '../incoming'
@@ -418,6 +419,8 @@ export const account = (name: string, over: Partial<NewAccount> = {}): NewAccoun
  */
 export async function appHarness() {
   const { db, raw } = await migratedDatabase()
+  // A message goes at once, as the tests of sending expect; the ones about taking a message back set the time they need.
+  await saveSendSettings(db, { undoSeconds: 0 })
   const server = new FakeMailServer()
   const files = new FakeFiles()
   const deviceContacts = new FakeContacts()
@@ -444,6 +447,7 @@ export async function appHarness() {
   async function givenAccount(name: string, mailbox: Mailbox, over: Partial<NewAccount> = {}): Promise<Account> {
     server.addUser(name, mailbox)
     const added = await addAccount(db, account(name, over), { now: server.mailboxes.size })
+    await app.identities.load()
     const entries = await (server.connect({ username: name } as ImapLogin).listMailboxes())
     const folders = await syncFolders(db, added.id, entries)
     for (const folder of folders) await saveMessages(db, folder, (mailbox[folder.imapPath] ?? []).map(toFetched))

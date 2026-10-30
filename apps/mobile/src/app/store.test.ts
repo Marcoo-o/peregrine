@@ -10,7 +10,8 @@ describe('the store', () => {
       connected: [],
       waiting: null,
       statusAccountId: null,
-      tags: []
+      tags: [],
+      undo: null
     })
   })
 

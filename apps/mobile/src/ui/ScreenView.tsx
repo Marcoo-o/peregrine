@@ -6,6 +6,7 @@ import { ComposeScreen } from './ComposeScreen'
 import { EditAccountScreen } from './EditAccountScreen'
 import { FolderToolsScreen } from './FolderToolsScreen'
 import { FoldersScreen } from './FoldersScreen'
+import { IdentitiesScreen } from './IdentitiesScreen'
 import { LoadingScreen } from './LoadingScreen'
 import { LoginScreen } from './LoginScreen'
 import { MessageScreen } from './MessageScreen'
@@ -19,7 +20,7 @@ import { UnifiedScreen } from './UnifiedScreen'
 
 /** The screen for what the application is showing, with what each of its buttons does handed to it. */
 export function ScreenView(props: { application: Application; screen: Screen }): ReactElement {
-  const { navigator, messages, compose, accounts, settings, selection, tags, keys, folders, services } = props.application
+  const { navigator, messages, compose, accounts, settings, selection, tags, keys, folders, senders, services } = props.application
   const { screen } = props
 
   switch (screen.name) {
@@ -80,6 +81,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onRemove={() => accounts.remove(screen.account)}
           onEdit={() => accounts.startEdit(screen.account)}
           onNewFolder={() => folders.startCreate(screen.account)}
+          onSenders={() => senders.show(screen.account)}
           onConnect={() => navigator.openAccount(screen.account)}
           onCompose={() => compose.startNew(screen.account, screen)}
         />
@@ -157,6 +159,17 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onDelete={(tag) => void tags.remove(tag.id)}
         />
       )
+    case 'identities':
+      return (
+        <IdentitiesScreen
+          key={screen.account.id}
+          state={screen}
+          onSave={(id, fields) => senders.save(screen, id, fields)}
+          onMakeDefault={(id) => senders.makeDefault(screen, id)}
+          onRemove={(id) => senders.remove(screen, id)}
+          onBack={() => senders.back(screen.account)}
+        />
+      )
     case 'folderTools':
       return (
         <FolderToolsScreen
@@ -207,6 +220,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onPreview={(preview) => settings.setPreview(preview)}
           onShowPreview={(show) => settings.setShowPreview(show)}
           onDeviceContacts={(on) => settings.setDeviceContacts(on)}
+          onUndoSeconds={(seconds) => settings.setUndoSeconds(seconds)}
           onTags={() => void tags.show()}
           onKeys={() => void keys.show()}
           onQuietHours={(on) => settings.setQuietHours(on)}
