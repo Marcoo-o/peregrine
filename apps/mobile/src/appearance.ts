@@ -61,3 +61,61 @@ export const appearance = {
 export function schemeFor(mode: AppearanceMode, system: 'light' | 'dark' | null | undefined): 'light' | 'dark' {
   return mode === 'system' ? (system === 'dark' ? 'dark' : 'light') : mode
 }
+
+/** How large the texts of the application are, on top of what the system's own setting makes them. */
+export type FontScale = 'small' | 'normal' | 'large' | 'xlarge'
+
+export const FONT_SCALES: ReadonlyArray<{ scale: FontScale; label: string; factor: number }> = [
+  { scale: 'small', label: 'Klein', factor: 0.9 },
+  { scale: 'normal', label: 'Normal', factor: 1 },
+  { scale: 'large', label: 'Groß', factor: 1.15 },
+  { scale: 'xlarge', label: 'Sehr groß', factor: 1.3 }
+]
+
+/** The number a size is multiplied by. */
+export function fontFactor(scale: FontScale): number {
+  return FONT_SCALES.find((choice) => choice.scale === scale)?.factor ?? 1
+}
+
+const SCALE_NAME = 'fontScale'
+
+/** The scale as stored, `normal` for what is missing or is not one. */
+export async function loadFontScale(db: SqlDb): Promise<FontScale> {
+  const row = await db.get<{ value: string }>('SELECT value FROM settings WHERE name = ?', SCALE_NAME)
+  if (!row) return 'normal'
+  try {
+    const scale = (JSON.parse(row.value) as { scale?: unknown } | null)?.scale
+    return FONT_SCALES.some((choice) => choice.scale === scale) ? (scale as FontScale) : 'normal'
+  } catch {
+    return 'normal'
+  }
+}
+
+export async function saveFontScale(db: SqlDb, scale: FontScale): Promise<FontScale> {
+  await db.run(
+    `INSERT INTO settings (name, value) VALUES (?, ?)
+     ON CONFLICT (name) DO UPDATE SET value = excluded.value`,
+    SCALE_NAME,
+    JSON.stringify({ scale })
+  )
+  return scale
+}
+
+let currentScale: FontScale = 'normal'
+const scaleListeners = new Set<Listener>()
+
+/** The scale that is in force, outside React for the same reason as the mode. */
+export const fontScale = {
+  get scale(): FontScale {
+    return currentScale
+  },
+  set(scale: FontScale): void {
+    if (scale === currentScale) return
+    currentScale = scale
+    scaleListeners.forEach((listener) => listener())
+  },
+  subscribe(listener: Listener): () => void {
+    scaleListeners.add(listener)
+    return () => scaleListeners.delete(listener)
+  }
+}

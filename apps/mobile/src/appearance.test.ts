@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { appearance, loadAppearance, saveAppearance, schemeFor } from './appearance'
+import { appearance, FONT_SCALES, fontFactor, fontScale, loadAppearance, loadFontScale, saveAppearance, saveFontScale, schemeFor } from './appearance'
 import { migratedDatabase } from './testing/testDb'
 
-afterEach(() => appearance.set('system'))
+afterEach(() => {
+  appearance.set('system')
+  fontScale.set('normal')
+})
 
 describe('light or dark', () => {
   it('follows the system where nothing was chosen, and is what was chosen otherwise', () => {
@@ -36,6 +39,37 @@ describe('light or dark', () => {
     appearance.set('light')
     stop()
     appearance.set('system')
+    expect(told).toBe(2)
+  })
+})
+
+describe('the size of the text', () => {
+  it('has a factor for each choice, normal being no change', () => {
+    expect(FONT_SCALES.map((choice) => choice.scale)).toEqual(['small', 'normal', 'large', 'xlarge'])
+    expect(fontFactor('normal')).toBe(1)
+    expect(fontFactor('small')).toBeLessThan(1)
+    expect(fontFactor('large')).toBeGreaterThan(1)
+    expect(fontFactor('xlarge')).toBeGreaterThan(fontFactor('large'))
+  })
+
+  it('is normal when nothing was stored, what was stored after, and normal for what is not a choice or not JSON', async () => {
+    const { db } = await migratedDatabase()
+    expect(await loadFontScale(db)).toBe('normal')
+    await saveFontScale(db, 'large')
+    expect(await loadFontScale(db)).toBe('large')
+    await db.run("UPDATE settings SET value = ? WHERE name = 'fontScale'", JSON.stringify({ scale: 'huge' }))
+    expect(await loadFontScale(db)).toBe('normal')
+    await db.run("UPDATE settings SET value = 'not json' WHERE name = 'fontScale'")
+    expect(await loadFontScale(db)).toBe('normal')
+  })
+
+  it('tells those who watch it when it changes, and not when it does not', () => {
+    let told = 0
+    const stop = fontScale.subscribe(() => told++)
+    fontScale.set('large')
+    fontScale.set('large')
+    fontScale.set('small')
+    stop()
     expect(told).toBe(2)
   })
 })

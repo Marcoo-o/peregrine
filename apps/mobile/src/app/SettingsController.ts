@@ -15,7 +15,7 @@ import {
 } from '../settings'
 import { saveSort, type ListSort } from '../listSort'
 import { loadLock } from '../lock'
-import { appearance, saveAppearance, type AppearanceMode } from '../appearance'
+import { appearance, fontScale, saveAppearance, saveFontScale, type AppearanceMode, type FontScale } from '../appearance'
 import { saveConversations } from '../threads'
 import { saveSafety, type SafetySettings } from '../safety'
 import type { LockController } from './LockController'
@@ -91,6 +91,12 @@ export class SettingsController {
 
   async setLockDelay(afterSeconds: number): Promise<void> {
     await this.locking.setDelay(afterSeconds)
+    await this.show()
+  }
+
+  /** How large the texts are: kept, and in force at once on every screen. */
+  async setFontScale(scale: FontScale): Promise<void> {
+    fontScale.set(await saveFontScale(this.services.db, scale))
     await this.show()
   }
 

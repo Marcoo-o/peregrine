@@ -1450,7 +1450,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 10. *Tools for a message:* the source and saving it as an `.eml` are done (see "What sorting and the first tools found"); printing and saving as PDF are left (M, the platform has a print service).
 11. *The safety switches* (done, see "What sorting and the first tools found").
 12. *Locking the application.* (Done: see "What locking the application found".)
-13. *Appearance:* light, dark or the system's is done; a choice of accents, a font scale, date formats and density are left (S for the font scale, the rest M).
+13. *Appearance:* light, dark or the system's, and a text size are done; a choice of accents, date formats and density are left (M).
 14. *Languages.* The desktop has English, German, Spanish, French and Portuguese (`src/renderer/src/i18n`); the phone's texts are German and written into the code. L:
     every text goes through a function, and the files of the languages can be the desktop's where the texts are the same.
 15. *Contacts:* a list, adding and changing, vCard in and out (M). On a phone the contacts of the system are the better place to look; see 2.
@@ -1779,3 +1779,16 @@ The phone listed every message by itself, so a long exchange filled a page with 
 
 Covered by tests: the subject, the grouping (chains, ids without brackets, the hole, newsletters, empty subjects, loops, an id two messages have, dates), the rows (off, on, order, the filter, nothing), the setting, what is kept of the ids, and opening from a conversation. Not seen on the device: the rows and the screen of a conversation
 (the emulator did not answer fast enough to be driven this time).
+
+## What a text size found
+
+The phone's texts followed the system's size setting and nothing else.
+
+- *Four sizes* under "Schriftgröße" in the settings (small 0.9, normal, large 1.15, very large 1.3), on top of the system's own setting, which React Native applies to texts already. The choice is kept and is in force at once on every
+  screen, held outside React like the light or dark mode so that nothing has to be passed down.
+- *How it is done:* every style that has a `fontSize` is multiplied when the styles are made (`scaleStyles.ts`, to the half of a point, the line height with it), once for each theme and size. No component was changed; a text that is not drawn from the styles
+  would not follow, and there is none in `ui`. Sizes of anything but text (padding, the height of a row) are left, so a very large text makes a row of two lines rather than a row that is taller than its touch target.
+- *Not done:* accents, date formats, density.
+
+Covered by tests: the factors, what is stored, the watching, the setting and the start, and the scaling of styles (text and line heights multiplied, the rest left, normal being the styles themselves). Not seen on the device (the emulator did not answer fast
+enough to be driven).
