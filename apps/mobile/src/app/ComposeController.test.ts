@@ -5,6 +5,7 @@ import { listAttachments } from '../attachments'
 import { listFolders } from '../folders'
 import type { StoredMessage } from '../messages'
 import { emptyDraft, isChanged, type Draft } from '../draft'
+import { saveListSettings } from '../settings'
 import { appHarness, eventually } from '../testing/appHarness'
 import { saveOwnKey } from '../pgp/keyStore'
 import { generateKeyPair } from '../pgp/pgpService'
@@ -473,6 +474,50 @@ describe('suggesting who to write to', () => {
     await t.givenAccount('work', { INBOX: [{ uid: 1 }, { uid: 2 }] })
     expect(await t.app.compose.suggest('SENDER@')).toEqual([{ name: '', address: 'sender@example.net' }])
     expect(await t.app.compose.suggest('nobody')).toEqual([])
+  })
+
+  describe('from the address book of the device', () => {
+    const people = [
+      { name: 'Kim Example', address: 'kim@example.net' },
+      { name: 'Sender Person', address: 'SENDER@example.net' },
+      { name: 'Alex Own', address: 'work@example.org' }
+    ]
+
+    async function withBook(on: boolean, allowed: boolean) {
+      const t = await appHarness()
+      await t.givenAccount('work', { INBOX: [{ uid: 1 }] })
+      t.deviceContacts.people = people
+      t.deviceContacts.allowed = allowed
+      await saveListSettings(t.db, { deviceContacts: on })
+      return t
+    }
+
+    it('are suggested after the people the phone has mail from, each address once, with the name the address book has', async () => {
+      const t = await withBook(true, true)
+      expect(await t.app.compose.suggest('e')).toEqual([
+        { name: 'Sender Person', address: 'sender@example.net' },
+        { name: 'Kim Example', address: 'kim@example.net' }
+      ])
+    })
+
+    it('do not include the accounts of the user', async () => {
+      const t = await withBook(true, true)
+      expect((await t.app.compose.suggest('own')).map((contact) => contact.address)).toEqual([])
+    })
+
+    it('are not asked for while the switch is off, or the system does not allow it', async () => {
+      expect(await (await withBook(false, true)).app.compose.suggest('kim')).toEqual([])
+      expect(await (await withBook(true, false)).app.compose.suggest('kim')).toEqual([])
+    })
+
+    it('leave the people of the mail when the address book cannot be read, and say so', async () => {
+      const t = await withBook(true, true)
+      t.deviceContacts.search = async () => {
+        throw new Error('no provider')
+      }
+      expect(await t.app.compose.suggest('sender')).toEqual([{ name: '', address: 'sender@example.net' }])
+      expect(t.logs.some((line) => line.includes('no provider'))).toBe(true)
+    })
   })
 })
 

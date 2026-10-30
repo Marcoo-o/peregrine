@@ -3,6 +3,8 @@
  * imports it, so everything above can be tested without a device.
  */
 
+import type { Incoming } from './incoming'
+
 /** A file the user picked, already copied into the application's own storage. */
 export interface PickedFile {
   /** Where the copy is, in the application's storage. What a queued message refers to. */
@@ -21,6 +23,11 @@ export interface FileAccess {
 }
 
 export interface Files extends FileAccess {
+  /**
+   * What another application asked of this one since it was last asked: a link to an address or something shared, with the shared files
+   * already copied as a picked file is. Given once, and null when there is none.
+   */
+  consumeIncoming(): Promise<Incoming | null>
   /** Lets the user pick files and copies them into the application's storage. No pick gives an empty list. */
   pick(): Promise<PickedFile[]>
   /**

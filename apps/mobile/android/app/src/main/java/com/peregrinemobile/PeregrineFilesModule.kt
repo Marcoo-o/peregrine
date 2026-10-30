@@ -109,7 +109,53 @@ class PeregrineFilesModule(context: ReactApplicationContext) : ReactContextBaseJ
       .start()
   }
 
-  private fun copyPicked(uri: Uri): com.facebook.react.bridge.WritableMap {
+  /**
+   * What another application asked since it was last asked, or null: a link, or what was shared, with the shared files copied as a
+   * picked file is. A file that is larger than a message can carry is not copied to the end: what is copied is one byte more than the
+   * limit, which says it is too large and costs no more than that.
+   */
+  @ReactMethod
+  fun consumeIncoming(promise: Promise) {
+    val request = IncomingRequest.consume()
+    if (request == null) {
+      promise.resolve(null)
+      return
+    }
+    Thread {
+        try {
+          val files = Arguments.createArray()
+          var unreadable = request.refused
+          for (address in request.streams) {
+            try {
+              files.pushMap(copyPicked(Uri.parse(address), MAX_SHARED_BYTES + 1))
+            } catch (e: IOException) {
+              // A file that cannot be read is left out, as a message that is shared without it is better than none. It is counted, and said.
+              unreadable++
+            } catch (e: SecurityException) {
+              // The sender did not allow reading it, which is the same.
+              unreadable++
+            }
+          }
+          promise.resolve(
+            Arguments.createMap().apply {
+              if (request.mailto == null) putNull("mailto") else putString("mailto", request.mailto)
+              putString("subject", request.subject)
+              putString("text", request.text)
+              putArray("to", Arguments.fromList(request.to))
+              putArray("cc", Arguments.fromList(request.cc))
+              putArray("bcc", Arguments.fromList(request.bcc))
+              putArray("files", files)
+              putInt("unreadable", unreadable)
+            }
+          )
+        } catch (e: RuntimeException) {
+          promise.reject("E_INCOMING", e.message ?: "What was shared could not be read", e)
+        }
+      }
+      .start()
+  }
+
+  private fun copyPicked(uri: Uri, limit: Long = Long.MAX_VALUE): com.facebook.react.bridge.WritableMap {
     val resolver = reactApplicationContext.contentResolver
     var name: String? = null
     resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
@@ -119,7 +165,7 @@ class PeregrineFilesModule(context: ReactApplicationContext) : ReactContextBaseJ
     val directory = File(outgoing, UUID.randomUUID().toString()).apply { mkdirs() }
     val copy = File(directory, safe)
     val input = resolver.openInputStream(uri) ?: throw IOException("The file could not be opened")
-    input.use { source -> copy.outputStream().use { target -> source.copyTo(target) } }
+    input.use { source -> copy.outputStream().use { target -> copyUpTo(source, target, limit) } }
     return Arguments.createMap().apply {
       putString("path", copy.path)
       putString("name", safe)
@@ -302,11 +348,26 @@ class PeregrineFilesModule(context: ReactApplicationContext) : ReactContextBaseJ
   }
 
   companion object {
+    /** Copies at most [limit] bytes: the copy of a file that is larger has exactly [limit], so that it is known to be too large. */
+    internal fun copyUpTo(source: java.io.InputStream, target: java.io.OutputStream, limit: Long) {
+      val buffer = ByteArray(64 * 1024)
+      var left = limit
+      while (left > 0) {
+        val read = source.read(buffer, 0, minOf(buffer.size.toLong(), left).toInt())
+        if (read < 0) return
+        target.write(buffer, 0, read)
+        left -= read
+      }
+    }
+
     private const val OUTGOING = "outgoing"
     private const val SHARED = "shared"
     private const val REQUEST_PICK = 4711
     private const val REQUEST_SAVE = 4712
     private const val MAX_READ_BYTES = 64L * 1024 * 1024
+
+    /** What a message may carry as attachments, as the JavaScript side holds it: what is shared beyond that is too large. */
+    private const val MAX_SHARED_BYTES = 20L * 1024 * 1024
     private const val ONE_DAY_MS = 24L * 60 * 60 * 1000
   }
 }

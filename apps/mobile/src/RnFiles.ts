@@ -1,9 +1,11 @@
 import { decodeBase64, encodeBase64 } from '@peregrine/imap/mime'
 import type { Files, PickedFile } from './files'
+import type { Incoming } from './incoming'
 
 /** What the native module `PeregrineFiles` offers, in the shapes that cross the bridge. */
 export interface NativeFiles {
   pick(): Promise<{ path: string; name: string; size: number; mimeType: string }[]>
+  consumeIncoming(): Promise<(Omit<Incoming, 'files'> & { files: { path: string; name: string; size: number; mimeType: string }[] }) | null>
   stash(name: string, mimeType: string, base64: string): Promise<{ path: string; name: string; size: number; mimeType: string }>
   read(path: string): Promise<string>
   remove(paths: string[]): Promise<void>
@@ -27,6 +29,20 @@ export class RnFiles implements Files {
       size: file.size,
       contentType: file.mimeType || 'application/octet-stream'
     }))
+  }
+
+  async consumeIncoming(): Promise<Incoming | null> {
+    const incoming = await this.native.consumeIncoming()
+    if (!incoming) return null
+    return {
+      ...incoming,
+      files: incoming.files.map((file) => ({
+        path: file.path,
+        name: file.name,
+        size: file.size,
+        contentType: file.mimeType || 'application/octet-stream'
+      }))
+    }
   }
 
   async stash(name: string, contentType: string, content: Uint8Array): Promise<PickedFile> {

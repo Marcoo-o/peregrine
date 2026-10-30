@@ -1,13 +1,15 @@
 import { listAccounts, type Account } from '../accounts'
-import { suggestContacts, type Contact } from '../contacts'
+import { mergeSuggestions, suggestContacts, SUGGESTIONS, type Contact } from '../contacts'
 import { editableDraft, emptyDraft, forwardDraft, recipientAddresses, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
 import { bringAttachments, notBroughtText } from '../draftAttachments'
 import { draftsFolderOf } from '../drafts'
+import { draftFromIncoming, type Incoming } from '../incoming'
 import { newId } from '../ids'
 import { explainError } from '../errors'
 import { protectionProblem } from '../pgp/protect'
 import type { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { smtpSettingsOf } from '../send'
+import { loadListSettings } from '../settings'
 import { autosaveDue } from './autosave'
 import type { Navigator } from './Navigator'
 import type { ComposeState, MessageState, Screen } from './screens'
@@ -60,10 +62,41 @@ export class ComposeController {
     if (first) this.startNew(first, returnTo)
   }
 
-  /** The people to suggest for an address that is being typed: those the phone has mail from, without the user's own. */
-  async suggest(typed: string): Promise<Contact[]> {
+  /**
+   * The message that another application asked for, a link to an address or something shared with this one. It is written from the first
+   * account that can send, or from the first there is when none can, which the screen then says. Returns whether it was started: it is not
+   * when there is no account to write from, and the files that came are then removed again.
+   */
+  async startFromIncoming(incoming: Incoming): Promise<boolean> {
     const accounts = await listAccounts(this.services.db)
-    return suggestContacts(this.services.db, typed, accounts.map((account) => account.emailAddress))
+    const account = accounts.find((candidate) => senderProblem(candidate) === null) ?? accounts[0]
+    if (!account) {
+      await this.services.files.remove(incoming.files.map((file) => file.path)).catch(() => undefined)
+      return false
+    }
+    const { draft, error } = await draftFromIncoming(incoming, this.services.files)
+    this.show({ account, returnTo: this.store.screen, draft: this.started(account, draft), error })
+    return true
+  }
+
+  /**
+   * The people to suggest for an address that is being typed: those the phone has mail from, without the user's own, and when the user
+   * switched it on and allowed it, those of the device's address book. An address book that cannot be read leaves the others.
+   */
+  async suggest(typed: string): Promise<Contact[]> {
+    const { db, deviceContacts } = this.services
+    const accounts = await listAccounts(db)
+    const own = accounts.map((account) => account.emailAddress.toLowerCase())
+    const history = await suggestContacts(db, typed, accounts.map((account) => account.emailAddress))
+    if (!(await loadListSettings(db)).deviceContacts) return history
+    try {
+      if (!(await deviceContacts.permitted())) return history
+      const book = (await deviceContacts.search(typed, SUGGESTIONS * 2)).filter((contact) => !own.includes(contact.address.toLowerCase()))
+      return mergeSuggestions(history, book, SUGGESTIONS)
+    } catch (error) {
+      this.services.log.warn(`the address book could not be read: ${explainError(error)}`)
+      return history
+    }
   }
 
   /** An answer to the open message, once its text is there to quote. */

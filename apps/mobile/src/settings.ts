@@ -108,13 +108,15 @@ export function policyOf(settings: NotificationSettings): NotificationPolicy {
   }
 }
 
-/** What the user has set about the lists of messages. */
+/** What the user has set about the lists of messages, and about the people suggested for an address. */
 export interface ListSettings {
   /** The first of the text under a subject. Somebody looking over the shoulder reads it too, so it can be switched off. */
   showPreview: boolean
+  /** The people of the device's address book are suggested when an address is typed. Off until the user allowed reading it. */
+  deviceContacts: boolean
 }
 
-export const DEFAULT_LIST_SETTINGS: ListSettings = { showPreview: true }
+export const DEFAULT_LIST_SETTINGS: ListSettings = { showPreview: true, deviceContacts: false }
 
 const LIST = 'list'
 
@@ -125,7 +127,11 @@ export async function loadListSettings(db: SqlDb): Promise<ListSettings> {
   try {
     const given = JSON.parse(row.value) as Record<string, unknown> | null
     const showPreview = given?.showPreview
-    return { showPreview: typeof showPreview === 'boolean' ? showPreview : DEFAULT_LIST_SETTINGS.showPreview }
+    const deviceContacts = given?.deviceContacts
+    return {
+      showPreview: typeof showPreview === 'boolean' ? showPreview : DEFAULT_LIST_SETTINGS.showPreview,
+      deviceContacts: typeof deviceContacts === 'boolean' ? deviceContacts : DEFAULT_LIST_SETTINGS.deviceContacts
+    }
   } catch {
     return DEFAULT_LIST_SETTINGS
   }

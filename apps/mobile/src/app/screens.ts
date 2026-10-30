@@ -128,6 +128,8 @@ export interface SettingsState {
   settings: NotificationSettings
   /** What is set about the lists of messages. */
   list: ListSettings
+  /** Whether the system lets the application read the address book, whatever is switched on here. */
+  contactsPermitted: boolean
   accounts: Account[]
   /** Whether the system lets the application show notifications at all, whatever is switched on here. */
   permitted: boolean

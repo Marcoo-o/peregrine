@@ -17,6 +17,8 @@ import type { AppStore } from './store'
 
 const NOT_ALLOWED =
   'Peregrine darf keine Benachrichtigungen zeigen. Das lässt sich in den Systemeinstellungen für die App ändern.'
+const CONTACTS_NOT_ALLOWED =
+  'Peregrine darf die Kontakte nicht lesen. Das lässt sich in den Systemeinstellungen für die App ändern.'
 const SWITCHED_OFF = 'Benachrichtigungen sind ausgeschaltet.'
 const LOOKING = 'Der Abruf läuft. Neue Nachrichten erscheinen als Benachrichtigung.'
 
@@ -36,6 +38,7 @@ export class SettingsController {
       settings: await loadNotificationSettings(db),
       list: await loadListSettings(db),
       accounts: await listAccounts(db),
+      contactsPermitted: await this.services.deviceContacts.permitted(),
       permitted: await notifications.permitted(),
       push: await this.pushState(),
       notice
@@ -45,6 +48,21 @@ export class SettingsController {
   /** Switches the line of text under the subjects in the lists on or off. */
   async setShowPreview(showPreview: boolean): Promise<void> {
     await saveListSettings(this.services.db, { showPreview })
+    await this.show()
+  }
+
+  /**
+   * Switches on or off that the people of the address book are suggested. Switching on is where the permission to read it is asked for,
+   * and when the user does not give it the switch stays off, with the reason, as it does for notifications.
+   */
+  async setDeviceContacts(on: boolean): Promise<void> {
+    const { db, deviceContacts } = this.services
+    if (on && !(await deviceContacts.ensurePermission())) {
+      await saveListSettings(db, { deviceContacts: false })
+      await this.show(CONTACTS_NOT_ALLOWED)
+      return
+    }
+    await saveListSettings(db, { deviceContacts: on })
     await this.show()
   }
 
