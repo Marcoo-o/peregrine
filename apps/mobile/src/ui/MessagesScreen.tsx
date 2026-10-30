@@ -6,6 +6,7 @@ import type { StoredMessage } from '../messages'
 import type { Tag } from '../tags'
 import { Fab, Spinner } from './controls'
 import { EmptyListNote } from './EmptyListNote'
+import { OlderFooter } from './OlderFooter'
 import { folderLabel } from './folderLabel'
 import { ListHead } from './ListHead'
 import { MessageRow } from './MessageRow'
@@ -30,9 +31,11 @@ export function MessagesScreen(props: {
   onCompose: () => void
   onCreateTag: (name: string, color: string) => Promise<Tag | undefined>
   onOpen: (message: StoredMessage) => void
+  /** Loads a page of older messages of the folder. */
+  onOlder: () => void
 }) {
   const styles = useStyles()
-  const { account, folder, messages, showPreview, folderNames, busy, error } = props.state
+  const { account, folder, messages, showPreview, folderNames, busy, error, hasOlder, loadingOlder } = props.state
   const [filter, setFilter] = useState(NO_FILTER)
   // What the choice needs of a message: where it is, which the list of one folder does not say of each of them.
   const rows = useMemo(
@@ -69,7 +72,11 @@ export function MessagesScreen(props: {
         keyExtractor={(row) => String(row.uid)}
         refreshing={busy}
         onRefresh={props.onRefresh}
+        // Scrolling to the end loads on, but not under a filter: a filter that shows little would load a whole mailbox to fill itself.
+        onEndReached={() => (filter === NO_FILTER && hasOlder && !busy && !loadingOlder ? props.onOlder() : undefined)}
+        onEndReachedThreshold={0.6}
         ListEmptyComponent={<EmptyListNote busy={busy} total={messages.length} />}
+        ListFooterComponent={<OlderFooter more={hasOlder} loading={loadingOlder === true} onLoad={props.onOlder} />}
         renderItem={({ item }) => (
           <SwipeableRow
             disabled={selection.selecting}

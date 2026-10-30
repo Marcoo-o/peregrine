@@ -127,7 +127,7 @@ describe('bringing the inboxes up to date', () => {
         },
         syncFetch: async (path: string, decide: (s: { uidValidity: bigint; uidNext: number }) => string | Promise<string>) => {
           asked.push(`fetch ${account.displayName} ${path} ${await decide({ uidValidity: 1n, uidNext: 100 })}`)
-          return { messages: served[account.displayName] }
+          return { messages: served[account.displayName], flags: served[account.displayName].map((m) => ({ uid: m.uid, flags: m.flags })) }
         }
       } as unknown as ImapSession
     })
@@ -249,7 +249,7 @@ describe('bringing up to date what a role holds', () => {
         listMailboxes: async () => [entry('INBOX', '\\Inbox'), entry('Sent', '\\Sent'), entry('Archive', '\\Archive')],
         syncFetch: async (path: string) => {
           asked.push(`fetch ${path}`)
-          return { messages: [] }
+          return { messages: [], flags: [] }
         }
       } as unknown as ImapSession
     })

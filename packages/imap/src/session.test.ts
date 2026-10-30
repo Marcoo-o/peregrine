@@ -289,6 +289,39 @@ describe('what the server sent for each operation', () => {
     expect(server.commands.filter((c) => c === 'NOOP')).toHaveLength(1)
   })
 
+  describe('fetching the headers of some UIDs', () => {
+    async function fetchSome(uids: number[]) {
+      const asked: string[] = []
+      const { server, session } = await connected((s) => {
+        s.on('SELECT', (c) => s.replay('02-fetch', 'SELECT INBOX', c.tag))
+        s.on('UID FETCH', (c) => {
+          asked.push(c.args)
+          return s.replay('02-fetch', 'UID FETCH 1:* (UID FLAGS RFC822.SIZE', c.tag)
+        })
+      })
+      const messages = await session.fetchMessages('INBOX', uids)
+      return { server, messages, asked }
+    }
+
+    it('asks for those UIDs as a set and gives the messages with their envelopes, as a sync does', async () => {
+      const { messages, asked } = await fetchSome([3, 4, 5, 9])
+      expect(asked).toEqual(['3:5,9 (UID FLAGS RFC822.SIZE ENVELOPE BODYSTRUCTURE)'])
+      expect(messages.map((m) => m.uid)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
+      expect(messages[2].envelope.subject).toBe('Grüße aus München ✓')
+    })
+
+    it('asks nothing for no UIDs, and does not even open the folder', async () => {
+      const { server, messages } = await fetchSome([])
+      expect(messages).toEqual([])
+      expect(server.commands.some((c) => c.startsWith('SELECT'))).toBe(false)
+    })
+
+    it('refuses what is not a UID without asking the server anything', async () => {
+      const { session } = await connected()
+      await expect(session.fetchMessages('INBOX', [1.5])).rejects.toThrow()
+    })
+  })
+
   describe('a folder sync against the corpus Dovecot answered', () => {
     async function sync(decide = () => '1:*') {
       const ranges: string[] = []

@@ -154,7 +154,10 @@ const MIGRATIONS: string[][] = [
   ],
   // 10. The UIDVALIDITY a folder had when it was last synced, as text since it is a number of 32 bits that a script may not hold
   // whole. The UIDs of its messages mean something only as long as it is the same; null for a folder that was never synced since.
-  ['ALTER TABLE folders ADD COLUMN uid_validity TEXT']
+  ['ALTER TABLE folders ADD COLUMN uid_validity TEXT'],
+  // 11. How many messages the server had in a folder at the last sync. What the phone has of them is the messages table, and the
+  // difference is what there is to load: null for a folder that was never synced since this was kept.
+  ['ALTER TABLE folders ADD COLUMN server_messages INTEGER']
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */

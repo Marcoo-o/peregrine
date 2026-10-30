@@ -119,6 +119,13 @@ export interface ImapSession {
     decideRange: (status: { uidValidity: bigint; uidNext: number }) => string | Promise<string>
   ): Promise<SyncFetchResult>
 
+  /**
+   * The headers of the messages with these UIDs, in a folder: what a sync fetches for a range, for UIDs that are not a range. A
+   * UID the server does not have is left out. This is how older messages are loaded a page at a time: the UIDs come from the
+   * list of every message of the folder that a sync gives, so that a folder numbered with gaps still gives full pages.
+   */
+  fetchMessages(imapPath: string, uids: number[]): Promise<FetchedMessage[]>
+
   fetchFullMessage(imapPath: string, uid: number): Promise<FullMessage | undefined>
 
   setFlags(imapPath: string, uid: number, flags: string[]): Promise<void>

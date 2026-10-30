@@ -1,4 +1,5 @@
 import type { PendingMovePayload, PendingSaveDraftPayload } from '@peregrine/core/pendingActions'
+import { listPendingActions } from '@peregrine/core/pendingActionsStore'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { Folder } from './folders'
 
@@ -65,18 +66,71 @@ export async function resetFolder(db: SqlDb, folder: Pick<Folder, 'id' | 'accoun
   })
 }
 
+/** The oldest and the newest UID of the messages the phone has of a folder, and how many it has; null when it has none. */
+export async function cachedBounds(db: SqlDb, folderId: string): Promise<{ min: number; max: number; count: number } | null> {
+  const row = await db.get<{ min: number | null; max: number | null; count: number }>(
+    'SELECT MIN(uid) AS min, MAX(uid) AS max, COUNT(*) AS count FROM messages WHERE folder_id = ?',
+    folderId
+  )
+  return row && row.min !== null && row.max !== null ? { min: row.min, max: row.max, count: row.count } : null
+}
+
+/** Forgets every message of a folder here, and nothing else: what waits in the queue names UIDs the server still has. */
+export async function clearMessages(db: SqlDb, folderId: string): Promise<void> {
+  await db.run('DELETE FROM messages WHERE folder_id = ?', folderId)
+}
+
+/** What a sync made of what it already had: how many messages were taken out, and how many had their flags changed. */
+export interface Reconciled {
+  gone: number
+  changed: number
+}
+
+const sameFlags = (a: string[], b: string[]): boolean => a.length === b.length && [...a].sort().join('\n') === [...b].sort().join('\n')
+
 /**
- * Takes out of a folder the messages that the server no longer has: those in the range that was fetched, from `first` on, that
- * were not among what it gave. A message that was deleted on another device or by a rule of the server would otherwise stay in
- * the list for good. What is older than the range is not asked about and stays.
+ * Brings what the phone has of a folder in line with what the server says it has, from the list of every message of the folder with its
+ * flags that a sync gets: the messages it no longer has are taken out of the list, whatever their age (one that was deleted on another
+ * device would stay for good), what was read or starred elsewhere shows so, and the number of messages that the server has is kept, which
+ * is how the list knows whether there is older mail to load.
+ *
+ * What the user has decided and the queue has not yet told the server is not undone by it: a message with a change waiting for it keeps
+ * the flags it has here.
  */
-export async function dropGone(db: SqlDb, folderId: string, first: number, seen: number[]): Promise<number> {
-  const kept = new Set(seen)
-  const rows = await db.all<{ uid: number }>('SELECT uid FROM messages WHERE folder_id = ? AND uid >= ?', folderId, first)
-  const gone = rows.map((row) => row.uid).filter((uid) => !kept.has(uid))
-  for (let at = 0; at < gone.length; at += 400) {
-    const part = gone.slice(at, at + 400)
-    await db.run(`DELETE FROM messages WHERE folder_id = ? AND uid IN (${part.map(() => '?').join(',')})`, folderId, ...part)
+export async function reconcile(db: SqlDb, folder: Pick<Folder, 'id' | 'accountId'>, onServer: { uid: number; flags: string[] }[]): Promise<Reconciled> {
+  const waiting = new Set<number>()
+  for (const action of await listPendingActions(db, folder.accountId)) {
+    const payload = action.payload as { folderId?: string; sourceFolderId?: string; uids?: number[] }
+    const named = action.kind === 'flags' || action.kind === 'delete' ? payload.folderId : action.kind === 'move' ? payload.sourceFolderId : undefined
+    if (named === folder.id) for (const uid of payload.uids ?? []) waiting.add(uid)
   }
-  return gone.length
+  const there = new Map(onServer.map((message) => [message.uid, message.flags]))
+  return db.transaction(async (tx) => {
+    const cached = await tx.all<{ uid: number; flags: string }>('SELECT uid, flags FROM messages WHERE folder_id = ?', folder.id)
+    const gone: number[] = []
+    let changed = 0
+    for (const row of cached) {
+      const flags = there.get(row.uid)
+      if (flags === undefined) {
+        gone.push(row.uid)
+      } else if (!waiting.has(row.uid) && !sameFlags(JSON.parse(row.flags) as string[], flags)) {
+        await tx.run('UPDATE messages SET flags = ? WHERE folder_id = ? AND uid = ?', JSON.stringify(flags), folder.id, row.uid)
+        changed += 1
+      }
+    }
+    for (let at = 0; at < gone.length; at += 400) {
+      const part = gone.slice(at, at + 400)
+      await tx.run(`DELETE FROM messages WHERE folder_id = ? AND uid IN (${part.map(() => '?').join(',')})`, folder.id, ...part)
+    }
+    await tx.run('UPDATE folders SET server_messages = ? WHERE id = ?', onServer.length, folder.id)
+    return { gone: gone.length, changed }
+  })
+}
+
+/** Whether the server has messages in a folder that the phone has not loaded: older ones, since the newer ones come with every sync. */
+export async function hasOlder(db: SqlDb, folderId: string): Promise<boolean> {
+  const row = await db.get<{ server_messages: number | null }>('SELECT server_messages FROM folders WHERE id = ?', folderId)
+  if (row?.server_messages === null || row?.server_messages === undefined) return false
+  const bounds = await cachedBounds(db, folderId)
+  return (bounds?.count ?? 0) < row.server_messages
 }

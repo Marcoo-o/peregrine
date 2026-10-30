@@ -93,10 +93,19 @@ class FakeSession {
     }))
   }
 
-  async syncFetch(path: string, decide: (status: { uidValidity: bigint; uidNext: number }) => string) {
+  async syncFetch(path: string, decide: (status: { uidValidity: bigint; uidNext: number }) => string | Promise<string>) {
     const messages = this.mailbox[path] ?? []
-    await decide({ uidValidity: 1n, uidNext: Math.max(0, ...messages.map((m) => m.uid)) + 1 })
-    return { messages: messages.map(toFetched) }
+    const range = await decide({ uidValidity: 1n, uidNext: Math.max(0, ...messages.map((m) => m.uid)) + 1 })
+    // What the folder has, as a sync is given it: the headers of the range and the flags of everything.
+    const first = Number(range.split(':')[0])
+    return {
+      messages: messages.filter((m) => m.uid >= first).map(toFetched),
+      flags: messages.map((m) => ({ uid: m.uid, flags: m.flags ?? [] }))
+    }
+  }
+
+  async fetchMessages(path: string, uids: number[]) {
+    return (this.mailbox[path] ?? []).filter((m) => uids.includes(m.uid)).map(toFetched)
   }
 
   async fetchFullMessage(path: string, uid: number) {

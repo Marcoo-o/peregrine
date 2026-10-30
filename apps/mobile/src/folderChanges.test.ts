@@ -3,10 +3,10 @@ import type { FetchedMessage, ImapSession } from '@peregrine/core/imapSession'
 import { enqueueAction, listPendingActions } from '@peregrine/core/pendingActionsStore'
 import type { ComposeInput } from '@peregrine/core/types'
 import { addAccount } from './accounts'
-import { dropGone, knownUidValidity, rememberUidValidity, resetFolder, resetText } from './folderChanges'
+import { cachedBounds, hasOlder, knownUidValidity, reconcile, rememberUidValidity, resetFolder, resetText } from './folderChanges'
 import { syncFolders, type Folder } from './folders'
 import { listMessages, saveMessages } from './messages'
-import { syncFolder } from './sync'
+import { loadOlder, NEWEST, PAGE, syncFolder } from './sync'
 import { migratedDatabase } from './testing/testDb'
 
 const fetched = (uid: number, flags: string[] = []): FetchedMessage => ({
@@ -42,18 +42,31 @@ async function setup() {
   return { db, account, inbox, drafts }
 }
 
-/** A server with one folder, which says what its UIDVALIDITY and UIDNEXT are and gives what it has in the range it is asked for. */
+/**
+ * A server with one folder, which says what its UIDVALIDITY and UIDNEXT are, gives the headers of the range it is asked for and the flags of
+ * everything it has, as a sync does, and gives the headers of UIDs it is asked for by number.
+ */
 function server(state: { uidValidity: bigint; uidNext: number; messages: FetchedMessage[] }) {
   const asked: string[] = []
+  const fetchedByNumber: number[][] = []
   const session = {
     syncFetch: async (_path: string, decide: (s: { uidValidity: bigint; uidNext: number }) => string | Promise<string>) => {
       const range = await decide({ uidValidity: state.uidValidity, uidNext: state.uidNext })
       asked.push(range)
       const first = Number(range.split(':')[0])
-      return { uidValidity: state.uidValidity, uidNext: state.uidNext, messages: state.messages.filter((m) => m.uid >= first) }
+      return {
+        uidValidity: state.uidValidity,
+        uidNext: state.uidNext,
+        messages: state.messages.filter((m) => m.uid >= first),
+        flags: state.messages.map((m) => ({ uid: m.uid, flags: m.flags }))
+      }
+    },
+    fetchMessages: async (_path: string, uids: number[]) => {
+      fetchedByNumber.push(uids)
+      return state.messages.filter((m) => uids.includes(m.uid))
     }
   } as unknown as ImapSession
-  return { session, asked }
+  return { session, asked, fetchedByNumber }
 }
 
 const uidsOf = async (db: Awaited<ReturnType<typeof setup>>['db'], folder: Folder) => (await listMessages(db, folder.id)).map((m) => m.uid).sort((a, b) => a - b)
@@ -144,8 +157,10 @@ describe('a folder that the server numbered anew', () => {
   })
 })
 
+const many = (from: number, to: number): FetchedMessage[] => Array.from({ length: to - from + 1 }, (_, i) => fetched(from + i))
+
 describe('messages that the server no longer has', () => {
-  it('are taken out of the list by the next sync: those in the range that was fetched that it did not give', async () => {
+  it('are taken out of the list by the next sync', async () => {
     const t = await setup()
     const state = { uidValidity: 1n, uidNext: 5, messages: [fetched(1), fetched(2), fetched(3), fetched(4)] }
     await syncFolder(server(state).session, t.db, t.inbox)
@@ -156,28 +171,132 @@ describe('messages that the server no longer has', () => {
     expect(await uidsOf(t.db, t.inbox)).toEqual([1, 4])
   })
 
+  it('are taken out whatever their age, and not only those of the newest range', async () => {
+    const t = await setup()
+    await saveMessages(t.db, t.inbox, [fetched(3), fetched(4)])
+    const state = { uidValidity: 1n, uidNext: 400, messages: [fetched(4), fetched(399)] }
+    await syncFolder(server(state).session, t.db, t.inbox)
+    expect(await uidsOf(t.db, t.inbox)).toEqual([4, 399])
+  })
+
   it('are taken out when the folder is empty now', async () => {
     const t = await setup()
     await syncFolder(server({ uidValidity: 1n, uidNext: 3, messages: [fetched(1), fetched(2)] }).session, t.db, t.inbox)
     await syncFolder(server({ uidValidity: 1n, uidNext: 3, messages: [] }).session, t.db, t.inbox)
     expect(await uidsOf(t.db, t.inbox)).toEqual([])
   })
+})
 
-  it('are not asked about when they are older than the range: what is not fetched is not known to be gone', async () => {
+describe('what was read or starred elsewhere', () => {
+  it('shows so after a sync, for a message that is not new', async () => {
     const t = await setup()
-    const messages = Array.from({ length: 60 }, (_, i) => fetched(i + 1))
-    // 60 messages, UIDNEXT 61: the newest 50 are asked for, from UID 11.
-    await syncFolder(server({ uidValidity: 1n, uidNext: 61, messages }).session, t.db, t.inbox)
-    expect((await uidsOf(t.db, t.inbox))[0]).toBe(11)
-    await saveMessages(t.db, t.inbox, [fetched(3)])
-    await syncFolder(server({ uidValidity: 1n, uidNext: 61, messages }).session, t.db, t.inbox)
-    expect(await uidsOf(t.db, t.inbox)).toContain(3)
+    const state = { uidValidity: 1n, uidNext: 4, messages: [fetched(1), fetched(2), fetched(3)] }
+    await syncFolder(server(state).session, t.db, t.inbox)
+    state.messages = [fetched(1, ['\\Seen']), fetched(2, ['\\Flagged']), fetched(3)]
+    await syncFolder(server(state).session, t.db, t.inbox)
+    const flags = Object.fromEntries((await listMessages(t.db, t.inbox.id)).map((m) => [m.uid, m.flags]))
+    expect(flags).toEqual({ 1: ['\\Seen'], 2: ['\\Flagged'], 3: [] })
   })
 
-  it('are counted by dropGone, which leaves the others', async () => {
+  it('does not undo a change that the queue has not told the server yet', async () => {
     const t = await setup()
-    await saveMessages(t.db, t.inbox, [fetched(1), fetched(2), fetched(3)])
-    expect(await dropGone(t.db, t.inbox.id, 2, [3])).toBe(1)
-    expect(await uidsOf(t.db, t.inbox)).toEqual([1, 3])
+    await saveMessages(t.db, t.inbox, [fetched(1), fetched(2)])
+    await saveMessages(t.db, t.inbox, [fetched(2, ['\\Seen'])])
+    await enqueueAction(t.db, t.account.id, 'flags', { folderId: t.inbox.id, uids: [2], add: ['\\Seen'], remove: [] })
+    const reconciled = await reconcile(t.db, t.inbox, [
+      { uid: 1, flags: ['\\Seen'] },
+      { uid: 2, flags: [] }
+    ])
+    expect(reconciled).toEqual({ gone: 0, changed: 1 })
+    const flags = Object.fromEntries((await listMessages(t.db, t.inbox.id)).map((m) => [m.uid, m.flags]))
+    expect(flags).toEqual({ 1: ['\\Seen'], 2: ['\\Seen'] })
+  })
+
+  it('is no change when the flags are the same in another order', async () => {
+    const t = await setup()
+    await saveMessages(t.db, t.inbox, [fetched(1, ['\\Seen', '\\Flagged'])])
+    expect(await reconcile(t.db, t.inbox, [{ uid: 1, flags: ['\\Flagged', '\\Seen'] }])).toEqual({ gone: 0, changed: 0 })
+  })
+})
+
+describe('what is new since the last sync', () => {
+  it('is fetched from the newest message the phone has on, and not the newest 50 again', async () => {
+    const t = await setup()
+    const state = { uidValidity: 1n, uidNext: 101, messages: many(1, 100) }
+    const first = server(state)
+    await syncFolder(first.session, t.db, t.inbox)
+    expect(first.asked).toEqual([`${101 - NEWEST}:*`])
+    state.uidNext = 104
+    state.messages = many(1, 103)
+    const second = server(state)
+    expect(await syncFolder(second.session, t.db, t.inbox)).toBe(3)
+    expect(second.asked).toEqual(['101:*'])
+    expect((await uidsOf(t.db, t.inbox)).length).toBe(53)
+  })
+
+  it('starts the folder anew when the UIDs have run on so far that the messages in between would be a hole', async () => {
+    const t = await setup()
+    await saveMessages(t.db, t.inbox, [fetched(1), fetched(2)])
+    const state = { uidValidity: 1n, uidNext: 2000, messages: [fetched(1999)] }
+    const gone = server(state)
+    await syncFolder(gone.session, t.db, t.inbox)
+    expect(gone.asked).toEqual([`${2000 - NEWEST}:*`])
+    expect(await uidsOf(t.db, t.inbox)).toEqual([1999])
+  })
+})
+
+describe('older messages', () => {
+  it('are not there to load for a folder that was not synced, and are there once the server has more than the phone', async () => {
+    const t = await setup()
+    expect(await hasOlder(t.db, t.inbox.id)).toBe(false)
+    await syncFolder(server({ uidValidity: 1n, uidNext: 121, messages: many(1, 120) }).session, t.db, t.inbox)
+    expect((await cachedBounds(t.db, t.inbox.id))?.count).toBe(NEWEST)
+    expect(await hasOlder(t.db, t.inbox.id)).toBe(true)
+  })
+
+  it('are loaded a page at a time, the highest UIDs below the oldest the phone has, until there are none', async () => {
+    const t = await setup()
+    const state = { uidValidity: 1n, uidNext: 131, messages: many(1, 130) }
+    const s = server(state)
+    await syncFolder(s.session, t.db, t.inbox)
+    expect(await uidsOf(t.db, t.inbox)).toEqual(many(81, 130).map((m) => m.uid))
+
+    expect(await loadOlder(s.session, t.db, t.inbox)).toBe(PAGE)
+    expect((await cachedBounds(t.db, t.inbox.id))?.min).toBe(31)
+    expect(await hasOlder(t.db, t.inbox.id)).toBe(true)
+
+    expect(await loadOlder(s.session, t.db, t.inbox)).toBe(30)
+    expect((await cachedBounds(t.db, t.inbox.id))).toMatchObject({ min: 1, count: 130 })
+    expect(await hasOlder(t.db, t.inbox.id)).toBe(false)
+
+    expect(await loadOlder(s.session, t.db, t.inbox)).toBe(0)
+  })
+
+  it('come in full pages from a folder numbered with gaps, since the UIDs are taken from what the server has', async () => {
+    const t = await setup()
+    // 120 messages with every second number gone.
+    const messages = Array.from({ length: 120 }, (_, i) => fetched((i + 1) * 2))
+    const state = { uidValidity: 1n, uidNext: 241, messages }
+    const s = server(state)
+    await syncFolder(s.session, t.db, t.inbox)
+    expect(await loadOlder(s.session, t.db, t.inbox)).toBe(PAGE)
+    expect(s.fetchedByNumber.at(-1)).toHaveLength(PAGE)
+  })
+
+  it('are not asked for again when they are there already, and a message that was deleted meanwhile is not fetched', async () => {
+    const t = await setup()
+    const state = { uidValidity: 1n, uidNext: 111, messages: many(1, 110) }
+    const s = server(state)
+    await syncFolder(s.session, t.db, t.inbox)
+    state.messages = state.messages.filter((m) => m.uid !== 60)
+    await loadOlder(s.session, t.db, t.inbox)
+    expect(s.fetchedByNumber.at(-1)).not.toContain(60)
+    expect(await uidsOf(t.db, t.inbox)).not.toContain(60)
+  })
+
+  it('say that there are none when the server has no more than the phone has', async () => {
+    const t = await setup()
+    await syncFolder(server({ uidValidity: 1n, uidNext: 4, messages: many(1, 3) }).session, t.db, t.inbox)
+    expect(await hasOlder(t.db, t.inbox.id)).toBe(false)
   })
 })

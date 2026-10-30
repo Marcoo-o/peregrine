@@ -46,6 +46,10 @@ export interface UnifiedState {
   busy: boolean
   /** The accounts that could not be brought up to date, each with its reason. */
   problems: RefreshResult[]
+  /** There are older messages than the list shows, on the phone or on the servers. */
+  more: boolean
+  /** Older messages are being loaded. */
+  loadingMore?: boolean
 }
 
 export interface SearchState {
@@ -77,6 +81,10 @@ export interface MessagesState {
   /** The names of the account's folders by id, for saying where a message is on its way to. */
   folderNames: Record<string, string>
   busy: boolean
+  /** The server has older messages in this folder than the phone has loaded. */
+  hasOlder: boolean
+  /** Older messages are being loaded. */
+  loadingOlder?: boolean
   error?: string
 }
 
