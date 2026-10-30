@@ -112,10 +112,17 @@ describe('the settings of the lists', () => {
 
   it('come back as they were stored', async () => {
     const { db } = await migratedDatabase()
-    expect(await saveListSettings(db, { showPreview: false })).toEqual({ showPreview: false })
-    expect(await loadListSettings(db)).toEqual({ showPreview: false })
+    expect(await saveListSettings(db, { showPreview: false })).toEqual({ showPreview: false, deviceContacts: false })
+    expect(await loadListSettings(db)).toEqual({ showPreview: false, deviceContacts: false })
     await saveListSettings(db, { showPreview: true })
-    expect(await loadListSettings(db)).toEqual({ showPreview: true })
+    expect(await loadListSettings(db)).toEqual({ showPreview: true, deviceContacts: false })
+  })
+
+  it('keep the switch for the address book apart from the one for the preview', async () => {
+    const { db } = await migratedDatabase()
+    expect(DEFAULT_LIST_SETTINGS.deviceContacts).toBe(false)
+    await saveListSettings(db, { deviceContacts: true })
+    expect(await loadListSettings(db)).toEqual({ showPreview: true, deviceContacts: true })
   })
 
   it('take what is stored that is not a switch for the default, and what is not JSON for nothing set', async () => {

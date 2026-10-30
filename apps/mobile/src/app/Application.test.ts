@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { listFolders } from '../folders'
+import type { Incoming } from '../incoming'
 import { saveNotificationSettings } from '../settings'
 import { appHarness, eventually } from '../testing/appHarness'
 
@@ -133,3 +134,86 @@ describe('what waits for a connection', () => {
 async function eventuallyPending(t: { reconnectTimers: { pending: Map<number, unknown> } }): Promise<void> {
   await eventually(() => expect(t.reconnectTimers.pending.size).toBeGreaterThan(0))
 }
+
+describe('what another application asks of this one', () => {
+  const asked = (over: Partial<Incoming> = {}): Incoming => ({ mailto: null, subject: '', text: '', to: [], cc: [], bcc: [], files: [], unreadable: 0, ...over })
+
+  it('starts a message from a link to an address, written from the account, over the screen that was shown', async () => {
+    const t = await withMessage()
+    await t.app.start()
+    const before = t.store.screen
+    t.files.incoming = asked({ mailto: 'mailto:sam@example.org?subject=Hi&body=Hello' })
+
+    await t.app.comeToFront()
+
+    expect(t.store.screen).toMatchObject({
+      name: 'compose',
+      account: { id: t.work.id },
+      draft: { to: 'sam@example.org', subject: 'Hi', body: 'Hello' },
+      returnTo: before
+    })
+    // it was given once
+    expect(await t.files.consumeIncoming()).toBeNull()
+  })
+
+  it('starts a message from what was shared, with its files attached and the ones too large said and removed', async () => {
+    const t = await withMessage()
+    await t.app.start()
+    t.files.incoming = asked({
+      text: 'https://example.org/page',
+      subject: 'A page',
+      files: [
+        { path: '/store/1/a.pdf', name: 'a.pdf', size: 10, contentType: 'application/pdf' },
+        { path: '/store/2/big.bin', name: 'big.bin', size: 30 * 1024 * 1024, contentType: 'application/octet-stream' }
+      ]
+    })
+    await t.app.openIncoming()
+    expect(t.store.screen).toMatchObject({
+      name: 'compose',
+      draft: { subject: 'A page', body: 'https://example.org/page', attachments: [{ filename: 'a.pdf' }] },
+      error: expect.stringContaining('big.bin')
+    })
+    expect(t.files.removed).toEqual(['/store/2/big.bin'])
+  })
+
+  it('writes from the first account that can send', async () => {
+    const t = await appHarness()
+    await t.givenAccount('reader', { INBOX: [] }, { smtpHost: null, smtpPort: null, smtpSecure: null })
+    const sender = await t.givenAccount('sender', { INBOX: [] }, { smtpHost: 'smtp.example.org', smtpPort: 587, smtpSecure: 'starttls' })
+    t.files.incoming = asked({ mailto: 'mailto:sam@example.org' })
+    await t.app.openIncoming()
+    expect(t.store.screen).toMatchObject({ name: 'compose', account: { id: sender.id } })
+  })
+
+  it('leaves a message that is being written alone, and keeps the request for the next time', async () => {
+    const t = await withMessage()
+    await t.app.start()
+    t.app.compose.startNew(t.work, t.store.screen)
+    const writing = t.store.screen
+    t.files.incoming = asked({ mailto: 'mailto:sam@example.org' })
+
+    await t.app.openIncoming()
+    expect(t.store.screen).toBe(writing)
+
+    t.store.showScreen({ name: 'login' })
+    await t.app.openIncoming()
+    expect(t.store.screen).toMatchObject({ name: 'compose', draft: { to: 'sam@example.org' } })
+  })
+
+  it('does nothing without an account, and removes the files that came', async () => {
+    const t = await appHarness()
+    t.files.incoming = asked({ files: [{ path: '/store/1/a.pdf', name: 'a.pdf', size: 1, contentType: 'application/pdf' }] })
+    await t.app.openIncoming()
+    expect(t.store.screen.name).not.toBe('compose')
+    expect(t.files.removed).toEqual(['/store/1/a.pdf'])
+  })
+
+  it('goes on when the platform cannot say, and says so', async () => {
+    const t = await withMessage()
+    t.files.consumeIncoming = async () => {
+      throw new Error('no module')
+    }
+    await expect(t.app.openIncoming()).resolves.toBeUndefined()
+    expect(t.logs.some((line) => line.includes('no module'))).toBe(true)
+  })
+})

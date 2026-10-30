@@ -12,6 +12,10 @@ function fakeNative(over: Partial<NativeFiles> = {}) {
         { path: '/store/2/b', name: 'b', size: 1, mimeType: '' }
       ]
     },
+    consumeIncoming: async () => {
+      calls.push('consumeIncoming')
+      return null
+    },
     stash: async (name, type, base64) => {
       calls.push(`stash ${name} ${type} ${base64}`)
       return { path: `/store/3/${name}`, name, size: 5, mimeType: type }
@@ -102,5 +106,34 @@ describe('copying content into the storage', () => {
   it('has octet-stream for a copy that has no type', async () => {
     const { files } = fakeNative({ stash: async (name) => ({ path: `/store/4/${name}`, name, size: 1, mimeType: '' }) })
     expect((await files.stash('x', '', new Uint8Array([1]))).contentType).toBe('application/octet-stream')
+  })
+
+  it('gives what another application asked, with the type of each shared file or octet-stream for none', async () => {
+    const { files } = fakeNative({
+      consumeIncoming: async () => ({
+        mailto: null,
+        subject: 'Hi',
+        text: 'Hello',
+        to: ['sam@example.org'],
+        cc: [],
+        bcc: [],
+        files: [{ path: '/store/4/c.png', name: 'c.png', size: 9, mimeType: '' }],
+        unreadable: 1
+      })
+    })
+    expect(await files.consumeIncoming()).toEqual({
+      mailto: null,
+      subject: 'Hi',
+      text: 'Hello',
+      to: ['sam@example.org'],
+      cc: [],
+      bcc: [],
+      files: [{ path: '/store/4/c.png', name: 'c.png', size: 9, contentType: 'application/octet-stream' }],
+      unreadable: 1
+    })
+  })
+
+  it('gives nothing when nothing was asked', async () => {
+    expect(await fakeNative().files.consumeIncoming()).toBeNull()
   })
 })

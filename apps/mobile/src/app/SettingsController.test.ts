@@ -77,14 +77,40 @@ describe('the settings screen', () => {
 
   it('has the text under the subjects of the lists switched off and on, and the lists carry it', async () => {
     const t = await onSettings()
-    expect(t.screen().list).toEqual({ showPreview: true })
+    expect(t.screen().list).toEqual({ showPreview: true, deviceContacts: false })
     await t.app.settings.setShowPreview(false)
-    expect(t.screen().list).toEqual({ showPreview: false })
+    expect(t.screen().list).toEqual({ showPreview: false, deviceContacts: false })
 
     await t.app.navigator.showUnified({ refresh: false })
     expect(t.store.screen).toMatchObject({ name: 'unified', showPreview: false })
     await t.app.navigator.showSearch('x')
     expect(t.store.screen).toMatchObject({ name: 'search', showPreview: false })
+  })
+
+  describe('the address book of the device', () => {
+    it('is switched on once the user allowed reading it, and off again', async () => {
+      const t = await onSettings()
+      t.deviceContacts.answer = true
+      await t.app.settings.setDeviceContacts(true)
+      expect(t.deviceContacts.asked).toBe(1)
+      expect(t.screen()).toMatchObject({ list: { deviceContacts: true }, contactsPermitted: true })
+      await t.app.settings.setDeviceContacts(false)
+      expect(t.screen().list.deviceContacts).toBe(false)
+    })
+
+    it('stays off, with the reason, when the user does not allow it', async () => {
+      const t = await onSettings()
+      t.deviceContacts.answer = false
+      await t.app.settings.setDeviceContacts(true)
+      expect(t.screen()).toMatchObject({ list: { deviceContacts: false }, contactsPermitted: false, notice: expect.stringContaining('Kontakte') })
+    })
+
+    it('does not ask again when the permission is there already', async () => {
+      const t = await onSettings()
+      t.deviceContacts.allowed = true
+      await t.app.settings.setDeviceContacts(true)
+      expect(t.deviceContacts.asked).toBe(0)
+    })
   })
 
   describe('the quiet hours', () => {
