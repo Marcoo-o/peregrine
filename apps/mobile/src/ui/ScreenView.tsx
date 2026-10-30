@@ -55,6 +55,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onCompose={() => compose.startNewFromAnyAccount(screen)}
           onCreateTag={(name, color) => tags.create(name, color)}
           onOpen={(message) => messages.openFromUnified(message)}
+          onOlder={() => navigator.showMoreUnified()}
         />
       )
     case 'search':
@@ -90,6 +91,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onCompose={() => compose.startNew(screen.account, screen)}
           onCreateTag={(name, color) => tags.create(name, color)}
           onOpen={(message) => messages.open(screen.account, screen.folder, message, 'folder')}
+          onOlder={() => navigator.loadOlderMessages(screen.account, screen.folder)}
         />
       )
     case 'message':

@@ -86,6 +86,28 @@ export function toMailboxEntry(tokens: Token[]): MailboxEntry | null {
   }
 }
 
+/** A message of a folder as a sync has it, from what the server said of it, or nothing for an answer that does not name a UID. */
+function fetchedMessage(data: ReturnType<typeof parseFetch>): FetchedMessage | undefined {
+  if (data.uid === undefined) return undefined
+  const envelope = data.envelope
+  return {
+    uid: data.uid,
+    flags: storedFlags(data.flags),
+    size: data.size ?? 0,
+    envelope: {
+      subject: envelope?.subject ?? undefined,
+      messageId: envelope?.messageId ?? undefined,
+      inReplyTo: envelope?.inReplyTo ?? undefined,
+      date: validDate(envelope?.date ?? null),
+      from: envelope?.from,
+      to: envelope?.to,
+      cc: envelope?.cc,
+      bcc: envelope?.bcc
+    },
+    hasAttachment: data.bodyStructure?.childNodes?.some((node) => node.disposition === 'attachment') ?? false
+  }
+}
+
 function dataOf(result: CommandResult, name: string): ServerMessage[] {
   return result.data.filter((m) => m.kind === 'data' && m.name === name)
 }
@@ -418,26 +440,8 @@ export class ImapClientSession implements ImapSession {
           '(UID FLAGS RFC822.SIZE ENVELOPE BODYSTRUCTURE)'
         ])
         for (const message of dataOf(full, 'FETCH')) {
-          const data = parseFetch(message)
-          if (data.uid === undefined) continue
-          const envelope = data.envelope
-          messages.push({
-            uid: data.uid,
-            flags: storedFlags(data.flags),
-            size: data.size ?? 0,
-            envelope: {
-              subject: envelope?.subject ?? undefined,
-              messageId: envelope?.messageId ?? undefined,
-              inReplyTo: envelope?.inReplyTo ?? undefined,
-              date: validDate(envelope?.date ?? null),
-              from: envelope?.from,
-              to: envelope?.to,
-              cc: envelope?.cc,
-              bcc: envelope?.bcc
-            },
-            hasAttachment:
-              data.bodyStructure?.childNodes?.some((node) => node.disposition === 'attachment') ?? false
-          })
+          const fetched = fetchedMessage(parseFetch(message))
+          if (fetched) messages.push(fetched)
         }
 
         // Flags of everything, without envelope or body structure: this is what tells the sync
@@ -449,6 +453,22 @@ export class ImapClientSession implements ImapSession {
         }
       }
       return { messages, flags, ...status }
+    })
+  }
+
+  async fetchMessages(imapPath: string, uids: number[]): Promise<FetchedMessage[]> {
+    if (uids.length === 0) return []
+    // Built before anything is sent: a value that is not a UID is refused without the connection having done anything.
+    const set = sequenceSet(uids)
+    return this.withMailbox(imapPath, async (_selected, justSelected) => {
+      if (!justSelected) await this.refresh()
+      const result = await this.client.command(['UID', 'FETCH', set, '(UID FLAGS RFC822.SIZE ENVELOPE BODYSTRUCTURE)'])
+      const messages: FetchedMessage[] = []
+      for (const message of dataOf(result, 'FETCH')) {
+        const fetched = fetchedMessage(parseFetch(message))
+        if (fetched) messages.push(fetched)
+      }
+      return messages
     })
   }
 

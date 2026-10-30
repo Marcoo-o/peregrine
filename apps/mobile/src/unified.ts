@@ -8,7 +8,7 @@ import { listFolders, syncFolders, type Folder } from './folders'
 import type { MailActions } from './mailActions'
 import { toStoredMessage, type StoredMessage } from './messages'
 import type { FolderReset } from './folderChanges'
-import { syncFolder } from './sync'
+import { loadOlder, syncFolder } from './sync'
 
 /** A message of the unified list: where it is, and whose it is. */
 export interface UnifiedMessage extends StoredMessage {
@@ -21,6 +21,9 @@ export interface UnifiedMessage extends StoredMessage {
 
 /** How many the list shows. A list of everything would read the whole mailbox for one screen. */
 export const UNIFIED_LIMIT = 200
+
+/** How many more the list shows each time the user asks for older messages. */
+export const UNIFIED_STEP = 100
 
 /** Whether a folder is the inbox: the server says so, or it is called INBOX, which every server has. */
 export function isInbox(folder: Pick<Folder, 'specialUse' | 'imapPath'>): boolean {
@@ -130,6 +133,27 @@ export async function listUnified(
   return rows.map(toUnifiedMessage)
 }
 
+/** How many messages of the folders of a role of every account the phone has, which is what `listUnified` shows the newest of. */
+export async function unifiedCount(db: SqlDb, role: UnifiedRole = 'inbox', now: number = Date.now()): Promise<number> {
+  const where = listCondition(role, now)
+  const row = await db.get<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM messages m JOIN folders f ON f.id = m.folder_id JOIN accounts a ON a.id = m.account_id WHERE ${where.sql}`,
+    ...where.params
+  )
+  return row?.n ?? 0
+}
+
+/** Whether the server has older messages than the phone has loaded in a folder of this role of any account. */
+export async function hasOlderInRole(db: SqlDb, role: UnifiedRole): Promise<boolean> {
+  const rows = await db.all<{ special_use: string | null; imap_path: string; server_messages: number | null; cached: number }>(
+    `SELECT f.special_use, f.imap_path, f.server_messages, (SELECT COUNT(*) FROM messages m WHERE m.folder_id = f.id) AS cached
+     FROM folders f WHERE f.server_messages IS NOT NULL`
+  )
+  return rows.some(
+    (row) => roleOf({ specialUse: row.special_use, imapPath: row.imap_path }) === role && row.cached < (row.server_messages ?? 0)
+  )
+}
+
 /**
  * How many messages of each role are not read, over all accounts, without those that are put aside. A role with none is
  * 0. For the list of what is put aside it is how many are, read or not, since that is what the number is for there.
@@ -228,6 +252,35 @@ export async function refreshRole(
           accountName: account.displayName,
           error: explainError(error)
         }
+      }
+    })
+  )
+}
+
+/**
+ * Loads a page of older messages of the folder of a role of each account, one by one and each on its own as `refreshRole` does: an
+ * account that cannot be reached is named with its reason and the others are not held up by it.
+ */
+export async function loadOlderRole(
+  context: { db: SqlDb; connections: Connections; timeoutMs?: number; onReset?: (folder: Folder, reset: FolderReset) => void },
+  accounts: Account[],
+  role: UnifiedRole
+): Promise<RefreshResult[]> {
+  const { db, connections, onReset, timeoutMs = 30_000 } = context
+  return Promise.all(
+    accounts.map(async (account): Promise<RefreshResult> => {
+      try {
+        await withTimeout(
+          (async () => {
+            const imap = await connections.ensure(account)
+            const folder = (await listFolders(db, account.id)).find((candidate) => roleOf(candidate) === role)
+            if (folder) await loadOlder(imap, db, folder, (reset) => onReset?.(folder, reset))
+          })(),
+          timeoutMs
+        )
+        return { accountId: account.id, accountName: account.displayName }
+      } catch (error) {
+        return { accountId: account.id, accountName: account.displayName, error: explainError(error) }
       }
     })
   )

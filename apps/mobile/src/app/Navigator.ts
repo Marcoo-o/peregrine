@@ -7,9 +7,19 @@ import { listMessages, unreadCounts } from '../messages'
 import { searchMessages } from '../search'
 import { loadListSettings } from '../settings'
 import { loadSidebar, type SidebarData } from '../sidebar'
-import { syncFolder } from '../sync'
-import { resetText } from '../folderChanges'
-import { listUnified, refreshRole, type RefreshResult, type UnifiedRole } from '../unified'
+import { loadOlder, syncFolder } from '../sync'
+import { hasOlder, resetText } from '../folderChanges'
+import {
+  hasOlderInRole,
+  listUnified,
+  loadOlderRole,
+  refreshRole,
+  unifiedCount,
+  UNIFIED_LIMIT,
+  UNIFIED_STEP,
+  type RefreshResult,
+  type UnifiedRole
+} from '../unified'
 import { refreshQueueStatus } from './queueStatus'
 import type { Services } from './services'
 import type { AppStore } from './store'
@@ -132,6 +142,9 @@ export class Navigator {
   /** The role of the list of all accounts that was shown last, which is the one shown again when none is asked for. */
   private unifiedRole: UnifiedRole = 'inbox'
 
+  /** How many messages the list of all accounts shows: it grows by a step each time the user asks for older ones. */
+  private unifiedLimit = UNIFIED_LIMIT
+
   /**
    * The newest messages of the folders of a role, of every account, in one list: the inboxes unless it is told
    * another role, and the one shown last when it is told none. It is shown at once from what is stored and, when
@@ -139,6 +152,7 @@ export class Navigator {
    */
   async showUnified(options: { refresh: boolean; role?: UnifiedRole }): Promise<void> {
     const { db, connections, mail } = this.services
+    if (options.role !== undefined && options.role !== this.unifiedRole) this.unifiedLimit = UNIFIED_LIMIT
     this.unifiedRole = options.role ?? this.unifiedRole
     const role = this.unifiedRole
     this.store.setStatusAccount(null)
@@ -160,12 +174,46 @@ export class Navigator {
    * screen the user has moved on to while the accounts were being fetched.
    */
   private async showUnifiedList(busy: boolean, problems: RefreshResult[], reason: 'navigating' | 'updating'): Promise<void> {
+    const { db } = this.services
     const role = this.unifiedRole
-    const messages = await listUnified(this.services.db, undefined, role)
+    const messages = await listUnified(db, this.unifiedLimit, role)
     // Everything is read before the screen is looked at, so that nothing is waited for between looking and showing.
-    const { showPreview } = await loadListSettings(this.services.db)
+    const { showPreview } = await loadListSettings(db)
+    const more = (await unifiedCount(db, role)) > messages.length || (await hasOlderInRole(db, role))
     if (reason === 'updating' && this.store.screen.name !== 'unified') return
-    this.store.showScreen({ name: 'unified', role, messages, showPreview, busy, problems })
+    this.store.showScreen({ name: 'unified', role, messages, showPreview, busy, problems, more })
+  }
+
+  /** Whether older messages are being fetched, so that scrolling to the end twice does not ask twice. */
+  private loadingOlder = false
+
+  /**
+   * Shows older messages in the list of all accounts: more of those the phone has when it has more than the list shows, and else a page
+   * of older ones fetched for the folder of the role of each account. The list grows by a step either way.
+   */
+  async showMoreUnified(): Promise<void> {
+    const { db, connections } = this.services
+    const role = this.unifiedRole
+    if (this.loadingOlder) return
+    if ((await unifiedCount(db, role)) > this.unifiedLimit) {
+      this.unifiedLimit += UNIFIED_STEP
+      await this.showUnifiedList(false, [], 'navigating')
+      return
+    }
+    this.loadingOlder = true
+    try {
+      const shown = this.store.screen
+      if (shown.name === 'unified') this.store.showScreen({ ...shown, loadingMore: true })
+      const results = await loadOlderRole(
+        { db, connections, onReset: (folder, reset) => this.services.log.warn(resetText(folder, reset)) },
+        await listAccounts(db),
+        role
+      )
+      this.unifiedLimit += UNIFIED_STEP
+      await this.showUnifiedList(false, results.filter((result) => result.error !== undefined), 'updating')
+    } finally {
+      this.loadingOlder = false
+    }
   }
 
   /** How many searches there have been, so that the newest is the one that is shown whichever finishes last. */
@@ -218,13 +266,37 @@ export class Navigator {
   private async showStoredMessages(
     account: Account,
     folder: Folder,
-    status: { busy: boolean; error?: string }
+    status: { busy: boolean; error?: string; loadingOlder?: boolean }
   ): Promise<void> {
     const { db } = this.services
     const folderNames = Object.fromEntries((await listFolders(db, account.id)).map((f) => [f.id, f.displayName]))
     const messages = await listMessages(db, folder.id)
     const { showPreview } = await loadListSettings(db)
-    this.store.showScreen({ name: 'messages', account, folder, messages, showPreview, folderNames, ...status })
+    const older = await hasOlder(db, folder.id)
+    this.store.showScreen({ name: 'messages', account, folder, messages, showPreview, folderNames, hasOlder: older, ...status })
+  }
+
+  /**
+   * Loads a page of older messages of the open folder and shows the list again with them. Asked for by scrolling to the end of the list or by its
+   * button: only one load at a time, and none without a connection, which is said.
+   */
+  async loadOlderMessages(account: Account, folder: Folder): Promise<void> {
+    if (this.loadingOlder) return
+    const imap = this.services.connections.get(account.id)
+    if (!imap) {
+      await this.showStoredMessages(account, folder, { busy: false, error: NO_CONNECTION_NOTICE })
+      return
+    }
+    this.loadingOlder = true
+    try {
+      await this.showStoredMessages(account, folder, { busy: false, loadingOlder: true })
+      await loadOlder(imap, this.services.db, folder, (reset) => this.services.log.warn(resetText(folder, reset)))
+      await this.showStoredMessages(account, folder, { busy: false })
+    } catch (error) {
+      await this.showStoredMessages(account, folder, { busy: false, error: explainError(error) })
+    } finally {
+      this.loadingOlder = false
+    }
   }
 
   /** Reads what waits in the queue into the store, without making anybody wait for it. */

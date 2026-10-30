@@ -180,6 +180,7 @@ function createStyles({ colors }: Theme) {
     },
     searchPillText: { flex: 1, fontSize: 15, color: colors.muted },
     // The line over a list: what it is, how many, and the filters.
+    olderFooter: { paddingVertical: 16, alignItems: 'stretch', gap: 8 },
     listSubtitle: { fontSize: 13, color: colors.muted, marginTop: 4 },
     listTitleRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' },
     listTitle: { fontSize: 20, fontWeight: '700', color: colors.text },

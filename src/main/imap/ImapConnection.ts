@@ -275,6 +275,25 @@ export class ImapConnection implements ImapSession {
     }
   }
 
+  async fetchMessages(imapPath: string, uids: number[]): Promise<FetchedMessage[]> {
+    if (uids.length === 0) return []
+    const lock = await this.lockMailbox(imapPath)
+    try {
+      const messages: FetchedMessage[] = []
+      for await (const msg of this.client.fetch(
+        uids.join(','),
+        { envelope: true, flags: true, uid: true, size: true, bodyStructure: true },
+        { uid: true }
+      )) {
+        const fetched = toFetchedMessage(msg)
+        if (fetched) messages.push(fetched)
+      }
+      return messages
+    } finally {
+      lock.release()
+    }
+  }
+
   async fetchFullMessage(imapPath: string, uid: number): Promise<FullMessage | undefined> {
     const lock = await this.lockMailbox(imapPath)
     try {

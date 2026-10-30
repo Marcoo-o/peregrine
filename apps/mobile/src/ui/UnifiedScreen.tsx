@@ -6,6 +6,7 @@ import type { Tag } from '../tags'
 import type { UnifiedMessage } from '../unified'
 import { Fab } from './controls'
 import { EmptyListNote } from './EmptyListNote'
+import { OlderFooter } from './OlderFooter'
 import { roleLabel } from './folderLabel'
 import { ListHead } from './ListHead'
 import { MessageRow } from './MessageRow'
@@ -26,9 +27,11 @@ export function UnifiedScreen(props: {
   onCompose: () => void
   onCreateTag: (name: string, color: string) => Promise<Tag | undefined>
   onOpen: (message: UnifiedMessage) => void
+  /** Shows older messages, loading them where the phone has no more. */
+  onOlder: () => void
 }) {
   const styles = useStyles()
-  const { role, messages, busy, problems } = props.state
+  const { role, messages, busy, problems, more, loadingMore } = props.state
   const [filter, setFilter] = useState(NO_FILTER)
   const shown = useMemo(() => filterMessages(messages, filter), [messages, filter])
   const selection = useSelection(shown, props.actions)
@@ -63,7 +66,10 @@ export function UnifiedScreen(props: {
         keyExtractor={(message) => `${message.folderId}:${message.uid}`}
         refreshing={busy}
         onRefresh={props.onRefresh}
+        onEndReached={() => (filter === NO_FILTER && more && !busy && !loadingMore ? props.onOlder() : undefined)}
+        onEndReachedThreshold={0.6}
         ListEmptyComponent={<EmptyListNote busy={busy} total={messages.length} />}
+        ListFooterComponent={<OlderFooter more={more} loading={loadingMore === true} onLoad={props.onOlder} />}
         renderItem={({ item }) => (
           <SwipeableRow
             disabled={selection.selecting}

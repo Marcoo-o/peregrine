@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { listAccounts } from '../accounts'
 import { listFolders } from '../folders'
+import { deleteMessages } from '../messages'
 import { appHarness, eventually } from '../testing/appHarness'
-import type { Screen } from './screens'
+import type { MessagesState, Screen, UnifiedState } from './screens'
 
 const day = (n: number) => new Date(Date.UTC(2026, 9, n))
 
@@ -424,5 +425,83 @@ describe('opening a folder from the sidebar', () => {
     await t.app.navigator.openFolder(t.work, folder)
 
     expect(t.server.calls).toContain('add INBOX 1 \\Seen')
+  })
+})
+
+describe('older messages', () => {
+  /** An account whose server has 120 messages in the inbox and whose phone has the newest 50 of them. */
+  async function withHistory() {
+    const t = await appHarness()
+    const inbox = Array.from({ length: 120 }, (_, i) => ({ uid: i + 1, subject: `m${i + 1}`, date: day(1 + Math.floor(i / 10)) }))
+    const work = await t.givenAccount('work', { INBOX: inbox, Trash: [] })
+    const folder = t.folderOf(await listFolders(t.db, work.id), 'INBOX')
+    await deleteMessages(t.db, folder.id, Array.from({ length: 70 }, (_, i) => i + 1))
+    await t.app.services.connections.ensure(work)
+    return { ...t, work, folder }
+  }
+
+  const shown = (t: { store: { screen: Screen } }) => t.store.screen as MessagesState
+
+  it('say that there are some once the folder was synced and the server has more than the phone', async () => {
+    const t = await withHistory()
+    await t.app.navigator.showMessages(t.work, t.folder, { sync: true })
+    expect(shown(t).messages).toHaveLength(50)
+    expect(shown(t).hasOlder).toBe(true)
+  })
+
+  it('are loaded a page at a time and shown, until there are none', async () => {
+    const t = await withHistory()
+    await t.app.navigator.showMessages(t.work, t.folder, { sync: true })
+    await t.app.navigator.loadOlderMessages(t.work, t.folder)
+    expect(shown(t).messages).toHaveLength(100)
+    expect(shown(t).hasOlder).toBe(true)
+    await t.app.navigator.loadOlderMessages(t.work, t.folder)
+    expect(shown(t).messages).toHaveLength(120)
+    expect(shown(t).hasOlder).toBe(false)
+    expect(shown(t).loadingOlder).toBeUndefined()
+  })
+
+  it('show that they are being loaded while they are', async () => {
+    const t = await withHistory()
+    await t.app.navigator.showMessages(t.work, t.folder, { sync: true })
+    const seen: Array<boolean | undefined> = []
+    t.store.subscribe(() => {
+      if (t.store.screen.name === 'messages') seen.push(t.store.screen.loadingOlder)
+    })
+    await t.app.navigator.loadOlderMessages(t.work, t.folder)
+    expect(seen[0]).toBe(true)
+    expect(seen.at(-1)).toBeUndefined()
+  })
+
+  it('are not loaded twice at once, as scrolling to the end twice asks for', async () => {
+    const t = await withHistory()
+    await t.app.navigator.showMessages(t.work, t.folder, { sync: true })
+    await Promise.all([t.app.navigator.loadOlderMessages(t.work, t.folder), t.app.navigator.loadOlderMessages(t.work, t.folder)])
+    expect(shown(t).messages).toHaveLength(100)
+  })
+
+  it('say that there is no connection, and load nothing, when the server cannot be reached', async () => {
+    const t = await withHistory()
+    await t.app.navigator.showMessages(t.work, t.folder, { sync: true })
+    t.app.services.connections.drop(t.work.id)
+    await t.app.navigator.loadOlderMessages(t.work, t.folder)
+    expect(shown(t).error).toMatch(/Keine Verbindung/)
+    expect(shown(t).messages).toHaveLength(50)
+  })
+
+  it('are shown in the list of all accounts, where the phone has more than the list shows, and are loaded where it has not', async () => {
+    const t = await withHistory()
+    await t.app.navigator.showUnified({ refresh: true })
+    const first = t.store.screen as UnifiedState
+    expect(first.messages).toHaveLength(50)
+    expect(first.more).toBe(true)
+    await t.app.navigator.showMoreUnified()
+    const second = t.store.screen as UnifiedState
+    expect(second.messages).toHaveLength(100)
+    expect(second.more).toBe(true)
+    await t.app.navigator.showMoreUnified()
+    const third = t.store.screen as UnifiedState
+    expect(third.messages).toHaveLength(120)
+    expect(third.more).toBe(false)
   })
 })
