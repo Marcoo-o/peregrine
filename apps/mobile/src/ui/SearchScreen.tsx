@@ -3,6 +3,7 @@ import { FlatList, Text, TextInput, View } from 'react-native'
 import type { SearchState } from '../app/screens'
 import type { SearchHit } from '../search'
 import { folderLabel } from './folderLabel'
+import { Button } from './controls'
 import { Header } from './Header'
 import { MessageRow } from './MessageRow'
 import { useStyles } from './useStyles'
@@ -25,10 +26,13 @@ export function SearchScreen(props: {
   onSearch: (query: string) => void
   onOpen: (message: SearchHit) => void
   onBack: () => void
+  /** Keeps the search, or takes the kept one away. */
+  onSave: () => void
+  onRemove: () => void
 }) {
   const styles = useStyles()
   const { colors } = useTheme()
-  const { query, messages, unsupported } = props.state
+  const { query, messages, unsupported, saved, notice } = props.state
   const [typed, setTyped] = useState(query)
 
   // What is typed is searched for after a pause. It is not searched for again when it is what is shown already,
@@ -53,6 +57,14 @@ export function SearchScreen(props: {
         value={typed}
         onChangeText={setTyped}
       />
+      {query.trim() !== '' ? (
+        saved ? (
+          <Button label="Aus der Seitenleiste entfernen" variant="secondary" onPress={props.onRemove} />
+        ) : (
+          <Button label="Suche in der Seitenleiste behalten" variant="secondary" onPress={props.onSave} />
+        )
+      ) : null}
+      {notice ? <Text style={styles.hint}>{notice}</Text> : null}
       {unsupported.map((field) => (
         <Text key={field} style={styles.hint}>
           {UNSUPPORTED[field]}

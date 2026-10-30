@@ -80,6 +80,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSearch={(query) => navigator.showSearch(query, 'typing')}
           onOpen={(message) => messages.openFromSearch(message, screen.query)}
           onBack={() => navigator.showAccounts()}
+          onSave={() => navigator.saveCurrentSearch()}
+          onRemove={() => navigator.removeCurrentSearch()}
         />
       )
     case 'folders':

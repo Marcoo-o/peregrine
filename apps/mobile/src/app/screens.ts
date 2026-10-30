@@ -6,6 +6,7 @@ import type { Draft } from '../draft'
 import type { ListSettings, NotificationSettings, SendSettings } from '../settings'
 import type { Folder } from '../folders'
 import type { Identity } from '../identities'
+import type { SavedSearch } from '../savedSearches'
 import type { LockSettings } from '../lock'
 import type { ContactKey, OwnKey } from '../pgp/keyStore'
 import type { KeyState, ScannedKey } from '../pgp/pgpService'
@@ -62,6 +63,10 @@ export interface SearchState {
   showPreview: boolean
   /** The parts of the search that the phone cannot do, which it was made without. */
   unsupported: SearchResult['unsupported']
+  /** The saved search this is, when it was kept. */
+  saved?: SavedSearch
+  /** What was said about keeping it, in a line. */
+  notice?: string
 }
 
 export interface FoldersState {

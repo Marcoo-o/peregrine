@@ -68,6 +68,7 @@ export function Sidebar(props: {
   /** The accounts that are connected now. */
   connected: string[]
   onUnified: (role: UnifiedRole) => void
+  onSearch: (query: string) => void
   onFolder: (account: Account, folder: Folder) => void
   onAccounts: () => void
   onAddAccount: () => void
@@ -103,6 +104,19 @@ export function Sidebar(props: {
             onPress={() => props.onUnified(role)}
           />
         ))}
+
+        {data && data.searches.length > 0 ? (
+          <>
+            <View style={styles.sidebarDivider} />
+            <View style={styles.sidebarAccount}>
+              <Icon name="search" size={18} color={colors.text} />
+              <Text style={styles.sidebarAccountName}>Suchen</Text>
+            </View>
+            {data.searches.map((search) => (
+              <Row key={search.id} label={search.name} icon="search" depth={1} chosen={false} count={0} onPress={() => props.onSearch(search.query)} />
+            ))}
+          </>
+        ) : null}
 
         <View style={styles.sidebarDivider} />
 

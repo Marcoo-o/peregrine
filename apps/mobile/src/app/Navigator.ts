@@ -5,6 +5,7 @@ import { explainError } from '../errors'
 import { listFolders, syncFolders, type Folder } from '../folders'
 import { listMessages, unreadCounts } from '../messages'
 import { searchMessages } from '../search'
+import { MAX_SAVED, removeSavedSearch, saveSearch, savedSearchFor } from '../savedSearches'
 import { loadListSettings } from '../settings'
 import { loadSidebar, type SidebarData } from '../sidebar'
 import { loadOlder, syncFolder } from '../sync'
@@ -230,7 +231,24 @@ export class Navigator {
     const { showPreview } = await loadListSettings(this.services.db)
     if (mine !== this.searches) return
     if (reason === 'typing' && this.store.screen.name !== 'search') return
-    this.store.showScreen({ name: 'search', query, messages, showPreview, unsupported })
+    this.store.showScreen({ name: 'search', query, messages, showPreview, unsupported, saved: await savedSearchFor(this.services.db, query) })
+  }
+
+  /** Keeps what is searched for, to be run again from the sidebar, and says so on the search. */
+  async saveCurrentSearch(): Promise<void> {
+    const shown = this.store.screen
+    if (shown.name !== 'search') return
+    const { saved, reason } = await saveSearch(this.services.db, shown.query)
+    const notice = saved ? 'Die Suche steht jetzt in der Seitenleiste.' : reason === 'full' ? `Es lassen sich höchstens ${MAX_SAVED} Suchen behalten.` : 'Es gibt nichts zu behalten.'
+    if (this.store.screen === shown) this.store.showScreen({ ...shown, saved: saved ?? undefined, notice })
+  }
+
+  /** Takes the saved search that is shown away. */
+  async removeCurrentSearch(): Promise<void> {
+    const shown = this.store.screen
+    if (shown.name !== 'search' || !shown.saved) return
+    await removeSavedSearch(this.services.db, shown.saved.id)
+    if (this.store.screen === shown) this.store.showScreen({ ...shown, saved: undefined, notice: 'Die Suche ist aus der Seitenleiste entfernt.' })
   }
 
   /** The messages of a folder from the database, and a sync with the server when asked to and there is one. */
