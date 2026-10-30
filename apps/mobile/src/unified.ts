@@ -7,6 +7,7 @@ import type { BodyIndexer } from './bodyIndex'
 import { listFolders, syncFolders, type Folder } from './folders'
 import type { MailActions } from './mailActions'
 import { toStoredMessage, type StoredMessage } from './messages'
+import type { FolderReset } from './folderChanges'
 import { syncFolder } from './sync'
 
 /** A message of the unified list: where it is, and whose it is. */
@@ -197,11 +198,13 @@ export async function refreshRole(
     /** Fetches the texts of what was fetched, after, and says when some have come in. */
     indexer?: BodyIndexer
     onIndexed?: () => void
+    /** Told when a folder was numbered anew by its server and the phone forgot what it had of it. */
+    onReset?: (folder: Folder, reset: FolderReset) => void
   },
   accounts: Account[],
   role: UnifiedRole
 ): Promise<RefreshResult[]> {
-  const { db, connections, mail, indexer, onIndexed, timeoutMs = 30_000 } = context
+  const { db, connections, mail, indexer, onIndexed, onReset, timeoutMs = 30_000 } = context
   return Promise.all(
     accounts.map(async (account): Promise<RefreshResult> => {
       try {
@@ -212,7 +215,7 @@ export async function refreshRole(
             await syncFolders(db, account.id, await imap.listMailboxes())
             const folder = (await listFolders(db, account.id)).find((candidate) => roleOf(candidate) === role)
             if (folder) {
-              await syncFolder(imap, db, folder)
+              await syncFolder(imap, db, folder, (reset) => onReset?.(folder, reset))
               void indexer?.run(imap, folder).then((stored) => (stored > 0 ? onIndexed?.() : undefined))
             }
           })(),

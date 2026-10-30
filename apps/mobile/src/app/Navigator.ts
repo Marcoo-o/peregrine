@@ -8,6 +8,7 @@ import { searchMessages } from '../search'
 import { loadListSettings } from '../settings'
 import { loadSidebar, type SidebarData } from '../sidebar'
 import { syncFolder } from '../sync'
+import { resetText } from '../folderChanges'
 import { listUnified, refreshRole, type RefreshResult, type UnifiedRole } from '../unified'
 import { refreshQueueStatus } from './queueStatus'
 import type { Services } from './services'
@@ -145,7 +146,11 @@ export class Navigator {
     if (!options.refresh) return
 
     const context = { db, connections, mail, indexer: this.indexer, onIndexed: () => this.showIndexedUnified(role) }
-    const results = await refreshRole(context, await listAccounts(db), role)
+    const results = await refreshRole(
+      { ...context, onReset: (folder, reset) => this.services.log.warn(resetText(folder, reset)) },
+      await listAccounts(db),
+      role
+    )
     await this.showUnifiedList(false, results.filter((result) => result.error !== undefined), 'updating')
     this.refreshStatus()
   }
@@ -188,7 +193,7 @@ export class Navigator {
 
     await this.showStoredMessages(account, folder, { busy: true })
     try {
-      await syncFolder(imap, this.services.db, folder)
+      await syncFolder(imap, this.services.db, folder, (reset) => this.services.log.warn(resetText(folder, reset)))
       await this.showStoredMessages(account, folder, { busy: false })
       void this.indexer.run(imap, folder).then((stored) => (stored > 0 ? this.showIndexedMessages(account, folder) : undefined))
     } catch (error) {

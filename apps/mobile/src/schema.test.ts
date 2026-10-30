@@ -53,7 +53,7 @@ describe('a new installation', () => {
     const made = fakeConnection()
     await migrate(new OpSqliteDb(made.connection))
     expect(tables(made.raw)).toEqual(['accounts', 'contact_keys', 'folders', 'messages', 'own_keys', 'pending_actions', 'settings', 'tags'])
-    expect(version(made.raw)).toBe(9)
+    expect(version(made.raw)).toBe(10)
   })
 
   it('can be migrated again without harm, as it is at every start', async () => {
@@ -62,7 +62,7 @@ describe('a new installation', () => {
     await migrate(db)
     made.raw.prepare("INSERT INTO accounts (id, display_name, email_address, imap_host, imap_port, imap_secure, imap_username, password, created_at) VALUES ('a','a','','h',1,'tls','u','p',0)").run()
     await migrate(db)
-    expect(version(made.raw)).toBe(9)
+    expect(version(made.raw)).toBe(10)
     expect((made.raw.prepare('SELECT COUNT(*) AS n FROM accounts').get() as { n: number }).n).toBe(1)
   })
 })
@@ -81,6 +81,7 @@ describe('the colours of accounts', () => {
     made.raw.exec('ALTER TABLE messages DROP COLUMN snoozed_until')
     made.raw.exec('DROP TABLE own_keys')
     made.raw.exec('DROP TABLE contact_keys')
+    made.raw.exec('ALTER TABLE folders DROP COLUMN uid_validity')
     made.raw.exec('PRAGMA user_version = 3')
     const insert = made.raw.prepare(
       "INSERT INTO accounts (id, display_name, email_address, imap_host, imap_port, imap_secure, imap_username, password, created_at) VALUES (?, ?, '', 'h', 1, 'tls', 'u', 'p', ?)"
@@ -108,13 +109,14 @@ describe('where folders sit', () => {
     made.raw.exec('ALTER TABLE messages DROP COLUMN snoozed_until')
     made.raw.exec('DROP TABLE own_keys')
     made.raw.exec('DROP TABLE contact_keys')
+    made.raw.exec('ALTER TABLE folders DROP COLUMN uid_validity')
     made.raw.exec('PRAGMA user_version = 4')
     made.raw.exec("INSERT INTO folders (id, account_id, imap_path, display_name, special_use) VALUES ('f', 'a', 'Projects/Phone', 'Phone', NULL)")
 
     await migrate(db)
 
     expect(made.raw.prepare('SELECT parent_path FROM folders').get()).toEqual({ parent_path: null })
-    expect(version(made.raw)).toBe(9)
+    expect(version(made.raw)).toBe(10)
   })
 })
 
@@ -126,6 +128,7 @@ describe('messages put aside', () => {
     made.raw.exec('ALTER TABLE messages DROP COLUMN snoozed_until')
     made.raw.exec('DROP TABLE own_keys')
     made.raw.exec('DROP TABLE contact_keys')
+    made.raw.exec('ALTER TABLE folders DROP COLUMN uid_validity')
     made.raw.exec('PRAGMA user_version = 7')
     made.raw.exec(
       "INSERT INTO messages (folder_id, uid, account_id, subject, sender, date_ms, flags, size, has_attachment) VALUES ('f', 1, 'a', 'Hi', 'x@example.net', 1, '[]', 1, 0)"
@@ -133,7 +136,7 @@ describe('messages put aside', () => {
 
     await expect(migrate(db)).resolves.toBeUndefined()
     expect(made.raw.prepare('SELECT snoozed_until FROM messages').get()).toEqual({ snoozed_until: null })
-    expect(version(made.raw)).toBe(9)
+    expect(version(made.raw)).toBe(10)
   })
 })
 
@@ -148,6 +151,7 @@ describe('the text of messages', () => {
     made.raw.exec('ALTER TABLE messages DROP COLUMN snoozed_until')
     made.raw.exec('DROP TABLE own_keys')
     made.raw.exec('DROP TABLE contact_keys')
+    made.raw.exec('ALTER TABLE folders DROP COLUMN uid_validity')
     made.raw.exec('PRAGMA user_version = 5')
     made.raw.exec(
       "INSERT INTO messages (folder_id, uid, account_id, subject, sender, date_ms, flags, size, has_attachment) VALUES ('f', 1, 'a', 'Hi', 'x@example.net', 1, '[]', 1, 0)"
@@ -160,7 +164,7 @@ describe('the text of messages', () => {
       body_text: null,
       preview_text: null
     })
-    expect(version(made.raw)).toBe(9)
+    expect(version(made.raw)).toBe(10)
   })
 })
 
@@ -197,7 +201,7 @@ describe('the migration from the prototype', () => {
     await migrate(db)
     expect(tables(raw)).toEqual(['accounts', 'contact_keys', 'folders', 'messages', 'own_keys', 'pending_actions', 'settings', 'tags'])
     expect((raw.prepare('SELECT COUNT(*) AS n FROM messages').get() as { n: number }).n).toBe(0)
-    expect(version(raw)).toBe(9)
+    expect(version(raw)).toBe(10)
   })
 
   it('is whole or nothing: a failure part way leaves the prototype as it was', async () => {
