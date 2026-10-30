@@ -125,8 +125,8 @@ describe('bringing the inboxes up to date', () => {
           asked.push(`list ${account.displayName}`)
           return [entry('INBOX', '\\Inbox'), entry('Archive')]
         },
-        syncFetch: async (path: string, decide: (s: { uidValidity: bigint; uidNext: number }) => string) => {
-          asked.push(`fetch ${account.displayName} ${path} ${decide({ uidValidity: 1n, uidNext: 100 })}`)
+        syncFetch: async (path: string, decide: (s: { uidValidity: bigint; uidNext: number }) => string | Promise<string>) => {
+          asked.push(`fetch ${account.displayName} ${path} ${await decide({ uidValidity: 1n, uidNext: 100 })}`)
           return { messages: served[account.displayName] }
         }
       } as unknown as ImapSession

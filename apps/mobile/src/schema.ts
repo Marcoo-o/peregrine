@@ -151,7 +151,10 @@ const MIGRATIONS: string[][] = [
        created_at INTEGER NOT NULL
      )`,
     'CREATE INDEX idx_contact_keys_address ON contact_keys(address)'
-  ]
+  ],
+  // 10. The UIDVALIDITY a folder had when it was last synced, as text since it is a number of 32 bits that a script may not hold
+  // whole. The UIDs of its messages mean something only as long as it is the same; null for a folder that was never synced since.
+  ['ALTER TABLE folders ADD COLUMN uid_validity TEXT']
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */
