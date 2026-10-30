@@ -1320,7 +1320,7 @@ which was sent to the receiving server and opens on the PC with the signature ch
 passphrase on the phone (the time of the JavaScript was measured, not the screen), RSA keys, the inline forms, a signature that does not
 match, a recipient without a key, and the removal of the keys with the account.
 
-Not done: keys from a key server or from the address's domain (WKD), a message sent to several recipients of whom some have a
+Not done (the key server and WKD are in "What looking up a key found"): a message sent to several recipients of whom some have a
 key and others none (it is refused, not split), (opening a sealed key faster than the script does is in the section after the next). What was left in this
 list at first (expiry and revocation, a default for signing and encrypting, taking a key from a message) is in the next section.
 
@@ -1367,6 +1367,32 @@ key and its subkey together; GnuPG asks for more (about 65 million) when it cali
 
 Seen on the emulator: a key sealed with 65 million bytes was taken for the account within the 11 seconds that this took to type and
 to look at, where 16 million took 40 seconds before. The time of the hash itself was not measured apart from that.
+
+## What looking up a key found
+
+The phone could take a public key only from a file or from pasted text. The desktop finds the key of an address itself, by the Web Key
+Directory of the address's domain (WKD) and then keys.openpgp.org, and so does the phone now, with the same sources in the same order.
+
+- *Shared addresses.* What can be said without fetching or hashing is in `packages/core/src/keyLookup.ts`, which the desktop's
+  `keyDiscovery.ts` uses as well now: the z-base-32 of the hashed local part, the two addresses WKD may publish a key at (the `openpgpkey`
+  subdomain first, then the domain itself) and the keyserver's. The hash and the encoding of text come from the platform. Tested against
+  the example of the WKD draft (the hash of `joe.doe`) and against the vectors of z-base-32.
+- *Asked for, not done for the user.* Asking a server for the key of an address tells it whom the user is about to write to, so the lookup
+  runs only when the user types an address on the keys screen and starts it, and the screen says whom it asks (the mail server of the address
+  and keys.openpgp.org) and that it does not store anything. It is not done on its own for the recipients of a message, as the desktop's
+  discovery is not either.
+- *What a server gives is not taken as it comes.* Only a key with a user ID that is the address that was asked for is kept (a server could
+  give any key); it is given as a public key whatever the file holds, so that a private key in it cannot be offered for an account; a
+  page where a key should be, as hosts with a catch-all route give, is passed over; an answer that is empty or over half a megabyte is not read;
+  and a server that does not answer in ten seconds is given up on, for the next. What is found is shown with where it was found, and with its
+  fingerprint, to be placed like a key from a file: nothing is stored before the user says whose it is.
+- *The ways it fails are told apart.* The servers answered and have no key ("Für … ist kein Schlüssel veröffentlicht", naming the two places
+  that were asked), none could be reached ("Gibt es eine Internetverbindung?"), and what is not an address.
+
+Seen on the emulator, on the real network: the address of the GnuPG maintainer's public key, which gnupg.org publishes by WKD, was found on the
+`openpgpkey` subdomain, with its fingerprint and "Gefunden im Verzeichnis von gnupg.org (WKD)", as a key without a private half, and "Für … merken"
+was offered; the file is binary, so this also shows that the response of `fetch` can be read as bytes on the phone. Not seen on the device: the
+keyserver, and the ways it fails (covered by tests with a fetcher that answers as told, and by the same lookup run against the real directory from a PC).
 
 ## What stage 4 found
 

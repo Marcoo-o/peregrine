@@ -5,6 +5,7 @@ import { explainError } from '../errors'
 import type { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { listContactKeys, listOwnKeys, removeContactKey, removeOwnKey, saveContactKey, saveOwnKey } from '../pgp/keyStore'
 import { keyFileName } from '../pgp/keyText'
+import { KeyLookupError, lookupKey, type KeySource } from '../pgp/keyLookup'
 import { generateKeyPair, keyState, scanKeys, unlockKey } from '../pgp/pgpService'
 import type { KeysState } from './screens'
 import type { Services } from './services'
@@ -15,6 +16,12 @@ const letScreenDraw = (): Promise<void> => new Promise((resolve) => setTimeout(r
 
 /** Opening a key that is sealed is the long piece of work, and the user is told so before it begins. */
 const OPENING = 'Der Schlüssel wird geöffnet. Das dauert einige Sekunden.'
+
+/** Where a key was found, in the words of its card. */
+function foundByText(source: KeySource, address: string): string {
+  const domain = address.slice(address.lastIndexOf('@') + 1).trim().toLowerCase()
+  return source === 'WKD' ? `Gefunden im Verzeichnis von ${domain} (WKD)` : 'Gefunden auf keys.openpgp.org'
+}
 
 /**
  * The OpenPGP keys: the account's own, which are made here or read from a file, and the public keys of the people the
@@ -68,6 +75,33 @@ export class KeysController {
   async setDefault(which: 'sign' | 'encrypt', on: boolean): Promise<void> {
     await this.protection.change({ [which]: on })
     await this.show({ found: this.found() })
+  }
+
+  /** How a key is looked up. It is a field so that it can be another in a test, which has no internet. */
+  lookup: typeof lookupKey = lookupKey
+
+  /**
+   * Looks for the public key of an address where it is published, and shows what is found to be placed like a key from a file.
+   * Only when the user asks, for the address they typed: asking tells the servers whom the user is about to write to.
+   */
+  async search(address: string): Promise<void> {
+    await this.working('Es wird nach dem Schlüssel gesucht …')
+    try {
+      const found = await this.lookup(address.trim())
+      const foundBy = foundByText(found.source, address)
+      await this.show({ found: found.keys.map((key) => ({ ...key, foundBy })) })
+    } catch (error) {
+      const failure = error instanceof KeyLookupError ? error.failure : undefined
+      const text =
+        failure === 'notAnAddress'
+          ? 'Das ist keine E-Mail-Adresse.'
+          : failure === 'notFound'
+            ? `Für ${address.trim()} ist kein Schlüssel veröffentlicht. Gefragt wurden der Mailserver der Adresse (WKD) und keys.openpgp.org.`
+            : failure === 'unreachable'
+              ? 'Die Server ließen sich nicht erreichen. Gibt es eine Internetverbindung?'
+              : `Die Suche ging schief: ${explainError(error)}`
+      await this.show({ error: text, found: this.found() })
+    }
   }
 
   /** Makes a key pair for an account on the phone. */
