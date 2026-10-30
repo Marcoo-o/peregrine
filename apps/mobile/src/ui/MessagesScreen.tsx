@@ -33,6 +33,8 @@ export function MessagesScreen(props: {
   onOpen: (message: StoredMessage) => void
   /** Loads a page of older messages of the folder. */
   onOlder: () => void
+  /** What can be done to the folder. */
+  onTools: () => void
 }) {
   const styles = useStyles()
   const { account, folder, messages, showPreview, folderNames, busy, error, hasOlder, loadingOlder } = props.state
@@ -58,6 +60,7 @@ export function MessagesScreen(props: {
             total={messages.length}
             shown={rows.length}
             filter={filter}
+            onTools={props.onTools}
             onFilter={setFilter}
           />
         </>

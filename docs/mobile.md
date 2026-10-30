@@ -1439,7 +1439,7 @@ the message, a look for mail while the application is closed, the keys sealed by
    and the people of the phone's contacts as suggestions for recipients. None of it is in the manifest. The desktop has no counterpart; a mail
    client on a phone without it is used less than one that has it. M.
 3. *Setting up and changing an account.* (Done as far as the servers, the logins and the editing go: see "What setting up an account found". What is left is DNS SRV on the phone and OAuth2.)
-4. *Folders.* Create, rename, delete, mark all as read, empty the trash. None of it on the phone; `ImapSession` has the commands. S to M.
+4. *Folders.* (Done: see "What managing folders found". What is left is subscribing to folders and moving a folder under another.)
 
 **Second, what the desktop's daily use has**
 
@@ -1619,3 +1619,31 @@ failing for reading and for sending).
 Seen on the emulator: the form with the search button and the hint of whom it asks; an account made against the test server; "Konto bearbeiten" with
 the stored values, the passwords empty, and the colour changed and kept (the dot in the folder list turned). Not seen on the device: the search over
 the internet (covered by tests with a fake web) and a wrong login for sending (covered by tests).
+
+## What managing folders found
+
+The phone listed folders and opened them. The desktop makes, renames and deletes them, marks a whole folder as read and empties the trash, and `ImapSession` had the commands.
+
+- *A screen for a folder*, from the gear next to the count in its list, and one for a new folder, from "Ordner anlegen" at the foot of the folders. A new one sits at
+  the top or under any of the others.
+- *Changing the folders themselves is not queued.* A new name or a folder that is gone changes what every other action names, and a rename that waited for a
+  connection would let the actions behind it run against a folder that is not there under that name. It needs a connection and says so when there is none. The folders
+  are taken from the server after, so that what is shown is what it has, and what it refuses (a name it does not take) is said as it said it, with the form kept.
+- *The name is checked first*: not empty, not longer than 100, not the delimiter of the server (which would make a folder inside another), no wildcard or control
+  character, and not one that a folder next to it has, whatever the case. Changing only the case of its own name is allowed.
+- *A rename keeps the id.* The folder and the ones under it are renamed in the stored folders in place (`renameFolderRows`), where a sync would have seen a new
+  folder under a new path: its messages fetched again, and what waited for it in the queue dropped because its folder was gone.
+- *The folders with a job* (inbox, drafts, sent, archive, junk, trash) cannot be renamed or deleted, as on the desktop, and the screen says why.
+- *Mark all as read and empty* are decisions about messages like any other: made on the stored copy at once, told to the server by the queue, so they work without a connection and
+  survive the application being closed. Emptying is for the trash and the junk folder, asks first, and deletes for good. Messages that are put aside are counted too.
+- *Not done:* subscribing to folders (what the server lists is what is shown, as it was), moving a folder under another, and a folder that is deleted while the phone has a
+  queued action naming it, which the queue drops as it does for any folder that is gone.
+
+Covered by tests: the names and paths, the rename in the stored folders (ids kept, a folder whose path only begins the same way left alone), which messages a decision acts on,
+and the controller against the fake server (make, rename, delete, a refusal, no connection, the queue keeping what waited, mark all as read, empty).
+- *A mailbox that is open is left before it is renamed or deleted.* Found on the emulator: deleting the folder that had just been opened ended the connection ("Selected mailbox was
+  deleted, have to disconnect", Dovecot), so the folder was gone on the server and the phone showed "The connection was closed". The session selects the inbox first when the mailbox,
+  or one under it, is the open one (`ImapSession.leave`, with a test in the session's tests); with that the same steps went through.
+
+Seen on the emulator: making a folder, opening it, renaming it, and deleting it after the question, which says what is lost and has the harmless answer filled. Not seen on the device:
+mark all as read and empty the trash (covered by the controller's tests against the fake server) and a folder under another.

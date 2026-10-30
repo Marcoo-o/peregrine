@@ -4,6 +4,7 @@ import type { Screen } from '../app/screens'
 import { AccountsScreen } from './AccountsScreen'
 import { ComposeScreen } from './ComposeScreen'
 import { EditAccountScreen } from './EditAccountScreen'
+import { FolderToolsScreen } from './FolderToolsScreen'
 import { FoldersScreen } from './FoldersScreen'
 import { LoadingScreen } from './LoadingScreen'
 import { LoginScreen } from './LoginScreen'
@@ -18,7 +19,7 @@ import { UnifiedScreen } from './UnifiedScreen'
 
 /** The screen for what the application is showing, with what each of its buttons does handed to it. */
 export function ScreenView(props: { application: Application; screen: Screen }): ReactElement {
-  const { navigator, messages, compose, accounts, settings, selection, tags, keys, services } = props.application
+  const { navigator, messages, compose, accounts, settings, selection, tags, keys, folders, services } = props.application
   const { screen } = props
 
   switch (screen.name) {
@@ -78,6 +79,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSettings={() => settings.show()}
           onRemove={() => accounts.remove(screen.account)}
           onEdit={() => accounts.startEdit(screen.account)}
+          onNewFolder={() => folders.startCreate(screen.account)}
           onConnect={() => navigator.openAccount(screen.account)}
           onCompose={() => compose.startNew(screen.account, screen)}
         />
@@ -95,6 +97,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onCreateTag={(name, color) => tags.create(name, color)}
           onOpen={(message) => messages.open(screen.account, screen.folder, message, 'folder')}
           onOlder={() => navigator.loadOlderMessages(screen.account, screen.folder)}
+          onTools={() => folders.startTools(screen.account, screen.folder)}
         />
       )
     case 'message':
@@ -152,6 +155,20 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onMove={(tag, by) => void tags.move(tag.id, by)}
           onSave={(tag, name, color) => void (tag ? tags.update(tag.id, name, color) : tags.create(name, color))}
           onDelete={(tag) => void tags.remove(tag.id)}
+        />
+      )
+    case 'folderTools':
+      return (
+        <FolderToolsScreen
+          // Another folder is another screen: what was typed is not carried over.
+          key={screen.folder?.id ?? 'new'}
+          state={screen}
+          onCreate={(name, parentPath) => folders.create(screen, name, parentPath)}
+          onRename={(name) => folders.rename(screen, name)}
+          onDelete={() => folders.remove(screen)}
+          onMarkAllRead={() => folders.markAllRead(screen)}
+          onEmpty={() => folders.empty(screen)}
+          onBack={() => folders.back(screen)}
         />
       )
     case 'editAccount':

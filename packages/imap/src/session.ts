@@ -578,8 +578,21 @@ export class ImapClientSession implements ImapSession {
     })
   }
 
+  /**
+   * Leaves the mailbox that is about to be renamed or deleted, and the ones under it, by selecting the inbox. A server that is asked
+   * to delete the mailbox that this connection has open may end the connection instead (Dovecot says "Selected mailbox was
+   * deleted, have to disconnect"), and a rename of it leaves the connection holding a name that is gone. Only a mailbox that is
+   * open costs anything here, and the one that is left to is the one the connection returns to for watching anyway.
+   */
+  private async leave(path: string): Promise<void> {
+    const open = this.client.selected?.path
+    if (!open || !(open === path || open.startsWith(`${path}/`) || open.startsWith(`${path}.`))) return
+    await this.client.select('INBOX')
+  }
+
   renameMailbox(path: string, newPath: string): Promise<void> {
     return this.alone(async () => {
+      await this.leave(path)
       await this.client.command(['RENAME', mailbox(path), mailbox(newPath)])
       if (this.client.selected?.path === path) this.client.selected = null
     })
@@ -587,6 +600,7 @@ export class ImapClientSession implements ImapSession {
 
   deleteMailbox(path: string): Promise<void> {
     return this.alone(async () => {
+      await this.leave(path)
       await this.client.command(['DELETE', mailbox(path)])
       if (this.client.selected?.path === path) this.client.selected = null
     })

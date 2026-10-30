@@ -184,6 +184,20 @@ export interface KeysState {
   error?: string
 }
 
+/** What can be done to a folder, or, with none, a new folder to make. */
+export interface FolderToolsState {
+  name: 'folderTools'
+  account: Account
+  /** The folder the screen is about, or null for the making of a new one. */
+  folder: Folder | null
+  /** The folders of the account, for choosing where a new one sits and for checking a name against the ones next to it. */
+  folders: Folder[]
+  busy?: boolean
+  error?: string
+  /** What was done last, in a line, when it left the screen where it is. */
+  notice?: string
+}
+
 /** Changing an account: its name and colour, its servers and its logins. */
 export interface EditAccountState {
   name: 'editAccount'
@@ -213,6 +227,7 @@ export type Screen =
   | SettingsState
   | KeysState
   | EditAccountState
+  | FolderToolsState
   | TagsState
 
 /** The screens that are about the mail of the accounts and so show what waits in the queue. */
