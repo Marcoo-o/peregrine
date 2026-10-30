@@ -9,6 +9,7 @@ import { FoldersScreen } from './FoldersScreen'
 import { IdentitiesScreen } from './IdentitiesScreen'
 import { ScheduledScreen } from './ScheduledScreen'
 import { SourceScreen } from './SourceScreen'
+import { ThreadScreen } from './ThreadScreen'
 import { LoadingScreen } from './LoadingScreen'
 import { LoginScreen } from './LoginScreen'
 import { MessageScreen } from './MessageScreen'
@@ -61,6 +62,14 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onCompose={() => compose.startNewFromAnyAccount(screen)}
           onCreateTag={(name, color) => tags.create(name, color)}
           onOpen={(message) => messages.openFromUnified(message)}
+          onThread={(thread) =>
+            messages.showThread({
+              subject: thread[0].subject,
+              origin: 'unified',
+              returnTo: screen,
+              items: thread.map((message) => ({ message, accountId: message.accountId, folderId: message.folderId, accountName: message.accountName, accountColor: message.accountColor }))
+            })
+          }
           onOlder={() => navigator.showMoreUnified()}
         />
       )
@@ -102,6 +111,14 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onOpen={(message) => messages.open(screen.account, screen.folder, message, 'folder')}
           onOlder={() => navigator.loadOlderMessages(screen.account, screen.folder)}
           onTools={() => folders.startTools(screen.account, screen.folder)}
+          onThread={(thread) =>
+            messages.showThread({
+              subject: thread[0].subject,
+              origin: 'folder',
+              returnTo: screen,
+              items: thread.map((message) => ({ message, accountId: screen.account.id, folderId: screen.folder.id }))
+            })
+          }
         />
       )
     case 'message':
@@ -163,6 +180,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onDelete={(tag) => void tags.remove(tag.id)}
         />
       )
+    case 'thread':
+      return <ThreadScreen state={screen} onOpen={(item) => messages.openFromThread(screen, item)} onBack={() => messages.closeThread(screen)} />
     case 'source':
       return <SourceScreen state={screen} onBack={() => messages.closeSource(screen)} />
     case 'scheduled':
@@ -232,6 +251,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSafety={(change) => settings.setSafety(change)}
           onAppearance={(mode) => settings.setAppearance(mode)}
           onLock={(on) => settings.setLock(on)}
+          onConversations={(on) => settings.setConversations(on)}
           onLockDelay={(seconds) => settings.setLockDelay(seconds)}
           onTags={() => void tags.show()}
           onKeys={() => void keys.show()}

@@ -6,6 +6,7 @@ import { hasQuietHours, INTERVAL_CHOICES, UNDO_CHOICES } from '../settings'
 import { APPEARANCE_CHOICES, appearance, type AppearanceMode } from '../appearance'
 import type { SafetySettings } from '../safety'
 import { useSafety } from './safety'
+import { useSort } from './sort'
 import { Button, Chip, SwitchRow } from './controls'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
@@ -45,6 +46,7 @@ export function SettingsScreen(props: {
   onSafety: (change: Partial<SafetySettings>) => void
   onAppearance: (mode: AppearanceMode) => void
   onLock: (on: boolean) => void
+  onConversations: (on: boolean) => void
   onLockDelay: (seconds: number) => void
   onTags: () => void
   onKeys: () => void
@@ -59,6 +61,7 @@ export function SettingsScreen(props: {
   const styles = useStyles()
   const { settings, list, sending, lock, lockAvailable, contactsPermitted, accounts, permitted, push, notice } = props.state
   const safety = useSafety()
+  const { conversations } = useSort()
   const quiet = hasQuietHours(settings)
   const off = !settings.enabled
 
@@ -96,6 +99,12 @@ export function SettingsScreen(props: {
 
       <Text style={styles.section}>Listen</Text>
       <View style={styles.group}>
+        <SwitchRow
+          label="Antworten zu Konversationen zusammenfassen"
+          hint="Eine Zeile für alles, was zusammengehört, mit der neuesten Nachricht und der Zahl der Nachrichten."
+          value={conversations}
+          onChange={props.onConversations}
+        />
         <SwitchRow label="Text unter dem Betreff zeigen" value={list.showPreview} onChange={props.onShowPreview} />
       </View>
       <Button label="Tags verwalten" variant="secondary" onPress={props.onTags} />

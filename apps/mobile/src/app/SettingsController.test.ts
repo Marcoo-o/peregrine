@@ -128,6 +128,16 @@ describe('the settings screen', () => {
     appearance.set('system')
   })
 
+  it('groups replies into conversations until told not to, and keeps that over a start', async () => {
+    const t = await onSettings()
+    expect(t.store.state.conversations).toBe(true)
+    await t.app.settings.setConversations(false)
+    expect(t.store.state.conversations).toBe(false)
+    t.store.setConversations(true)
+    await t.app.start()
+    expect(t.store.state.conversations).toBe(false)
+  })
+
   describe('the address book of the device', () => {
     it('is switched on once the user allowed reading it, and off again', async () => {
       const t = await onSettings()

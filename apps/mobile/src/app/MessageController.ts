@@ -23,7 +23,7 @@ import { isFirstContact, messagesFrom } from '../senderHistory'
 import type { UnifiedMessage } from '../unified'
 import type { MessageTarget } from '../background/notifications'
 import type { Navigator } from './Navigator'
-import type { MessageOrigin, MessageState, MoveState, SourceState } from './screens'
+import type { MessageOrigin, MessageState, MoveState, SourceState, ThreadState } from './screens'
 import type { Services } from './services'
 import type { AppStore } from './store'
 
@@ -240,6 +240,23 @@ export class MessageController {
       this.services.log.error(describeError(error))
     }
     await this.leave(state)
+  }
+
+  /** Shows the messages of a conversation, from the list that it is a row of, which is shown again when it is left. */
+  showThread(thread: Omit<ThreadState, 'name'>): void {
+    this.store.showScreen({ name: 'thread', ...thread })
+  }
+
+  closeThread(state: ThreadState): void {
+    this.store.showScreen(state.returnTo)
+  }
+
+  /** Opens one message of a conversation, as it is opened from the list the conversation was in. */
+  async openFromThread(state: ThreadState, item: ThreadState['items'][number]): Promise<void> {
+    const { db } = this.services
+    const account = await getAccount(db, item.accountId)
+    const folder = await getFolder(db, item.folderId)
+    if (account && folder) await this.open(account, folder, item.message, state.origin)
   }
 
   /** The most of a source that is shown: a message with a large attachment is not a text to read, and would hold the screen. */

@@ -242,6 +242,7 @@ function createStyles({ colors }: Theme) {
     removeRow: { minHeight: SIZE.target, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: SIZE.padding, paddingHorizontal: 4 },
     removeText: { fontSize: 15, color: colors.danger },
     editText: { fontSize: 15, color: colors.accent },
+    threadCount: { fontSize: 12, fontWeight: '600', color: colors.muted, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 6, marginRight: 8, overflow: 'hidden' },
     lockScreen: { flex: 1, justifyContent: 'center', gap: 16, padding: SIZE.padding * 2, backgroundColor: colors.background },
     lockTitle: { fontSize: 24, fontWeight: '700', color: colors.text },
     source: { fontFamily: 'monospace', fontSize: 12, color: colors.text },

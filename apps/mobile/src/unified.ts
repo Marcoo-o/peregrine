@@ -78,7 +78,7 @@ function listCondition(role: UnifiedRole, now: number): { sql: string; params: A
 }
 
 /** What is read for a message of a list that holds those of several accounts, besides the message itself. */
-export const UNIFIED_COLUMNS = `m.uid, m.subject, m.sender, m.date_ms, m.flags, m.size, m.has_attachment, m.pending_move_to, m.preview_text, m.snoozed_until,
+export const UNIFIED_COLUMNS = `m.uid, m.subject, m.sender, m.date_ms, m.flags, m.size, m.has_attachment, m.pending_move_to, m.preview_text, m.snoozed_until, m.message_id, m.in_reply_to,
             m.account_id, m.folder_id, a.display_name AS account_name, a.color AS account_color`
 
 export interface UnifiedRow {
@@ -92,6 +92,8 @@ export interface UnifiedRow {
   pending_move_to: string | null
   preview_text: string | null
   snoozed_until: number | null
+  message_id: string | null
+  in_reply_to: string | null
   account_id: string
   folder_id: string
   account_name: string

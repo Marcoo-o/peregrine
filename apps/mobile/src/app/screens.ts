@@ -197,6 +197,17 @@ export interface KeysState {
   error?: string
 }
 
+/** The messages of one conversation, to open one of them from. */
+export interface ThreadState {
+  name: 'thread'
+  subject: string
+  /** The messages, the newest first, with where each is, since a conversation of the list of all accounts can be in several. */
+  items: Array<{ message: StoredMessage; accountId: string; folderId: string; accountName?: string; accountColor?: string }>
+  /** Which list it was opened from, which a message that is opened goes back to, and the screen to show again when this is left. */
+  origin: 'folder' | 'unified'
+  returnTo: Screen
+}
+
 /** The source of a message, as it is on the server: the headers and the parts, to read what the other screens leave out. */
 export interface SourceState {
   name: 'source'
@@ -272,6 +283,7 @@ export type Screen =
   | IdentitiesState
   | ScheduledState
   | SourceState
+  | ThreadState
   | FolderToolsState
   | TagsState
 

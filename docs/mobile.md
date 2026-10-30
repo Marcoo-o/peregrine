@@ -1443,7 +1443,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 
 5. *Signature text for each account and several identities.* (Done: see "What identities, a signature and undo send found".)
 6. *Sending at a later time.* (Done: see "What sending later found".)
-7. *Sorting* (done, see "What sorting and the first tools found") and *conversations*, which group replies (L).
+7. *Sorting* and *conversations* (both done, see "What sorting and the first tools found" and "What conversations found").
 8. *Saved searches* shown as folders (S to M: the search exists).
 9. *Formatted text when writing.* Reading HTML is done; writing is plain text and a formatted draft is refused. There is no good rich editor for the platform
    that does not live in a web view. L, and a decision to make before work.
@@ -1761,3 +1761,21 @@ on and off asking for the lock, a phone without one) and the settings screen.
 Seen on the emulator: without a screen lock the switch is off, disabled and says why; with a PIN set, switching it on opened the system's screen for the lock, and after the PIN the screenshot of the application was black
 (`FLAG_SECURE`: the check that it keeps the content out of screenshots); after the application was ended and started again the lock was asked for at once and the application opened after the PIN. Not seen: the locked screen itself (it is
 kept out of screenshots, which is what it is for), a time away of a minute, and a wrong PIN.
+
+## What conversations found
+
+The phone listed every message by itself, so a long exchange filled a page with rows about one thing.
+
+- *What a conversation is made of* (migration 13): the Message-ID and the In-Reply-To of each message, which the sync's envelope already carries and was thrown away, are kept (`messages.message_id`, `in_reply_to`). What was stored before has none until a sync
+  fetches it again, and is grouped by its subject until then.
+- *Grouping* (`threads.ts`, with the desktop's languages for "Re:", "Fwd:", "AW:", "WG:" and the rest). A message that names the one it answers is in its conversation, and so are the ones that answer it, however long the chain. For what that cannot see, a hole in the
+  chain because a message was never fetched or a client that does not write the header, messages with the same subject once the "Re:" is taken off belong together when at least one of them says it is an answer. Two first messages with the same subject are two
+  conversations (a newsletter every week is not one), and an empty subject joins nothing. `References` is not read: the envelope does not carry it, and fetching it for every message would cost more than the gaps it closes.
+- *In the lists* (a folder, and the list of all accounts) a conversation is one row: its newest message, the number of messages, and bold when any of them is not read. The order is the user's (sort), by the newest message of each. A filter is asked of the conversation, so "not read" finds one
+  with a message not read in it. A tap on a conversation of several opens "its messages" (the newest first), from which each opens as it does from the list; one of a single message opens at once. A switch under "Listen" ("Antworten zu Konversationen
+  zusammenfassen") turns it off, and it is on until then.
+- *What it does not do yet:* a swipe, the choice of several rows and a long press act on the newest message of a conversation and not on all of them; a conversation is looked for among what the list has, so one whose older messages are not loaded yet has fewer; the search lists every message as before;
+  the messages of a conversation that are in other folders (the answers in the sent folder) are in it only in the list of all accounts' role. A message is not shown in its conversation as a thread of quotes.
+
+Covered by tests: the subject, the grouping (chains, ids without brackets, the hole, newsletters, empty subjects, loops, an id two messages have, dates), the rows (off, on, order, the filter, nothing), the setting, what is kept of the ids, and opening from a conversation. Not seen on the device: the rows and the screen of a conversation
+(the emulator did not answer fast enough to be driven this time).

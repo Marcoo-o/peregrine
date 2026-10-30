@@ -27,6 +27,8 @@ export interface AppState {
   sort: ListSort
   /** Which of the checks of links and attachments are on. */
   safety: SafetySettings
+  /** Whether replies are grouped into conversations in the lists. */
+  conversations: boolean
   /** The application is locked: nothing of the mail is shown until the screen lock of the phone has been given. */
   locked: boolean
 }
@@ -52,7 +54,7 @@ type Listener = () => void
  * changed in place, which is what lets a screen tell that it changed.
  */
 export class AppStore {
-  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null, tags: [], undo: null, sort: DEFAULT_SORT, safety: DEFAULT_SAFETY, locked: false }
+  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null, tags: [], undo: null, sort: DEFAULT_SORT, safety: DEFAULT_SAFETY, conversations: true, locked: false }
   private readonly listeners = new Set<Listener>()
 
   get state(): AppState {
@@ -81,6 +83,10 @@ export class AppStore {
 
   setTags(tags: Tag[]): void {
     this.update({ tags })
+  }
+
+  setConversations(conversations: boolean): void {
+    this.update({ conversations })
   }
 
   setLocked(locked: boolean): void {

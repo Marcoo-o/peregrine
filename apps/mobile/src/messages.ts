@@ -16,6 +16,9 @@ export interface StoredMessage {
   preview: string
   /** When it comes back, if it was put aside, which is only a moment ahead for a message that is still away. */
   snoozedUntil: number | null
+  /** Its Message-ID and the one of the message it answers, which a conversation is made of; null for what was stored before they were kept. */
+  messageId: string | null
+  inReplyTo: string | null
 }
 
 /** How many numbers go into one statement. SQLite allows far more, and a short list is easier to read in a log. */
@@ -41,11 +44,12 @@ export async function saveMessages(
     for (const message of messages) {
       await tx.run(
         `INSERT INTO messages
-           (folder_id, uid, account_id, subject, sender, date_ms, flags, size, has_attachment)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           (folder_id, uid, account_id, subject, sender, date_ms, flags, size, has_attachment, message_id, in_reply_to)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (folder_id, uid) DO UPDATE SET
            subject = excluded.subject, sender = excluded.sender, date_ms = excluded.date_ms,
-           flags = excluded.flags, size = excluded.size, has_attachment = excluded.has_attachment`,
+           flags = excluded.flags, size = excluded.size, has_attachment = excluded.has_attachment,
+           message_id = excluded.message_id, in_reply_to = excluded.in_reply_to`,
         folder.id,
         message.uid,
         folder.accountId,
@@ -54,7 +58,9 @@ export async function saveMessages(
         message.envelope.date ? message.envelope.date.getTime() : null,
         JSON.stringify(message.flags),
         message.size,
-        message.hasAttachment ? 1 : 0
+        message.hasAttachment ? 1 : 0,
+        message.envelope.messageId ?? null,
+        message.envelope.inReplyTo ?? null
       )
     }
   })
@@ -71,6 +77,8 @@ interface MessageRow {
   pending_move_to: string | null
   preview_text: string | null
   snoozed_until?: number | null
+  message_id?: string | null
+  in_reply_to?: string | null
 }
 
 export function toStoredMessage(row: MessageRow): StoredMessage {
@@ -84,12 +92,14 @@ export function toStoredMessage(row: MessageRow): StoredMessage {
     hasAttachment: row.has_attachment === 1,
     pendingMoveTo: row.pending_move_to,
     preview: row.preview_text ?? '',
-    snoozedUntil: row.snoozed_until ?? null
+    snoozedUntil: row.snoozed_until ?? null,
+    messageId: row.message_id ?? null,
+    inReplyTo: row.in_reply_to ?? null
   }
 }
 
 /** The columns of a message that a list of one folder reads. */
-const COLUMNS = 'uid, subject, sender, date_ms, flags, size, has_attachment, pending_move_to, preview_text, snoozed_until'
+const COLUMNS = 'uid, subject, sender, date_ms, flags, size, has_attachment, pending_move_to, preview_text, snoozed_until, message_id, in_reply_to'
 
 /**
  * The newest messages of a folder first, without those that are put aside: they are not in the folder until their
