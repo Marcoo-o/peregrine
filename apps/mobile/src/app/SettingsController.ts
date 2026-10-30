@@ -14,6 +14,8 @@ import {
   type NotificationSettings
 } from '../settings'
 import { saveSort, type ListSort } from '../listSort'
+import { appearance, saveAppearance, type AppearanceMode } from '../appearance'
+import { saveSafety, type SafetySettings } from '../safety'
 import type { Navigator } from './Navigator'
 import type { Services } from './services'
 import type { AppStore } from './store'
@@ -74,6 +76,17 @@ export class SettingsController {
   async setUndoSeconds(undoSeconds: number): Promise<void> {
     await saveSendSettings(this.services.db, { undoSeconds })
     await this.show()
+  }
+
+  /** Whether the application is light, dark or follows the system: kept, and in force at once on every screen. */
+  async setAppearance(mode: AppearanceMode): Promise<void> {
+    appearance.set(await saveAppearance(this.services.db, mode))
+    await this.show()
+  }
+
+  /** Switches the checks of links and attachments on or off: kept, and in force for the next link that is tapped. */
+  async setSafety(change: Partial<SafetySettings>): Promise<void> {
+    this.store.setSafety(await saveSafety(this.services.db, change))
   }
 
   /** How the lists of messages are ordered: kept, and every list shown is ordered so at once. */

@@ -6,6 +6,8 @@ import { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { FolderController } from './FolderController'
 import { SenderController } from './SenderController'
 import { loadSort } from '../listSort'
+import { appearance, loadAppearance } from '../appearance'
+import { loadSafety } from '../safety'
 import { Identities } from './Identities'
 import { KeysController } from './KeysController'
 import { MessageController } from './MessageController'
@@ -69,6 +71,8 @@ export class Application {
     await this.protection.load()
     await this.identities.load()
     this.store.setSort(await loadSort(this.services.db))
+    this.store.setSafety(await loadSafety(this.services.db))
+    appearance.set(await loadAppearance(this.services.db))
     await this.navigator.start()
     await this.openLaunchTarget()
     await this.openIncoming()

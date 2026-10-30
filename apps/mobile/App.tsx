@@ -10,6 +10,7 @@ import { describeError } from './src/errors'
 import { createPlatform } from './src/platform'
 import type { SidebarData } from './src/sidebar'
 import { DrawerContext, locationOf, showsDrawer } from './src/ui/drawer'
+import { SafetyContext } from './src/ui/safety'
 import { SortContext } from './src/ui/sort'
 import { TagsContext } from './src/ui/tags'
 import { useHardwareBack } from './src/ui/useHardwareBack'
@@ -125,9 +126,11 @@ export default function App() {
               />
             ) : null}
             <TagsContext.Provider value={state.tags}>
-              <SortContext.Provider value={sortControl}>
-                {application ? <ScreenView application={application} screen={state.screen} /> : <LoadingScreen />}
-              </SortContext.Provider>
+              <SafetyContext.Provider value={state.safety}>
+                <SortContext.Provider value={sortControl}>
+                  {application ? <ScreenView application={application} screen={state.screen} /> : <LoadingScreen />}
+                </SortContext.Provider>
+              </SafetyContext.Provider>
             </TagsContext.Provider>
             {application && state.undo ? (
               <UndoBar undo={state.undo} onUndo={() => application.compose.undoSend()} onDone={() => application.compose.clearUndo()} />

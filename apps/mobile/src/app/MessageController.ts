@@ -2,6 +2,7 @@ import type { PgpStatus } from '@peregrine/core/types'
 import { decodeUtf8 } from '@peregrine/imap/utf8'
 import { safeFilename } from '@peregrine/core/safeFilename'
 import { parseAddress } from '@peregrine/smtp/headers'
+import { loadSafety } from '../safety'
 import { refusalForOpening } from '@peregrine/core/attachmentSafety'
 import { SNIFF_BYTES } from '@peregrine/core/fileType'
 import type { Account } from '../accounts'
@@ -283,7 +284,7 @@ export class MessageController {
   async openAttachment(state: MessageState, info: AttachmentInfo): Promise<void> {
     const content = this.contentOf(state, info)
     if (!content) return
-    const refused = refusalForOpening(info.filename, content.subarray(0, SNIFF_BYTES))
+    const refused = (await loadSafety(this.services.db)).warnRiskyAttachments ? refusalForOpening(info.filename, content.subarray(0, SNIFF_BYTES)) : null
     if (refused) {
       this.showNotice(state, refusalText(refused))
       return

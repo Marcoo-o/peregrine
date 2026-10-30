@@ -32,7 +32,12 @@ export function normalised(address: string): string {
  * file of the application, a provider of its own, or an intent for another application. A mail address is not
  * opened either, the application writes to those itself.
  */
-export function decideLink(url: string, pageLinks: PageLink[], knownDomains: string[]): LinkDecision {
+export function decideLink(
+  url: string,
+  pageLinks: PageLink[],
+  knownDomains: string[],
+  options: { warnSuspicious: boolean; confirmAll: boolean } = { warnSuspicious: true, confirmAll: false }
+): LinkDecision {
   const kind = /^([a-z][a-z0-9+.-]*):/i.exec(url)?.[1].toLowerCase()
   if (kind !== 'tel' && kind !== 'http' && kind !== 'https') return { action: 'ignore' }
 
@@ -43,5 +48,7 @@ export function decideLink(url: string, pageLinks: PageLink[], knownDomains: str
   if (kind === 'tel') return { action: 'open', url }
 
   const analysis = analyzeLink(url, tapped.text || undefined, knownDomains)
-  return analysis.findings.length > 0 ? { action: 'confirm', analysis } : { action: 'open', url }
+  // Every link is asked about when the user wants that; otherwise those that look wrong, unless that check is off too.
+  if (options.confirmAll) return { action: 'confirm', analysis }
+  return options.warnSuspicious && analysis.findings.length > 0 ? { action: 'confirm', analysis } : { action: 'open', url }
 }

@@ -106,3 +106,32 @@ describe('the spellings of one address', () => {
     expect(normalised('/relative/path')).toBe('/relative/path')
   })
 })
+
+describe('what is done with a link when the user chose how careful to be', () => {
+  const bad = 'https://evil.test/login'
+  const badText = 'https://paypal.com/login'
+  const fine = 'https://example.net/page'
+
+  it('is opened at once, though it looks wrong, when the check for that is off', () => {
+    expect(decideLink(bad, [link(bad, badText)], [], { warnSuspicious: false, confirmAll: false })).toEqual({ action: 'open', url: bad })
+  })
+
+  it('is asked about even when nothing is wrong with it, when every link is to be asked about', () => {
+    const decision = decideLink(fine, [link(fine, 'a page')], [], { warnSuspicious: true, confirmAll: true })
+    expect(decision.action).toBe('confirm')
+    if (decision.action === 'confirm') expect(decision.analysis.findings).toEqual([])
+  })
+
+  it('is asked about when every link is to be asked about, whether or not the check for the ones that look wrong is on', () => {
+    expect(decideLink(fine, [link(fine)], [], { warnSuspicious: false, confirmAll: true }).action).toBe('confirm')
+  })
+
+  it('is still left alone when the page did not say it, whatever was chosen', () => {
+    expect(decideLink(fine, [], [], { warnSuspicious: true, confirmAll: true })).toEqual({ action: 'ignore' })
+    expect(decideLink('intent://x', [link('intent://x')], [], { warnSuspicious: true, confirmAll: true })).toEqual({ action: 'ignore' })
+  })
+
+  it('is a telephone number, which is not asked about', () => {
+    expect(decideLink('tel:+4912345', [link('tel:+4912345')], [], { warnSuspicious: true, confirmAll: true })).toEqual({ action: 'open', url: 'tel:+4912345' })
+  })
+})

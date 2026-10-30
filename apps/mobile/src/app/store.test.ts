@@ -12,7 +12,8 @@ describe('the store', () => {
       statusAccountId: null,
       tags: [],
       undo: null,
-      sort: { field: 'date', direction: 'desc' }
+      sort: { field: 'date', direction: 'desc' },
+      safety: { warnSuspiciousLinks: true, confirmAllLinks: false, warnRiskyAttachments: true }
     })
   })
 

@@ -22,6 +22,7 @@ import { SnoozeSheet } from './SnoozeSheet'
 import { TagChips } from './TagChips'
 import { TagSheet } from './TagSheet'
 import { useTags } from './tags'
+import { useSafety } from './safety'
 import { useStyles } from './useStyles'
 
 /** When a message was written, for the line under who it is from. */
@@ -56,6 +57,7 @@ export function MessageScreen(props: {
   const styles = useStyles()
   const { account, summary, message, attachments, assessment, notice, error } = props.state
   const known = props.state.knownDomains ?? []
+  const safety = useSafety()
   const flagged = summary.flags.includes(FLAGGED)
 
   const [showImages, setShowImages] = useState(false)
@@ -75,7 +77,7 @@ export function MessageScreen(props: {
   const hints = hintsFor({ assessment, page, remoteImages, showingImages: showImages, pgp: props.state.protection })
 
   const followLink = (url: string) => {
-    const decision = decideLink(url, facts?.links ?? [], known)
+    const decision = decideLink(url, facts?.links ?? [], known, { warnSuspicious: safety.warnSuspiciousLinks, confirmAll: safety.confirmAllLinks })
     if (decision.action === 'open') Linking.openURL(decision.url).catch(() => undefined)
     else if (decision.action === 'confirm') setPendingLink(decision.analysis)
   }

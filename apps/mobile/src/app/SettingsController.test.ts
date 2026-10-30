@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { appearance } from '../appearance'
 import { loadNotificationSettings } from '../settings'
 import { appHarness } from '../testing/appHarness'
 import type { SettingsState } from './screens'
@@ -104,6 +105,27 @@ describe('the settings screen', () => {
     t.store.setSort({ field: 'date', direction: 'desc' })
     await t.app.start()
     expect(t.store.state.sort).toEqual({ field: 'size', direction: 'desc' })
+  })
+
+  it('has the checks of links and attachments on as the desktop has them, switches them, and keeps them over a start', async () => {
+    const t = await onSettings()
+    expect(t.store.state.safety).toEqual({ warnSuspiciousLinks: true, confirmAllLinks: false, warnRiskyAttachments: true })
+    await t.app.settings.setSafety({ confirmAllLinks: true })
+    await t.app.settings.setSafety({ warnRiskyAttachments: false })
+    expect(t.store.state.safety).toEqual({ warnSuspiciousLinks: true, confirmAllLinks: true, warnRiskyAttachments: false })
+    t.store.setSafety({ warnSuspiciousLinks: true, confirmAllLinks: false, warnRiskyAttachments: true })
+    await t.app.start()
+    expect(t.store.state.safety).toEqual({ warnSuspiciousLinks: true, confirmAllLinks: true, warnRiskyAttachments: false })
+  })
+
+  it('has the application light or dark at once, and keeps the choice over a start', async () => {
+    const t = await onSettings()
+    await t.app.settings.setAppearance('dark')
+    expect(appearance.mode).toBe('dark')
+    appearance.set('system')
+    await t.app.start()
+    expect(appearance.mode).toBe('dark')
+    appearance.set('system')
   })
 
   describe('the address book of the device', () => {

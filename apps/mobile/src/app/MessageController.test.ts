@@ -509,3 +509,22 @@ describe('the source of a message', () => {
     expect(t.store.screen).toMatchObject({ notice: expect.stringContaining('no space left') })
   })
 })
+
+describe('the checks that can be switched off', () => {
+  const info = (state: MessageState, filename: string) => state.attachments!.find((a) => a.filename === filename)!
+
+  it('hand a program to another application when the check for risky attachments is off', async () => {
+    const t = await connectedInbox()
+    await t.app.settings.setSafety({ warnRiskyAttachments: false })
+    const state = await opened(t)
+    await t.app.messages.openAttachment(state, info(state, 'invoice.pdf.exe'))
+    expect(t.files.opened.map((file) => file.name)).toEqual(['invoice.pdf.exe'])
+  })
+
+  it('keep refusing it while the check is on, which it is until the user says otherwise', async () => {
+    const t = await connectedInbox()
+    const state = await opened(t)
+    await t.app.messages.openAttachment(state, info(state, 'invoice.pdf.exe'))
+    expect(t.files.opened).toEqual([])
+  })
+})
