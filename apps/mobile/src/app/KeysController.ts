@@ -6,6 +6,7 @@ import type { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { listContactKeys, listOwnKeys, removeContactKey, removeOwnKey, saveContactKey, saveOwnKey } from '../pgp/keyStore'
 import { keyFileName } from '../pgp/keyText'
 import { KeyLookupError, lookupKey, type KeySource } from '../pgp/keyLookup'
+import { PublishError, publishKey, type Poster } from '../pgp/keyPublish'
 import { generateKeyPair, keyState, scanKeys, unlockKey } from '../pgp/pgpService'
 import type { KeysState } from './screens'
 import type { Services } from './services'
@@ -100,6 +101,41 @@ export class KeysController {
             : failure === 'unreachable'
               ? 'Die Server ließen sich nicht erreichen. Gibt es eine Internetverbindung?'
               : `Die Suche ging schief: ${explainError(error)}`
+      await this.show({ error: text, found: this.found() })
+    }
+  }
+
+  /** The key of the sender of a message, looked for where it is published, and shown to be placed: from the message it is a tap and not the typing of an address. */
+  async findFor(address: string): Promise<void> {
+    await this.show()
+    await this.search(address)
+  }
+
+  /** How a key is published. A field for the same reason as `lookup`. */
+  poster: Poster = (url, init) => (fetch as unknown as (url: string, init: unknown) => ReturnType<Poster>)(url, init)
+
+  /**
+   * Publishes the public key of an account on keys.openpgp.org, and asks the server to send the mail that confirms the address. It is said what this
+   * does and what it does not: the key is public from then on, and is found by the address once the link in the mail has been followed.
+   */
+  async publish(accountId: string, fingerprint: string): Promise<void> {
+    const key = (await listOwnKeys(this.services.db, accountId)).find((candidate) => candidate.fingerprint === fingerprint)
+    const account = (await listAccounts(this.services.db)).find((candidate) => candidate.id === accountId)
+    if (!key || !account?.emailAddress) return
+    await this.working('Der Schlüssel wird veröffentlicht …')
+    try {
+      const published = await publishKey(key.publicKey, account.emailAddress, this.poster)
+      const notice = published.confirmed
+        ? `Der Schlüssel ist veröffentlicht, und ${account.emailAddress} ist bestätigt: wer danach sucht, findet ihn.`
+        : `Der Schlüssel ist hochgeladen. keys.openpgp.org hat eine Mail an ${account.emailAddress} geschickt: erst wenn du den Link darin öffnest, findet man den Schlüssel über die Adresse.`
+      await this.show({ notice, found: this.found() })
+    } catch (error) {
+      const text =
+        error instanceof PublishError
+          ? error.failure === 'unreachable'
+            ? 'Der Server ließ sich nicht erreichen. Gibt es eine Internetverbindung?'
+            : `Der Server hat den Schlüssel nicht genommen: ${error.detail ?? 'ohne Grund'}`
+          : `Das Veröffentlichen ging schief: ${explainError(error)}`
       await this.show({ error: text, found: this.found() })
     }
   }

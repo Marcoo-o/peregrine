@@ -1444,13 +1444,13 @@ the message, a look for mail while the application is closed, the keys sealed by
 5. *Signature text for each account and several identities.* (Done: see "What identities, a signature and undo send found".)
 6. *Sending at a later time.* (Done: see "What sending later found".)
 7. *Sorting* and *conversations* (both done, see "What sorting and the first tools found" and "What conversations found").
-8. *Saved searches* shown as folders (S to M: the search exists).
+8. *Saved searches* (done, see "What saved searches, more of the look and the rest of the key search found").
 9. *Formatted text when writing.* Reading HTML is done; writing is plain text and a formatted draft is refused. There is no good rich editor for the platform
    that does not live in a web view. L, and a decision to make before work.
 10. *Tools for a message:* the source and saving it as an `.eml` are done (see "What sorting and the first tools found"); printing and saving as PDF are left (M, the platform has a print service).
 11. *The safety switches* (done, see "What sorting and the first tools found").
 12. *Locking the application.* (Done: see "What locking the application found".)
-13. *Appearance:* light, dark or the system's, and a text size are done; a choice of accents, date formats and density are left (M).
+13. *Appearance:* light, dark or the system's, a text size, an accent, the date format and the density are done; what is left of the desktop's is small.
 14. *Languages.* The desktop has English, German, Spanish, French and Portuguese (`src/renderer/src/i18n`); the phone's texts are German and written into the code. L:
     every text goes through a function, and the files of the languages can be the desktop's where the texts are the same.
 15. *Contacts:* a list, adding and changing, vCard in and out (M). On a phone the contacts of the system are the better place to look; see 2.
@@ -1460,8 +1460,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 16. *Filter rules.* The engine (`src/main/filters`) is not portable yet, and a rule has to run where mail arrives: here that is the look for mail in the background. L.
 17. *The daily list and tasks* (recurring tasks, linked to messages). L, and unclear whether it is wanted on a phone.
 18. *Diagnostics:* a log that can be recorded and exported for a bug report (S to M).
-19. *What is left of OpenPGP:* publishing the own key to a keyserver, choosing which of several keys signs (the newest does), one key for each of several recipients with the choice shown, and the search for a key started from
-    the sender of a message or from a recipient that has none (S to M each; the first and the last are the cheapest).
+19. *What is left of OpenPGP:* publishing the own key and the search for the key of the sender of a message are done; choosing which of several keys signs (the newest does), one key for each of several recipients with the choice shown, and the search from a recipient that has none are left (S each).
 20. *A wide screen:* two panes for a tablet or a folding phone (M to L).
 
 **Neither has it**
@@ -1792,3 +1791,20 @@ The phone's texts followed the system's size setting and nothing else.
 
 Covered by tests: the factors, what is stored, the watching, the setting and the start, and the scaling of styles (text and line heights multiplied, the rest left, normal being the styles themselves). Not seen on the device (the emulator did not answer fast
 enough to be driven).
+
+## What saved searches, more of the look and the rest of the key search found
+
+- *Saved searches.* "Suche in der Seitenleiste behalten" on the search screen keeps what was typed (not twice for the same words, whatever the case and the spaces, at most 20, named by the search itself), and the
+  sidebar has a section "Suchen" with one row for each, a tap running it. The search screen says whether what is shown is kept, and offers to take it away. Stored with the settings, so no migration. What the desktop has and
+  this has not: naming a search by hand, and a search that spans a folder only.
+- *The look.* An accent (blue, petrol, violet, amber, rosé, slate, each with a light and a dark value, every one measured as readable text on the pages of its scheme, and what is written on it readable on it), the way a date
+  is written in a list (the time for today and the day for the rest, a short date, a long one with the time, the ISO date) and the density of the lines of a list (loose, normal, tight: the vertical padding of a line of a list
+  is multiplied, a touch target stays at its minimum height). All three are in force at once, kept, and held outside React like the mode, so every screen follows.
+- *The key of the sender.* "Schlüssel des Absenders suchen" in the menu behind the last button of a message opens the keys screen with the search for that address already made, on the keyserver and in the directory of the sender's domain, and
+  the key that is found is placed like any other. It is the user's tap that asks, as it always is: asking tells a server whom the user is about to write to.
+- *Publishing the own key.* "Auf keys.openpgp.org veröffentlichen" on the card of an own key, after a question that says what it does (the key and the address become public, for good; the server can hide an address, not take a key back).
+  The server's way is followed: the key is uploaded, then the server is asked to mail a link to the address, and only after it is followed is the key found by the address; the screen says that, and says "bestätigt" only when the server
+  did. A refusal, a server that cannot be reached and the second step being refused are each said.
+
+Covered by tests: the saved searches (kept, not twice, the limit, taken away, what is stored that is not one), the sidebar and the search screen, every accent against both schemes, the dates, the density, the look that is stored, the
+upload and the mail that confirms it (confirmed already, refused, a token that is missing, unreachable, a second step refused) and the keys screen for both. Not seen on the device (the emulator did not answer fast enough to be driven).

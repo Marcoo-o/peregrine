@@ -145,6 +145,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onJunk={() => messages.markAsJunk(screen)}
           onSource={() => messages.showSource(screen)}
           onSaveSource={() => messages.saveSource(screen)}
+          onFindKey={(address) => keys.findFor(address)}
           onDelete={() => messages.delete(screen)}
           onSave={(attachment) => messages.saveAttachment(screen, attachment)}
           onOpenAttachment={(attachment) => messages.openAttachment(screen, attachment)}
@@ -237,6 +238,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onRemoveOwn={(accountId, fingerprint) => void keys.removeOwn(accountId, fingerprint)}
           onRemoveContact={(fingerprint) => void keys.removeContact(fingerprint)}
           onExport={(accountId, fingerprint) => void keys.exportPublic(accountId, fingerprint)}
+          onPublish={(accountId, fingerprint) => void keys.publish(accountId, fingerprint)}
           onDefault={(which, on) => void keys.setDefault(which, on)}
         />
       )
