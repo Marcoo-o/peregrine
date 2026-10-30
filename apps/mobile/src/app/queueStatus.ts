@@ -34,6 +34,12 @@ export function waitingText(summary: PendingSummary): string | null {
   return drafts === 1 ? `${base}, davon 1 Entwurf` : `${base}, davon ${drafts} Entwürfe`
 }
 
+/** The sentence about the messages that wait for a moment that was chosen, or null when none does. */
+export function scheduledText(summary: PendingSummary): string | null {
+  if (summary.scheduled <= 0) return null
+  return summary.scheduled === 1 ? '1 Nachricht ist zum Senden geplant' : `${summary.scheduled} Nachrichten sind zum Senden geplant`
+}
+
 /** The sentence about the actions that were given up on, or null when none was. */
 export function failedText(summary: PendingSummary): string | null {
   if (summary.failed === 0) return null

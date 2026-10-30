@@ -12,7 +12,7 @@ import type { Screen } from './screens'
  * The writing of a message is not here: its way back has to carry the draft, which only that screen has.
  */
 export function backAction(
-  application: Pick<Application, 'navigator' | 'messages' | 'settings' | 'folders' | 'senders'>,
+  application: Pick<Application, 'navigator' | 'messages' | 'settings' | 'folders' | 'senders' | 'compose'>,
   screen: Screen,
   leave: () => void
 ): (() => void) | null {
@@ -24,6 +24,8 @@ export function backAction(
       return () => void messages.cancelMove(screen)
     case 'settings':
       return () => void settings.back()
+    case 'scheduled':
+      return () => void application.compose.leaveScheduled(screen)
     case 'identities':
       return () => void senders.back(screen.account)
     case 'folderTools':

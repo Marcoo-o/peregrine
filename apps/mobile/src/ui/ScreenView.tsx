@@ -7,6 +7,7 @@ import { EditAccountScreen } from './EditAccountScreen'
 import { FolderToolsScreen } from './FolderToolsScreen'
 import { FoldersScreen } from './FoldersScreen'
 import { IdentitiesScreen } from './IdentitiesScreen'
+import { ScheduledScreen } from './ScheduledScreen'
 import { LoadingScreen } from './LoadingScreen'
 import { LoginScreen } from './LoginScreen'
 import { MessageScreen } from './MessageScreen'
@@ -141,7 +142,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
         <ComposeScreen
           state={screen}
           files={services.files}
-          onSend={(draft) => compose.send(screen, draft)}
+          onSend={(draft, sendAt) => compose.send(screen, draft, sendAt)}
           suggest={(typed) => compose.suggest(typed)}
           onSaveDraft={(draft) => compose.saveDraft(screen, draft)}
           onAutosave={(draft) => compose.autosave(screen, draft)}
@@ -159,6 +160,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onDelete={(tag) => void tags.remove(tag.id)}
         />
       )
+    case 'scheduled':
+      return <ScheduledScreen state={screen} onTakeBack={(id) => compose.takeBack(screen, id)} onBack={() => compose.leaveScheduled(screen)} />
     case 'identities':
       return (
         <IdentitiesScreen
