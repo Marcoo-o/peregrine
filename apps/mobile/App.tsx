@@ -10,6 +10,7 @@ import { describeError } from './src/errors'
 import { createPlatform } from './src/platform'
 import type { SidebarData } from './src/sidebar'
 import { DrawerContext, locationOf, showsDrawer } from './src/ui/drawer'
+import { SortContext } from './src/ui/sort'
 import { TagsContext } from './src/ui/tags'
 import { useHardwareBack } from './src/ui/useHardwareBack'
 import { LoadingScreen } from './src/ui/LoadingScreen'
@@ -35,6 +36,10 @@ export default function App() {
   const { scheme, colors } = useTheme()
   const drawer = useRef<InstanceType<typeof DrawerLayoutAndroid>>(null)
   const [sidebar, setSidebar] = useState<SidebarData | null>(null)
+  const sortControl = useMemo(
+    () => ({ sort: state.sort, setSort: (sort: typeof state.sort) => void application?.settings.setSort(sort) }),
+    [state.sort, application]
+  )
   const drawerControl = useMemo(() => ({ open: () => drawer.current?.openDrawer() }), [])
   const drawerOpen = useRef(false)
   const sidebarControl = useMemo(() => ({ isOpen: () => drawerOpen.current, close: () => drawer.current?.closeDrawer() }), [])
@@ -120,7 +125,9 @@ export default function App() {
               />
             ) : null}
             <TagsContext.Provider value={state.tags}>
-              {application ? <ScreenView application={application} screen={state.screen} /> : <LoadingScreen />}
+              <SortContext.Provider value={sortControl}>
+                {application ? <ScreenView application={application} screen={state.screen} /> : <LoadingScreen />}
+              </SortContext.Provider>
             </TagsContext.Provider>
             {application && state.undo ? (
               <UndoBar undo={state.undo} onUndo={() => application.compose.undoSend()} onDone={() => application.compose.clearUndo()} />

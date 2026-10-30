@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { FlatList, Text, View } from 'react-native'
 import type { UnifiedState } from '../app/screens'
 import { filterMessages, NO_FILTER } from '../listFilter'
+import { sortMessages } from '../listSort'
 import type { Tag } from '../tags'
 import type { UnifiedMessage } from '../unified'
 import { Fab } from './controls'
@@ -9,6 +10,7 @@ import { EmptyListNote } from './EmptyListNote'
 import { OlderFooter } from './OlderFooter'
 import { roleLabel } from './folderLabel'
 import { ListHead } from './ListHead'
+import { useSort } from './sort'
 import { MessageRow } from './MessageRow'
 import { SelectionBar, SelectionHeader } from './SelectionBar'
 import { backAtText } from './snoozeText'
@@ -33,7 +35,8 @@ export function UnifiedScreen(props: {
   const styles = useStyles()
   const { role, messages, busy, problems, more, loadingMore } = props.state
   const [filter, setFilter] = useState(NO_FILTER)
-  const shown = useMemo(() => filterMessages(messages, filter), [messages, filter])
+  const { sort } = useSort()
+  const shown = useMemo(() => sortMessages(filterMessages(messages, filter), sort), [messages, filter, sort])
   const selection = useSelection(shown, props.actions)
 
   return (

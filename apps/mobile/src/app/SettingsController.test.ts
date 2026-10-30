@@ -96,6 +96,16 @@ describe('the settings screen', () => {
     expect(t.screen().sending).toEqual({ undoSeconds: 0 })
   })
 
+  it('keeps the order of the lists, which the store has at once and the application starts with', async () => {
+    const t = await onSettings()
+    expect(t.store.state.sort).toEqual({ field: 'date', direction: 'desc' })
+    await t.app.settings.setSort({ field: 'size', direction: 'desc' })
+    expect(t.store.state.sort).toEqual({ field: 'size', direction: 'desc' })
+    t.store.setSort({ field: 'date', direction: 'desc' })
+    await t.app.start()
+    expect(t.store.state.sort).toEqual({ field: 'size', direction: 'desc' })
+  })
+
   describe('the address book of the device', () => {
     it('is switched on once the user allowed reading it, and off again', async () => {
       const t = await onSettings()

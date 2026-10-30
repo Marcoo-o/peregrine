@@ -13,6 +13,7 @@ import {
   saveSendSettings,
   type NotificationSettings
 } from '../settings'
+import { saveSort, type ListSort } from '../listSort'
 import type { Navigator } from './Navigator'
 import type { Services } from './services'
 import type { AppStore } from './store'
@@ -73,6 +74,11 @@ export class SettingsController {
   async setUndoSeconds(undoSeconds: number): Promise<void> {
     await saveSendSettings(this.services.db, { undoSeconds })
     await this.show()
+  }
+
+  /** How the lists of messages are ordered: kept, and every list shown is ordered so at once. */
+  async setSort(sort: ListSort): Promise<void> {
+    this.store.setSort(await saveSort(this.services.db, sort))
   }
 
   back(): Promise<void> {

@@ -5,6 +5,7 @@ import { ComposeController } from './ComposeController'
 import { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { FolderController } from './FolderController'
 import { SenderController } from './SenderController'
+import { loadSort } from '../listSort'
 import { Identities } from './Identities'
 import { KeysController } from './KeysController'
 import { MessageController } from './MessageController'
@@ -67,6 +68,7 @@ export class Application {
     await this.tags.load()
     await this.protection.load()
     await this.identities.load()
+    this.store.setSort(await loadSort(this.services.db))
     await this.navigator.start()
     await this.openLaunchTarget()
     await this.openIncoming()

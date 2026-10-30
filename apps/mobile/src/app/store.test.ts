@@ -11,7 +11,8 @@ describe('the store', () => {
       waiting: null,
       statusAccountId: null,
       tags: [],
-      undo: null
+      undo: null,
+      sort: { field: 'date', direction: 'desc' }
     })
   })
 
