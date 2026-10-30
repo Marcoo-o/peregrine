@@ -49,12 +49,9 @@ export function MessageScreen(props: {
   onArchive: () => void
   onJunk: () => void
   onSource: () => void
-<<<<<<< HEAD
   onPrint: () => void
-=======
   /** Looks for the public key of the sender, on the keyserver and in the directory of the sender's domain. */
   onFindKey: (address: string) => void
->>>>>>> origin/main
   onSaveSource: () => void
   onDelete: () => void
   onSave: (attachment: AttachmentInfo) => void
@@ -150,11 +147,8 @@ export function MessageScreen(props: {
             : { label: 'Später erinnern …', onPress: () => setSnoozing(true) },
           { label: 'Verschieben …', onPress: props.onMove },
           { label: 'Als Spam markieren', onPress: props.onJunk },
-<<<<<<< HEAD
           ...(message ? [{ label: 'Drucken oder als PDF speichern', onPress: props.onPrint }] : []),
-=======
           ...(senderAddress ? [{ label: 'Schlüssel des Absenders suchen', onPress: () => props.onFindKey(senderAddress) }] : []),
->>>>>>> origin/main
           ...(props.state.raw
             ? [
                 { label: 'Quelltext anzeigen', onPress: props.onSource },
