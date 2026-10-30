@@ -36,6 +36,8 @@ export interface ScannedKey {
   locked: boolean
   /** When the key stops being valid, or null when it does not. */
   expiresAt: Date | null
+  /** Where it was found, for a key that was looked up and not read from a file: said on its card. */
+  foundBy?: string
 }
 
 /** The armored blocks of a text: a file with several keys is often several blocks one after the other, which OpenPGP reads one at a time. */

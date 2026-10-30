@@ -57,6 +57,7 @@ function FoundKey(props: {
   return (
     <View style={[styles.group, styles.keyCard]}>
       <Text style={styles.itemTitle}>{key.userIds[0] ?? 'Schlüssel ohne Namen'}</Text>
+      {key.foundBy ? <Text style={styles.itemMeta}>{key.foundBy}</Text> : null}
       <View style={styles.actions}>
         <View style={styles.tag}>
           <Text style={styles.tagText}>{key.privateKey ? 'Mit privatem Teil' : 'Nur öffentlicher Teil'}</Text>
@@ -110,6 +111,7 @@ export function KeysScreen(props: {
   onGenerate: (accountId: string) => void
   onPickFile: () => void
   onPasted: (text: string) => void
+  onSearch: (address: string) => void
   onAdoptOwn: (fingerprint: string, accountId: string, passphrase: string) => void
   onAdoptContact: (fingerprint: string, address: string) => void
   onDismiss: (fingerprint: string) => void
@@ -121,6 +123,7 @@ export function KeysScreen(props: {
   const styles = useStyles()
   const { accounts, own, contacts, states, defaults, found, working, notice, error } = props.state
   const [pasted, setPasted] = useState('')
+  const [searched, setSearched] = useState('')
   const [removing, setRemoving] = useState<{ title: string; text: string; remove: () => void } | null>(null)
   const idle = working === undefined
 
@@ -214,6 +217,26 @@ export function KeysScreen(props: {
           <Button label="Entfernen" variant="danger" disabled={!idle} onPress={() => askToRemoveContact(key)} />
         </View>
       ))}
+
+      <Text style={styles.section}>Schlüssel suchen</Text>
+      <Text style={styles.hint}>
+        Sucht den öffentlichen Schlüssel einer Adresse im Verzeichnis ihres Mailservers (WKD) und auf keys.openpgp.org. Die Suche
+        verrät beiden, an wen du schreiben willst. Sie läuft nur, wenn du sie startest, und speichert nichts, bevor du es sagst.
+      </Text>
+      <FormInput
+        placeholder="Adresse, zum Beispiel sam@example.net"
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="email-address"
+        value={searched}
+        onChangeText={setSearched}
+      />
+      <Button
+        label="Schlüssel suchen"
+        variant="secondary"
+        disabled={!idle || searched.trim() === ''}
+        onPress={() => props.onSearch(searched)}
+      />
 
       <Text style={styles.section}>Schlüssel einlesen</Text>
       <Text style={styles.hint}>

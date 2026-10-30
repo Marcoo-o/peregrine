@@ -1,42 +1,12 @@
 import { appError } from '@peregrine/core/errorText'
+import { keyserverUrl, KEYSERVER_BASE, wkdUrls } from '@peregrine/core/keyLookup'
 import { createHash } from 'node:crypto'
 import { normalizeDiscoveredKey } from './pgpService'
 
-const KEYSERVER_BASE = 'https://keys.openpgp.org'
 const REQUEST_TIMEOUT_MS = 10_000
 
-/** z-base-32 alphabet as specified for WKD hashed local parts (RFC draft / GnuPG WKD). */
-const ZBASE32_ALPHABET = 'ybndrfg8ejkmcpqxot1uwisza345h769'
-
-function zBase32Encode(bytes: Buffer): string {
-  let bitBuffer = 0
-  let bitCount = 0
-  let out = ''
-  for (const byte of bytes) {
-    bitBuffer = (bitBuffer << 8) | byte
-    bitCount += 8
-    while (bitCount >= 5) {
-      out += ZBASE32_ALPHABET[(bitBuffer >>> (bitCount - 5)) & 31]
-      bitCount -= 5
-    }
-  }
-  if (bitCount > 0) {
-    out += ZBASE32_ALPHABET[(bitBuffer << (5 - bitCount)) & 31]
-  }
-  return out
-}
-
-/** WKD maps the lowercased local part through SHA-1 and z-base-32 into a fixed 32-char name. */
-function wkdLocalPartHash(localPart: string): string {
-  const digest = createHash('sha1').update(localPart.toLowerCase(), 'utf8').digest()
-  return zBase32Encode(digest)
-}
-
-function splitAddress(email: string): { localPart: string; domain: string } | null {
-  const at = email.lastIndexOf('@')
-  if (at <= 0 || at === email.length - 1) return null
-  return { localPart: email.slice(0, at), domain: email.slice(at + 1).toLowerCase() }
-}
+const sha1 = (bytes: Uint8Array): Uint8Array => new Uint8Array(createHash('sha1').update(bytes).digest())
+const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text)
 
 async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController()
@@ -79,15 +49,7 @@ async function tryFetchKey(
 
 /** Web Key Directory lookup, trying the advanced (openpgpkey subdomain) method first. */
 export async function lookupViaWkd(email: string): Promise<DiscoveredKey | null> {
-  const parts = splitAddress(email)
-  if (!parts) return null
-  const hashed = wkdLocalPartHash(parts.localPart)
-  const encodedLocal = encodeURIComponent(parts.localPart)
-
-  const advanced = `https://openpgpkey.${parts.domain}/.well-known/openpgpkey/${parts.domain}/hu/${hashed}?l=${encodedLocal}`
-  const direct = `https://${parts.domain}/.well-known/openpgpkey/hu/${hashed}?l=${encodedLocal}`
-
-  for (const url of [advanced, direct]) {
+  for (const url of wkdUrls(email, sha1, utf8)) {
     const key = await tryFetchKey(url, 'WKD')
     if (key) return key
   }
@@ -96,10 +58,7 @@ export async function lookupViaWkd(email: string): Promise<DiscoveredKey | null>
 
 /** keys.openpgp.org VKS lookup; only returns addresses whose owner opted in to publication. */
 export async function lookupViaKeyserver(email: string): Promise<DiscoveredKey | null> {
-  return tryFetchKey(
-    `${KEYSERVER_BASE}/vks/v1/by-email/${encodeURIComponent(email)}`,
-    'keys.openpgp.org'
-  )
+  return tryFetchKey(keyserverUrl(email), 'keys.openpgp.org')
 }
 
 export async function discoverPublicKey(email: string): Promise<DiscoveredKey | null> {

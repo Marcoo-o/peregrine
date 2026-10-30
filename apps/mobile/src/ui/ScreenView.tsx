@@ -157,6 +157,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onGenerate={(accountId) => void keys.generate(accountId)}
           onPickFile={() => void keys.pickFile()}
           onPasted={(text) => void keys.scan(text)}
+          onSearch={(address) => void keys.search(address)}
           onAdoptOwn={(fingerprint, accountId, passphrase) => void keys.adoptOwn(fingerprint, accountId, passphrase)}
           onAdoptContact={(fingerprint, address) => void keys.adoptContact(fingerprint, address)}
           onDismiss={(fingerprint) => void keys.dismiss(fingerprint)}

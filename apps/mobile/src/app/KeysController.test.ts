@@ -2,9 +2,10 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import * as openpgp from 'openpgp'
 import { encodeUtf8 } from '@peregrine/imap/utf8'
 import { composeMessage } from '@peregrine/smtp/compose'
+import { KeyLookupError } from '../pgp/keyLookup'
 import { listAttachments } from '../attachments'
 import { contactKeysFor, listOwnKeys } from '../pgp/keyStore'
-import { generateKeyPair, type KeyPair } from '../pgp/pgpService'
+import { generateKeyPair, scanKeys, type KeyPair } from '../pgp/pgpService'
 import { appHarness } from '../testing/appHarness'
 import type { KeysState } from './screens'
 
@@ -234,5 +235,70 @@ describe('what the user wants of every message', () => {
     await t.app.keys.generate(t.work.id)
     await t.app.keys.setDefault('sign', true)
     expect(t.app.protection.forAccount(t.work.id)).toEqual({ sign: true })
+  })
+})
+
+describe('looking for the key of an address', () => {
+  it('shows what was found, said where it was found, and stores nothing yet', async () => {
+    const t = await keys()
+    const asked: string[] = []
+    t.app.keys.lookup = async (address) => {
+      asked.push(address)
+      return { source: 'WKD', keys: await scanKeys(sam.publicKey) }
+    }
+    await t.app.keys.search(' sam@example.net ')
+    expect(asked).toEqual(['sam@example.net'])
+    expect(t.shown().found?.map((key) => key.addresses[0])).toEqual(['sam@example.net'])
+    expect(t.shown().found?.[0].foundBy).toBe('Gefunden im Verzeichnis von example.net (WKD)')
+    expect(await contactKeysFor(t.db, 'sam@example.net')).toEqual([])
+  })
+
+  it('says where the keyserver had it', async () => {
+    const t = await keys()
+    t.app.keys.lookup = async () => ({ source: 'keys.openpgp.org', keys: await scanKeys(sam.publicKey) })
+    await t.app.keys.search('sam@example.net')
+    expect(t.shown().found?.[0].foundBy).toBe('Gefunden auf keys.openpgp.org')
+  })
+
+  it('has the key placed like any other: for the address, when the user says so', async () => {
+    const t = await keys()
+    t.app.keys.lookup = async () => ({ source: 'WKD', keys: await scanKeys(sam.publicKey) })
+    await t.app.keys.search('sam@example.net')
+    await t.app.keys.adoptContact(sam.fingerprint, 'sam@example.net')
+    expect((await contactKeysFor(t.db, 'sam@example.net')).map((key) => key.fingerprint)).toEqual([sam.fingerprint])
+  })
+
+  it('says what it asked when nothing is published, and that no server could be reached when none answered', async () => {
+    const t = await keys()
+    t.app.keys.lookup = async () => {
+      throw new KeyLookupError('notFound')
+    }
+    await t.app.keys.search('sam@example.net')
+    expect(t.shown().error).toMatch(/sam@example\.net ist kein Schlüssel veröffentlicht.*WKD.*keys\.openpgp\.org/)
+    t.app.keys.lookup = async () => {
+      throw new KeyLookupError('unreachable')
+    }
+    await t.app.keys.search('sam@example.net')
+    expect(t.shown().error).toMatch(/nicht erreichen/)
+  })
+
+  it('says that it is no address, and does not hide what else was found', async () => {
+    const t = await keys()
+    await t.app.keys.scan(sam.publicKey)
+    t.app.keys.lookup = async () => {
+      throw new KeyLookupError('notAnAddress')
+    }
+    await t.app.keys.search('nobody')
+    expect(t.shown().error).toMatch(/keine E-Mail-Adresse/)
+    expect(t.shown().found).toHaveLength(1)
+  })
+
+  it('says why when it fails otherwise', async () => {
+    const t = await keys()
+    t.app.keys.lookup = async () => {
+      throw new Error('boom')
+    }
+    await t.app.keys.search('sam@example.net')
+    expect(t.shown().error).toMatch(/Die Suche ging schief/)
   })
 })
