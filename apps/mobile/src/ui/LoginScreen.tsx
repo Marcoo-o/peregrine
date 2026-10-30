@@ -1,15 +1,18 @@
 import { useState } from 'react'
-import { Text } from 'react-native'
+import { Linking, Text } from 'react-native'
 import {
   initialFields,
   isSubmittable,
+  looksLikeAddress,
   toAccountForm,
+  withFound,
   withImapSecurity,
   withSmtpSecurity,
   type AccountForm,
   type FormFields
 } from '../app/accountForm'
-import { Button } from './controls'
+import { foundText, type FoundServers } from '../discovery'
+import { Button, Spinner } from './controls'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
 import { ServerFields } from './ServerFields'
@@ -20,11 +23,29 @@ export function LoginScreen(props: {
   error?: string
   previous?: AccountForm
   onSubmit: (form: AccountForm) => void
+  /** Finds the servers of an address, where they are published. Asked for, not done on its own: it tells somebody the domain. */
+  onFind: (email: string) => Promise<FoundServers | null>
   onCancel: () => void
 }) {
   const styles = useStyles()
   const [fields, setFields] = useState<FormFields>(() => initialFields(props.previous))
   const set = (patch: Partial<FormFields>) => setFields((current) => ({ ...current, ...patch }))
+  const [finding, setFinding] = useState(false)
+  const [found, setFound] = useState<{ text: string; appPasswordUrl?: string } | null>(null)
+
+  async function find(): Promise<void> {
+    setFinding(true)
+    setFound(null)
+    try {
+      const servers = await props.onFind(fields.email.trim())
+      if (servers) setFields((current) => withFound(current, servers))
+      setFound({ text: foundText(servers), appPasswordUrl: servers?.appPasswordUrl })
+    } catch {
+      setFound({ text: 'Die Suche ging schief. Trage die Server selbst ein.' })
+    } finally {
+      setFinding(false)
+    }
+  }
 
   return (
     <FormScroll>
@@ -39,6 +60,21 @@ export function LoginScreen(props: {
         value={fields.email}
         onChangeText={(email) => set({ email })}
       />
+      <Button
+        label="Einstellungen suchen"
+        variant="secondary"
+        disabled={finding || !looksLikeAddress(fields.email)}
+        onPress={() => void find()}
+      />
+      <Text style={styles.hint}>
+        Fragt den Anbieter der Adresse nach seinen Servern und, wenn er nichts veröffentlicht hat, die Datenbank von Mozilla. Dorthin geht nur die Domain.
+        Nur wenn du auf den Knopf tippst.
+      </Text>
+      {finding ? <Spinner /> : null}
+      {found ? <Text style={styles.hint}>{found.text}</Text> : null}
+      {found?.appPasswordUrl ? (
+        <Button label="App-Passwort anlegen" variant="secondary" onPress={() => void Linking.openURL(found.appPasswordUrl as string)} />
+      ) : null}
       <ServerFields
         hostPlaceholder="IMAP-Server (mail.example.org)"
         portPlaceholder="Port"

@@ -53,7 +53,9 @@ export interface SmtpSettings {
  * sending is the one for reading. A port that was not given is the one that goes with the kind of
  * connection, 465 for TLS from the start and 587 for STARTTLS.
  */
-export function smtpSettingsOf(account: Account): SmtpSettings | undefined {
+export function smtpSettingsOf(
+  account: Pick<Account, 'smtpHost' | 'smtpPort' | 'smtpSecure' | 'smtpUsername' | 'smtpPassword' | 'imapUsername' | 'password'>
+): SmtpSettings | undefined {
   if (!account.smtpHost) return undefined
   const secure = account.smtpSecure ?? 'starttls'
   return {
@@ -177,4 +179,18 @@ export async function sendAndFile(
     log.error(`the message went out but could not be filed in Sent: ${error instanceof Error ? error.message : String(error)}`)
   }
   return sent
+}
+
+/**
+ * Finds out whether the server for sending takes the login, without sending anything: connects, encrypts if asked to, and logs in. Raises what the
+ * server said when it does not. It is for before an account is kept or changed, so that a login that is wrong is found then and not when
+ * the first message does not go.
+ */
+export async function checkSending(makeTransport: () => Transport, settings: SmtpSettings): Promise<void> {
+  const client = new SmtpClient(makeTransport(), settings)
+  try {
+    await client.connect()
+  } finally {
+    await client.close()
+  }
 }

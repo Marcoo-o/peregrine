@@ -26,6 +26,8 @@ export class FakeSmtpServer {
   tlsStarted = false
   tlsFails = false
   closed = false
+  /** How many connections were made, so that what is still to happen to an old one does not happen to a new one. */
+  private connections = 0
   credentials = { user: 'user', pass: 'pass' }
   /**
    * What the server lists in answer to EHLO, which depends on whether the connection is encrypted.
@@ -48,6 +50,11 @@ export class FakeSmtpServer {
     this.transport = {
       connect: async (options) => {
         this.connectedWith = options
+        this.connections++
+        // A new connection starts clean: one server is used for more than one connection in a test.
+        this.closed = false
+        this.tlsStarted = false
+        this.buffer = ''
         if (this.greeting !== null) setTimeout(() => this.send(this.greeting as string), 0)
       },
       startTls: async () => {
@@ -62,7 +69,13 @@ export class FakeSmtpServer {
       close: () => {
         if (this.closed) return
         this.closed = true
-        setTimeout(() => this.onClose(), 0)
+        // Told to the client of this connection, and only if no other has been made since: one fake stands for every connection, and a
+        // client told too late would close the new one.
+        const listener = this.onClose
+        const connection = this.connections
+        setTimeout(() => {
+          if (connection === this.connections) listener()
+        }, 0)
       },
       onData: (listener) => {
         this.onData = listener
@@ -177,7 +190,10 @@ export class FakeSmtpServer {
       case 'QUIT':
         this.answer(`221 2.0.0 Bye${CRLF}`)
         // After the goodbye has gone out.
-        setTimeout(() => this.hangUp(), 5)
+        const connection = this.connections
+        setTimeout(() => {
+          if (connection === this.connections) this.hangUp()
+        }, 5)
         return
       default:
         this.answer(`500 5.5.1 Command unrecognized${CRLF}`)

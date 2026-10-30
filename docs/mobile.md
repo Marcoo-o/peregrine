@@ -1438,10 +1438,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 2. *The phone's own place in the system.* `mailto:` links, sharing text and files to a new message, being offered as an application for mail,
    and the people of the phone's contacts as suggestions for recipients. None of it is in the manifest. The desktop has no counterpart; a mail
    client on a phone without it is used less than one that has it. M.
-3. *Setting up and changing an account.* The desktop finds the servers of an address (autoconfig of the provider, `.well-known`, the Mozilla database,
-   DNS SRV; `autoconfig.ts` in the shared code already reads what comes back), has presets for providers, tests the connection, and edits an account
-   afterwards (servers, name, colour, password, order). The phone has one form and "Konto entfernen". Needed: the discovery over HTTPS (not SRV: there is
-   no DNS on the platform), a test of the connection before saving, and an edit screen. M.
+3. *Setting up and changing an account.* (Done as far as the servers, the logins and the editing go: see "What setting up an account found". What is left is DNS SRV on the phone and OAuth2.)
 4. *Folders.* Create, rename, delete, mark all as read, empty the trash. None of it on the phone; `ImapSession` has the commands. S to M.
 
 **Second, what the desktop's daily use has**
@@ -1592,3 +1589,33 @@ already imports Thunderbird's accounts, so the credentials are the same ones.
 The reason to build this is the safety work and the way several mailboxes are handled, not the
 want of a mail client on a phone. If that reason does not hold up when written out, the plan
 above is a great many months for something that already exists.
+
+## What setting up an account found
+
+The phone had one form and "Konto entfernen". The servers were typed by hand, only the login for reading was tried, and an account could
+not be changed: a new password meant removing the account and with it everything the phone had of it.
+
+- *The servers of an address are found by the code both apps share.* The rounds over the web (the provider's `autoconfig.<domain>`, the
+  well-known path of the domain, then Mozilla's database, which is told the domain and not the address) and the presets of the large providers
+  moved to `packages/core` (`mailDiscovery.ts`, `providerPresets.ts`); a platform gives how a document is fetched. The desktop keeps its DNS SRV
+  step and its own fetch and uses the shared rounds, so the two cannot drift. The desktop had no test of this; the shared code has them (the
+  order of trust, the second round only when the first found nothing, HTTPS only, a page that is no configuration, OAuth2 reported).
+- *The phone asks only when the user taps "Einstellungen suchen"*, and the screen says whom that asks. A large provider is known by its domain
+  and costs no request. The result fills the form, says where it came from, offers the page for an app password where the provider wants one
+  and says plainly that a provider which wants OAuth2 cannot be used yet. Not done: DNS SRV (the platform has no lookup for it).
+- *Both logins are tried before an account is kept.* The login for sending was never tried, so a wrong one was found when the first message did
+  not go. Now it is (`checkSending`: connect, encrypt, log in, send nothing); a failure keeps nothing, lets go of the connection for reading, and says
+  "Zum Senden: ..." with what the server said. An account without a server for sending is not tried for it.
+- *An account can be changed* ("Konto bearbeiten" on the folder list): name, colour, address, the servers, the logins for reading and
+  for sending (the latter may differ). The stored passwords are not put into fields, an empty field means "as it is". Only what changed is
+  tried against a server; a change that fails leaves the account as it was, with the reason and the form as typed. The connection that proved a
+  new login becomes the account's, and the push service is told.
+- The fake server for sending in the tests served one connection only (a close that came late closed the next connection). It starts clean for
+  each connection now, which a test of "log in once at setup, once at editing" needed.
+
+Covered by tests: the shared discovery, the phone's fetching (timeouts, size, failures), the form helpers (what changed, empty passwords, a
+server for sending taken away), updating an account, and the controller (signing in with a wrong login for sending, saving each kind of change,
+failing for reading and for sending).
+Seen on the emulator: the form with the search button and the hint of whom it asks; an account made against the test server; "Konto bearbeiten" with
+the stored values, the passwords empty, and the colour changed and kept (the dot in the folder list turned). Not seen on the device: the search over
+the internet (covered by tests with a fake web) and a wrong login for sending (covered by tests).

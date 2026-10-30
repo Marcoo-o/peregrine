@@ -10,7 +10,7 @@ import type { Files } from '../files'
 import { MailActions } from '../mailActions'
 import { keepQueuedDraft } from '../drafts'
 import { createQueue } from '../queue'
-import { sendAndFile } from '../send'
+import { checkSending, sendAndFile, type SmtpSettings } from '../send'
 import { imapLoginOf, type ImapLogin } from './accountForm'
 
 /** Where the application writes down what it cannot show anybody. */
@@ -45,6 +45,8 @@ export interface Services {
   log: Log
   /** A connection that belongs to no account yet, to find out whether a login works. */
   connectImap(login: ImapLogin): Promise<ImapSession>
+  /** Whether the server for sending takes a login, without sending anything. Raises why not. */
+  checkSending(settings: SmtpSettings): Promise<void>
   /**
    * Removes the copies of attached files that no queued message refers to. What cannot be removed is
    * logged and not raised: a copy that is left is a leak of storage and no reason to stop anything.
@@ -86,6 +88,7 @@ export function createServices(db: SqlDb, platform: Platform, listeners: Service
     push,
     log,
     connectImap: (login) => platform.connectImap(login),
+    checkSending: (settings) => checkSending(() => platform.makeTransport(), settings),
     sweepCopies: async () => {
       try {
         await sweepCopies(db, files)
