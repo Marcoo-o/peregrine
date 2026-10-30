@@ -1442,7 +1442,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 **Second, what the desktop's daily use has**
 
 5. *Signature text for each account and several identities.* (Done: see "What identities, a signature and undo send found".)
-6. *Sending at a later time* (the queue has `dueAt`, which snooze and undo send use; the composer refuses it now with "Sending at a later time is not on the phone yet"; S now that the queue holds messages). Undo send is done, see 5.
+6. *Sending at a later time.* (Done: see "What sending later found".)
 7. *Sorting* by field and direction (S) and *conversations*, which group replies (L).
 8. *Saved searches* shown as folders (S to M: the search exists).
 9. *Formatted text when writing.* Reading HTML is done; writing is plain text and a formatted draft is refused. There is no good rich editor for the platform
@@ -1708,3 +1708,18 @@ a message back (in time, too late, the newest only, with attachments), against a
 Seen on the emulator: the screen for the senders (an account has its identity, a signature saved and the list coming back), a new message with the signature under the text after the
 `-- ` line, the bar "Wird gesendet: ... Rückgängig (4)" counting down, the message arriving at the SMTP server by itself after the five seconds with the signature, and a second message
 taken back with "Rückgängig" that came back into the editor with everything and was never sent. Not seen on the device: choosing between two identities on the compose screen (covered by tests).
+
+## What sending later found
+
+The composer refused a message for a later time. Undo send had already made the queue hold actions until a moment (`dueAt`) and wake at it, which is all that sending later needs.
+
+- *"Später senden"* on the compose screen opens the sheet snoozing uses, with its own title and note: the presets with the time each comes to, and a moment of one's own. The message goes into the
+  queue until then (`MailActions.send` takes a moment). It is not also held for the time to take it back, since it is in the list of what is planned; a moment that is not ahead is a message sent now, with that time.
+- *The status line* says "N Nachrichten sind zum Senden geplant. Ansehen", apart from what waits for a connection, which is a problem where this is a plan. The list ("Geplante Nachrichten") shows to whom,
+  what about and when; a tap takes the message out of the queue and writes it on again, which is how it is changed or given up. What the queue keeps of a file is its path, so a message taken back lists
+  its attachments with no size until it is sent.
+- *What the phone cannot promise:* the message goes at the moment only if the phone has a connection then and the application may run (open, or woken by the background look for mail, whose interval is
+  the one set under notifications). The note on the sheet says so. A message that is due when the phone has no connection goes at the next one.
+
+Covered by tests: queuing until the moment, nothing sent before and the message sent at it, by itself through the timer, a moment that is not ahead, the status text, the list, taking one back and too late, and the draft made from a queued message.
+Not seen on the device: the sheet and the list on the screen.

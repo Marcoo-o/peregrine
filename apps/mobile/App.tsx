@@ -116,6 +116,7 @@ export default function App() {
                 online={isOnline(state)}
                 waiting={state.waiting}
                 onDiscard={() => application.discardFailedActions()}
+                onScheduled={() => application.compose.showScheduled()}
               />
             ) : null}
             <TagsContext.Provider value={state.tags}>

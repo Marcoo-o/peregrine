@@ -10,7 +10,14 @@ import { useStyles } from './useStyles'
  * as the desktop offers them, a moment of one's own for what they do not come to, and a line that says where the setting
  * is kept. A tap on one does it and takes the sheet away.
  */
-export function SnoozeSheet(props: { visible: boolean; onChoose: (until: number) => void; onClose: () => void }) {
+export function SnoozeSheet(props: {
+  visible: boolean
+  onChoose: (until: number) => void
+  onClose: () => void
+  /** What the sheet is for, when it is not for putting a message aside. */
+  title?: string
+  note?: string
+}) {
   const styles = useStyles()
   const { bottom } = useSafeAreaInsets()
   const [custom, setCustom] = useState(false)
@@ -31,7 +38,7 @@ export function SnoozeSheet(props: { visible: boolean; onChoose: (until: number)
         {/* A tap inside the sheet is not a tap beside it. */}
         <Pressable style={[styles.sheet, { paddingBottom: 24 + bottom }]} onPress={() => undefined}>
           <Text accessibilityRole="header" style={styles.dialogTitle}>
-            Später erinnern
+            {props.title ?? 'Später erinnern'}
           </Text>
           {options.map((option) => (
             <Pressable
@@ -53,7 +60,7 @@ export function SnoozeSheet(props: { visible: boolean; onChoose: (until: number)
               <Text style={styles.sheetText}>Eigener Zeitpunkt …</Text>
             </Pressable>
           )}
-          <Text style={styles.hint}>Gilt nur hier: auf anderen Geräten bleibt die Nachricht im Posteingang.</Text>
+          <Text style={styles.hint}>{props.note ?? 'Gilt nur hier: auf anderen Geräten bleibt die Nachricht im Posteingang.'}</Text>
         </Pressable>
       </Pressable>
       </KeyboardAvoidingView>

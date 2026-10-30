@@ -205,6 +205,27 @@ export function toComposeInput(accountId: string, draft: Draft): ComposeInput {
   }
 }
 
+/**
+ * The draft a queued message was made from, to write on it again: the inverse of `toComposeInput`. The queue keeps the files by their path and
+ * not their size, so an attachment is listed with none; the limit for what can be attached counts it as nothing until it is sent.
+ */
+export function draftFromInput(input: ComposeInput): Draft {
+  const text = (list: EmailAddress[]) => list.map(written).join(', ')
+  return {
+    to: text(input.to),
+    cc: text(input.cc),
+    bcc: text(input.bcc),
+    subject: input.subject,
+    body: input.textBody,
+    attachments: input.attachments.map((file) => ({ filename: file.filename, path: file.path, contentType: file.contentType ?? 'application/octet-stream', size: 0 })),
+    inReplyTo: input.inReplyTo,
+    references: input.references,
+    encrypt: input.encrypt === true ? true : undefined,
+    sign: input.sign === true ? true : undefined,
+    identityId: input.identityId
+  }
+}
+
 /** The addresses a draft goes to, in all three fields, as they are typed. */
 export function recipientAddresses(draft: Draft): string[] {
   return [...parseAddressList(draft.to), ...parseAddressList(draft.cc), ...parseAddressList(draft.bcc)].map((address) => address.address)

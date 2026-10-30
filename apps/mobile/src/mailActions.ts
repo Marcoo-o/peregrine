@@ -103,11 +103,24 @@ export class MailActions {
    * Puts a message to be sent into the queue. The message is the whole of what was written, and goes
    * out with the next run of the queue for its account, which is now when there is a connection.
    */
-  async send(input: ComposeInput, options: { holdSeconds?: number } = {}): Promise<number> {
+  async send(input: ComposeInput, options: { holdSeconds?: number; at?: number } = {}): Promise<number> {
     const hold = options.holdSeconds ?? 0
-    const id = await enqueueAction(this.context.db, input.accountId, 'send', { input }, hold > 0 ? Date.now() + hold * 1000 : null)
+    // A moment that was chosen is the one it goes at; without one it is held for the time to take it back, or goes at once.
+    const dueAt = options.at !== undefined && options.at > Date.now() ? options.at : hold > 0 ? Date.now() + hold * 1000 : null
+    const id = await enqueueAction(this.context.db, input.accountId, 'send', { input }, dueAt)
     await this.settle(input.accountId)
     return id
+  }
+
+  /** The messages that wait for a moment that is still ahead, the next first: those that were scheduled and those that can still be taken back. */
+  async scheduledSends(): Promise<Array<{ id: number; accountId: string; dueAt: number; input: ComposeInput }>> {
+    const now = Date.now()
+    const found: Array<{ id: number; accountId: string; dueAt: number; input: ComposeInput }> = []
+    for (const action of await listScheduled(this.context.db)) {
+      if (action.kind !== 'send' || action.dueAt === null || action.dueAt <= now) continue
+      found.push({ id: action.id, accountId: action.accountId, dueAt: action.dueAt, input: (action.payload as { input: ComposeInput }).input })
+    }
+    return found
   }
 
   /**

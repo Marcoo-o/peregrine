@@ -191,6 +191,15 @@ export interface KeysState {
   error?: string
 }
 
+/** The messages that wait for a moment, which can be taken back to be written on again. */
+export interface ScheduledState {
+  name: 'scheduled'
+  items: Array<{ id: number; accountId: string; dueAt: number; to: string; subject: string }>
+  /** The screen to show again when this one is left. */
+  returnTo: Screen
+  notice?: string
+}
+
 /** The addresses an account sends under, with the name and signature of each. */
 export interface IdentitiesState {
   name: 'identities'
@@ -245,6 +254,7 @@ export type Screen =
   | KeysState
   | EditAccountState
   | IdentitiesState
+  | ScheduledState
   | FolderToolsState
   | TagsState
 

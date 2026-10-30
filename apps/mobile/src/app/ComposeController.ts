@@ -1,6 +1,6 @@
 import { listAccounts, type Account } from '../accounts'
 import { mergeSuggestions, suggestContacts, SUGGESTIONS, type Contact } from '../contacts'
-import { editableDraft, emptyDraft, forwardDraft, recipientAddresses, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
+import { draftFromInput, editableDraft, emptyDraft, forwardDraft, recipientAddresses, replyAllDraft, replyDraft, toComposeInput, type Draft } from '../draft'
 import { bringAttachments, notBroughtText } from '../draftAttachments'
 import { draftsFolderOf } from '../drafts'
 import { draftFromIncoming, type Incoming } from '../incoming'
@@ -202,7 +202,7 @@ export class ComposeController {
    * again when there is not. An account that cannot send is told so before anything is queued: a message
    * that would fail five times in the queue has nobody looking at it.
    */
-  async send(given: ComposeState, draft: Draft): Promise<void> {
+  async send(given: ComposeState, draft: Draft, sendAt?: number): Promise<void> {
     const state = await this.settled(given)
     const problem = senderProblem(state.account) ?? (await this.protectionProblemOf(state, draft))
     if (problem) {
@@ -212,8 +212,10 @@ export class ComposeController {
     this.store.showScreen({ ...state, draft, busy: true, error: undefined })
     try {
       // The message waits for a few seconds, which is when it can be taken back, and then goes as any queued message goes.
-      const holdSeconds = (await loadSendSettings(this.services.db)).undoSeconds
-      const actionId = await this.services.mail.send(toComposeInput(state.account.id, draft), { holdSeconds })
+      // A moment that was chosen is the one it goes at, and is not also a time to take it back: it is in the list of what is planned.
+      const planned = sendAt !== undefined && sendAt > Date.now()
+      const holdSeconds = planned ? 0 : (await loadSendSettings(this.services.db)).undoSeconds
+      const actionId = await this.services.mail.send(toComposeInput(state.account.id, draft), { holdSeconds, at: sendAt })
       // The message is on its way, and a draft of it is not wanted any more: not the one that waits, and not the one kept.
       await this.services.mail.forgetDraft(state.account.id, state.session)
       await this.dropSavedRevision(state)
@@ -223,6 +225,35 @@ export class ComposeController {
     } catch (error) {
       this.store.showScreen({ ...state, draft, busy: false, error: explainError(error) })
     }
+  }
+
+  /** The messages that wait for a moment, as a list to look at and to take back from. */
+  async showScheduled(): Promise<void> {
+    const shown = this.store.screen
+    const items = (await this.services.mail.scheduledSends()).map((held) => ({
+      id: held.id,
+      accountId: held.accountId,
+      dueAt: held.dueAt,
+      to: held.input.to.map((address) => address.address).join(', '),
+      subject: held.input.subject
+    }))
+    this.store.showScreen({ name: 'scheduled', items, returnTo: shown.name === 'scheduled' ? shown.returnTo : shown })
+  }
+
+  leaveScheduled(state: Extract<Screen, { name: 'scheduled' }>): void {
+    this.store.showScreen(state.returnTo)
+  }
+
+  /** Takes a planned message out of the queue and writes it on again, which is how it is changed or given up: it is not sent while it is being written. */
+  async takeBack(state: Extract<Screen, { name: 'scheduled' }>, actionId: number): Promise<void> {
+    const held = (await this.services.mail.scheduledSends()).find((one) => one.id === actionId)
+    const account = held ? (await listAccounts(this.services.db)).find((one) => one.id === held.accountId) : undefined
+    if (!held || !account || !(await this.services.mail.cancelSend(actionId))) {
+      await this.showScheduled()
+      return
+    }
+    this.navigator.refreshStatus()
+    this.show({ account, returnTo: state.returnTo, draft: draftFromInput(held.input) })
   }
 
   /** What is said of a message that is held back: only the newest can be taken back, and the ones before it are on their way. */

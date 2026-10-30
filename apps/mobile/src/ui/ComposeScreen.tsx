@@ -11,6 +11,7 @@ import { Button, Chip, Spinner, SwitchRow } from './controls'
 import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
+import { SnoozeSheet } from './SnoozeSheet'
 import { SuggestionList } from './SuggestionList'
 import { useStyles } from './useStyles'
 import { useAutosave } from './useAutosave'
@@ -22,7 +23,7 @@ export function ComposeScreen(props: {
   files: Files
   /** The people to suggest for an address that is being typed. */
   suggest: (typed: string) => Promise<Contact[]>
-  onSend: (draft: Draft) => void
+  onSend: (draft: Draft, sendAt?: number) => void
   onSaveDraft: (draft: Draft) => void
   /** Keeps the message as a draft without leaving, which is done once writing has paused. */
   onAutosave: (draft: Draft) => void
@@ -35,6 +36,7 @@ export function ComposeScreen(props: {
   const form = useComposeForm(props.state.draft, props.files)
   const { draft } = form
   const [discarding, setDiscarding] = useState(false)
+  const [choosingMoment, setChoosingMoment] = useState(false)
   const [typing, setTyping] = useState<'to' | 'cc' | 'bcc' | null>(null)
   // The identity the message is from: the one it names, or the default of the account when it names none.
   const sender = identities.find((identity) => identity.id === draft.identityId) ?? identities[0]
@@ -187,6 +189,14 @@ export function ComposeScreen(props: {
         label={form.confirming ? 'Trotzdem senden' : 'Senden'}
         disabled={busy || !hasRecipient(draft)}
         onPress={() => form.mayGo() && props.onSend(draft)}
+      />
+      <Button label="Später senden" variant="secondary" disabled={busy || !hasRecipient(draft)} onPress={() => form.mayGo() && setChoosingMoment(true)} />
+      <SnoozeSheet
+        visible={choosingMoment}
+        title="Später senden"
+        note="Die Nachricht wartet bis dahin in der Warteschlange dieses Telefons. Das Telefon muss dann eine Verbindung haben, und die App geöffnet oder im Hintergrund erlaubt sein."
+        onChoose={(at) => props.onSend(draft, at)}
+        onClose={() => setChoosingMoment(false)}
       />
     </FormScroll>
   )
