@@ -236,10 +236,10 @@ In:
   the spam verdict from the server's own headers. This already exists and is what makes it
   Peregrine rather than one more client.
 
-Out, for now:
+Out, for now (much of it has been done since: snooze, tags, drafts, OpenPGP; what is still out is in "What is still missing next to
+the desktop"):
 
-- OpenPGP (done since: see "What OpenPGP found").
-- Filter rules, tasks, snooze, saved searches, several identities per account.
+- Filter rules, tasks, saved searches, several identities per account.
 - Thunderbird import, which has nothing to read from.
 
 ## Stages
@@ -1421,6 +1421,71 @@ sync logged that the phone forgot three messages and the list showed the two tha
 went from the list at the next refresh. Not seen: the queue part, which is covered by tests only. One more thing seen, and not looked at: after
 the test server was restarted the screen said "Keine Verbindung" and the refresh button did not bring the connection back for a minute or more,
 only restarting the application did.
+
+## What is still missing next to the desktop
+
+Written on 2026-10-30, after OpenPGP, drafts, push and the folder checks were done, from the desktop's channels (`src/shared/ipcContracts.ts`),
+its settings (`AppSettings`) and its pages, set against what the phone has. Effort: S is a part of a pull request, M is one or two, L is several.
+
+**What the phone has that the desktop does not:** push by the system's own service and by a foreground service, notifications that open
+the message, a look for mail while the application is closed, the keys sealed by the Keystore, and a sync that checks the numbering of a folder.
+
+**First, because the phone is not a client that can stand alone without them**
+
+1. *History.* A sync fetches the headers of the newest 50 messages of a folder (`NEWEST` in `sync.ts`) and nothing older, ever; there is no
+   "older messages". Search looks only through what was fetched, and there is no search on the server. The desktop synchronises the whole
+   folder. Needed: fetching older messages by page as the list is scrolled, a sync of the flags of what is already there (CONDSTORE
+   where the server has it), and an IMAP search for what is not on the phone. L, and the one with the most to gain.
+2. *The phone's own place in the system.* `mailto:` links, sharing text and files to a new message, being offered as an application for mail,
+   and the people of the phone's contacts as suggestions for recipients. None of it is in the manifest. The desktop has no counterpart; a mail
+   client on a phone without it is used less than one that has it. M.
+3. *Setting up and changing an account.* The desktop finds the servers of an address (autoconfig of the provider, `.well-known`, the Mozilla database,
+   DNS SRV; `autoconfig.ts` in the shared code already reads what comes back), has presets for providers, tests the connection, and edits an account
+   afterwards (servers, name, colour, password, order). The phone has one form and "Konto entfernen". Needed: the discovery over HTTPS (not SRV: there is
+   no DNS on the platform), a test of the connection before saving, and an edit screen. M.
+4. *Folders.* Create, rename, delete, mark all as read, empty the trash. None of it on the phone; `ImapSession` has the commands. S to M.
+
+**Second, what the desktop's daily use has**
+
+5. *Signature text for each account* (S) and *several identities* with a default and the choice on a message (M).
+6. *Undo send* (the desktop holds a message for a few seconds; S, the queue has what it needs) and *sending at a later time* (the queue has `dueAt`, which snooze
+   uses; the composer refuses it now with "Sending at a later time is not on the phone yet"; M).
+7. *Sorting* by field and direction (S) and *conversations*, which group replies (L).
+8. *Saved searches* shown as folders (S to M: the search exists).
+9. *Formatted text when writing.* Reading HTML is done; writing is plain text and a formatted draft is refused. There is no good rich editor for the platform
+   that does not live in a web view. L, and a decision to make before work.
+10. *Tools for a message:* the source of a message and saving it as an `.eml` (S each; the source is in hand), printing and saving as PDF (M, the platform has a
+    print service).
+11. *The safety switches*: the checks of links and of risky attachments are always on; the desktop lets each be switched off, and has "ask before any link" (S).
+12. *Locking the application.* The desktop's profiles can have a password and lock after some minutes of nobody there. The phone has the database sealed by the
+    Keystore and no lock of its own. What fits a phone: the screen lock or biometrics before the application shows mail, and a time after which it asks again (M).
+13. *Appearance:* the phone follows the system's light or dark and has one accent; the desktop has a choice of mode, accents, a font scale, date formats and
+    density (S for mode and font scale, the rest M).
+14. *Languages.* The desktop has English, German, Spanish, French and Portuguese (`src/renderer/src/i18n`); the phone's texts are German and written into the code. L:
+    every text goes through a function, and the files of the languages can be the desktop's where the texts are the same.
+15. *Contacts:* a list, adding and changing, vCard in and out (M). On a phone the contacts of the system are the better place to look; see 2.
+
+**Third**
+
+16. *Filter rules.* The engine (`src/main/filters`) is not portable yet, and a rule has to run where mail arrives: here that is the look for mail in the background. L.
+17. *The daily list and tasks* (recurring tasks, linked to messages). L, and unclear whether it is wanted on a phone.
+18. *Diagnostics:* a log that can be recorded and exported for a bug report (S to M).
+19. *What is left of OpenPGP:* publishing the own key to a keyserver, choosing which of several keys signs (the newest does), one key for each of several recipients with the choice shown, and the search for a key started from
+    the sender of a message or from a recipient that has none (S to M each; the first and the last are the cheapest).
+20. *A wide screen:* two panes for a tablet or a folding phone (M to L).
+
+**Neither has it**
+
+- Signing in with OAuth2. Providers that no longer accept a password (and the app passwords that replace it are not for everybody) cannot be used on either; the desktop's
+  wizard says so and stops. This is the largest thing that stands between the application and mail of the big providers. L, and a decision about client registrations.
+- Invitations to meetings, read receipts.
+- Taking a private key out, to keep a copy or to use it on another device: the desktop exports the public half only, and a phone that is lost loses
+  the key with it. A decision about where such a copy may be written, and how it is sealed, comes first.
+
+**An order**
+
+History (1), then setting up and editing accounts (3), then the system's place (2) and folders (4); then undo send and the signature (5, 6), sorting (7) and the tools of a
+message (10); OAuth2 as a decision of its own, taken before the phone is shown to anyone who does not have a provider that accepts a password; the rest by what is missed.
 
 ## What stage 4 found
 
