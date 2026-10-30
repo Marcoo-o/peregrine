@@ -6,6 +6,7 @@ import { sweepCopies } from '../attachmentCopies'
 import type { Notifications, PushDevice, SyncSchedule } from '../background/devices'
 import { Connections } from '../connections'
 import type { DeviceContacts } from '../contacts'
+import type { DeviceLock } from '../lock'
 import { describeError } from '../errors'
 import type { Files } from '../files'
 import { MailActions } from '../mailActions'
@@ -27,6 +28,8 @@ export interface Platform {
   files: Files
   /** The address book of the device, from which people are suggested when the user allowed it. */
   deviceContacts: DeviceContacts
+  /** The screen lock of the device, which is the lock of the application. */
+  deviceLock: DeviceLock
   notifications: Notifications
   /** When the platform looks for new mail while the application is closed. */
   syncSchedule: SyncSchedule
@@ -43,6 +46,7 @@ export interface Services {
   mail: MailActions
   files: Files
   deviceContacts: DeviceContacts
+  deviceLock: DeviceLock
   notifications: Notifications
   syncSchedule: SyncSchedule
   push: PushDevice
@@ -70,7 +74,7 @@ export interface ServiceListeners {
  * and sends what was written, and the actions the screens ask for, which go through the queue.
  */
 export function createServices(db: SqlDb, platform: Platform, listeners: ServiceListeners): Services {
-  const { log, files, deviceContacts, notifications, syncSchedule, push } = platform
+  const { log, files, deviceContacts, deviceLock, notifications, syncSchedule, push } = platform
   const connections = new Connections(
     (account) => platform.connectImap(imapLoginOf(account)),
     listeners.connectionsChanged
@@ -88,6 +92,7 @@ export function createServices(db: SqlDb, platform: Platform, listeners: Service
     mail,
     files,
     deviceContacts,
+    deviceLock,
     notifications,
     syncSchedule,
     push,

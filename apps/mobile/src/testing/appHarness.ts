@@ -7,6 +7,7 @@ import type { MailNotification, MessageTarget } from '../background/notification
 import type { ImapLogin } from '../app/accountForm'
 import type { Platform } from '../app/services'
 import { AppStore } from '../app/store'
+import type { DeviceLock } from '../lock'
 import { saveSendSettings } from '../settings'
 import type { Contact, DeviceContacts } from '../contacts'
 import type { Files, PickedFile } from '../files'
@@ -226,6 +227,28 @@ export class FakeContacts implements DeviceContacts {
   }
 }
 
+/** The screen lock of the device: whether there is one, what the user answers when asked for it, and what was asked. */
+export class FakeDeviceLock implements DeviceLock {
+  hasLock = true
+  /** What the user does when asked: gives the lock (true) or cancels (false). */
+  answer = true
+  asked = 0
+  secure = false
+
+  async available(): Promise<boolean> {
+    return this.hasLock
+  }
+
+  async authenticate(): Promise<boolean> {
+    this.asked++
+    return this.hasLock && this.answer
+  }
+
+  async setSecure(on: boolean): Promise<void> {
+    this.secure = on
+  }
+}
+
 /** The device's files, which keeps what it was asked to do and answers as it is told to. */
 export class FakeFiles implements Files {
   readonly picked: PickedFile[] = []
@@ -424,6 +447,7 @@ export async function appHarness() {
   const server = new FakeMailServer()
   const files = new FakeFiles()
   const deviceContacts = new FakeContacts()
+  const deviceLock = new FakeDeviceLock()
   const smtp = new FakeSmtpServer()
   const notifications = new FakeNotifications()
   const syncSchedule = new FakeSyncSchedule()
@@ -434,6 +458,7 @@ export async function appHarness() {
     makeTransport: () => smtp.transport,
     files,
     deviceContacts,
+    deviceLock,
     notifications,
     syncSchedule,
     push,
@@ -458,7 +483,7 @@ export async function appHarness() {
 
   const folderOf = (folders: Folder[], path: string): Folder => folders.find((f) => f.imapPath === path) as Folder
 
-  return { app, store, db, raw, server, files, deviceContacts, smtp, notifications, syncSchedule, push, logs, reconnectTimers, givenAccount, folderOf }
+  return { app, store, db, raw, server, files, deviceContacts, deviceLock, smtp, notifications, syncSchedule, push, logs, reconnectTimers, givenAccount, folderOf }
 }
 
 /**

@@ -15,6 +15,7 @@ import { SortContext } from './src/ui/sort'
 import { TagsContext } from './src/ui/tags'
 import { useHardwareBack } from './src/ui/useHardwareBack'
 import { LoadingScreen } from './src/ui/LoadingScreen'
+import { LockScreen } from './src/ui/LockScreen'
 import { ScreenView } from './src/ui/ScreenView'
 import { Sidebar } from './src/ui/Sidebar'
 import { StatusLine } from './src/ui/StatusLine'
@@ -52,6 +53,7 @@ export default function App() {
     // A tap on a notification arrives here when the application is running already and comes forward.
     const watching = AppState.addEventListener('change', (next) => {
       if (next === 'active') void started?.comeToFront()
+      else if (next === 'background') started?.lock.wentAway()
     })
     ;(async () => {
       try {
@@ -90,7 +92,7 @@ export default function App() {
         drawerPosition="left"
         drawerBackgroundColor={colors.sunken}
         // The sidebar is for the lists and the places that lead to them, and not for a message that is being read.
-        drawerLockMode={application && showsDrawer(state.screen.name) ? 'unlocked' : 'locked-closed'}
+        drawerLockMode={application && !state.locked && showsDrawer(state.screen.name) ? 'unlocked' : 'locked-closed'}
         onDrawerOpen={() => {
           drawerOpen.current = true
           reloadSidebar()
@@ -100,7 +102,7 @@ export default function App() {
         }}
         renderNavigationView={() => (
           <SafeAreaView style={{ flex: 1, backgroundColor: colors.sunken }}>
-            {application ? (
+            {application && !state.locked ? (
               <Sidebar
                 data={sidebar}
                 location={locationOf(state.screen)}
@@ -117,7 +119,7 @@ export default function App() {
       >
         <DrawerContext.Provider value={drawerControl}>
           <SafeAreaView style={styles.page}>
-            {application && showsQueueStatus(state.screen) ? (
+            {application && !state.locked && showsQueueStatus(state.screen) ? (
               <StatusLine
                 online={isOnline(state)}
                 waiting={state.waiting}
@@ -128,11 +130,17 @@ export default function App() {
             <TagsContext.Provider value={state.tags}>
               <SafetyContext.Provider value={state.safety}>
                 <SortContext.Provider value={sortControl}>
-                  {application ? <ScreenView application={application} screen={state.screen} /> : <LoadingScreen />}
+                  {application && state.locked ? (
+                    <LockScreen onUnlock={() => void application.lock.unlock()} />
+                  ) : application ? (
+                    <ScreenView application={application} screen={state.screen} />
+                  ) : (
+                    <LoadingScreen />
+                  )}
                 </SortContext.Provider>
               </SafetyContext.Provider>
             </TagsContext.Provider>
-            {application && state.undo ? (
+            {application && !state.locked && state.undo ? (
               <UndoBar undo={state.undo} onUndo={() => application.compose.undoSend()} onDone={() => application.compose.clearUndo()} />
             ) : null}
           </SafeAreaView>

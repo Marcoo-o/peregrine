@@ -2,6 +2,7 @@ import { DeviceEventEmitter, NativeModules } from 'react-native'
 import { RnNotifications, RnSyncSchedule } from './background/RnNotifications'
 import { RnPush } from './background/RnPush'
 import { RnContacts } from './RnContacts'
+import { RnDeviceLock } from './RnDeviceLock'
 import { RnFiles } from './RnFiles'
 import { RnPgp } from './RnPgp'
 import { RnTransport } from './RnTransport'
@@ -18,6 +19,11 @@ export function createTransport(): RnTransport {
 /** The files of the device: picking, reading what was picked, saving, handing a file to another application. */
 export function createFiles(): RnFiles {
   return new RnFiles(NativeModules.PeregrineFiles)
+}
+
+/** The screen lock of the device, which locks the application. */
+export function createDeviceLock(): RnDeviceLock {
+  return new RnDeviceLock(NativeModules.PeregrineLock)
 }
 
 /** The address book of the device, to suggest people from. */

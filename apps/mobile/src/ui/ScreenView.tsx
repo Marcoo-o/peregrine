@@ -231,6 +231,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onUndoSeconds={(seconds) => settings.setUndoSeconds(seconds)}
           onSafety={(change) => settings.setSafety(change)}
           onAppearance={(mode) => settings.setAppearance(mode)}
+          onLock={(on) => settings.setLock(on)}
+          onLockDelay={(seconds) => settings.setLockDelay(seconds)}
           onTags={() => void tags.show()}
           onKeys={() => void keys.show()}
           onQuietHours={(on) => settings.setQuietHours(on)}
