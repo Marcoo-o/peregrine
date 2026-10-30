@@ -148,3 +148,42 @@ export async function saveListSettings(db: SqlDb, change: Partial<ListSettings>)
   )
   return next
 }
+
+/** What the user has set about sending. */
+export interface SendSettings {
+  /** How long a message that was sent is held back, in seconds, so that it can be taken back. 0 sends at once. */
+  undoSeconds: number
+}
+
+/** The times to choose from. Longer than half a minute is a wait, not a second thought. */
+export const UNDO_CHOICES = [0, 5, 10, 20, 30] as const
+
+/** Five seconds, as on the desktop: enough to see a mistake in what was just sent, and short enough not to be noticed when there is none. */
+export const DEFAULT_SEND_SETTINGS: SendSettings = { undoSeconds: 5 }
+
+const SEND = 'send'
+
+/** The settings of sending as stored, with what is missing or is not one of the choices taking its default. */
+export async function loadSendSettings(db: SqlDb): Promise<SendSettings> {
+  const row = await db.get<{ value: string }>('SELECT value FROM settings WHERE name = ?', SEND)
+  if (!row) return DEFAULT_SEND_SETTINGS
+  try {
+    const given = (JSON.parse(row.value) as Record<string, unknown> | null)?.undoSeconds
+    const known = (UNDO_CHOICES as readonly number[]).includes(given as number)
+    return { undoSeconds: known ? (given as number) : DEFAULT_SEND_SETTINGS.undoSeconds }
+  } catch {
+    return DEFAULT_SEND_SETTINGS
+  }
+}
+
+/** Changes some of the settings of sending and returns all of them as they are stored now. */
+export async function saveSendSettings(db: SqlDb, change: Partial<SendSettings>): Promise<SendSettings> {
+  const next = { ...(await loadSendSettings(db)), ...change }
+  await db.run(
+    `INSERT INTO settings (name, value) VALUES (?, ?)
+     ON CONFLICT (name) DO UPDATE SET value = excluded.value`,
+    SEND,
+    JSON.stringify(next)
+  )
+  return next
+}

@@ -17,6 +17,19 @@ export interface AppState {
   statusAccountId: string | null
   /** The tags the user has made, which every list shows on its messages. */
   tags: Tag[]
+  /** The message that was sent last and can still be taken back, or null. */
+  undo: UndoState | null
+}
+
+/** A message that waits in the queue for a few seconds, which can be taken back until then. */
+export interface UndoState {
+  /** The action in the queue that carries it. */
+  actionId: number
+  subject: string
+  /** Until when it can be taken back, in epoch milliseconds. */
+  until: number
+  /** It was too late: the message has gone out already. */
+  late?: boolean
 }
 
 type Listener = () => void
@@ -29,7 +42,7 @@ type Listener = () => void
  * changed in place, which is what lets a screen tell that it changed.
  */
 export class AppStore {
-  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null, tags: [] }
+  private current: AppState = { screen: { name: 'loading' }, connected: [], waiting: null, statusAccountId: null, tags: [], undo: null }
   private readonly listeners = new Set<Listener>()
 
   get state(): AppState {
@@ -58,6 +71,10 @@ export class AppStore {
 
   setTags(tags: Tag[]): void {
     this.update({ tags })
+  }
+
+  setUndo(undo: UndoState | null): void {
+    this.update({ undo })
   }
 
   /** Calls the listener after every change, and returns the way to stop. */

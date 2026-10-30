@@ -4,6 +4,7 @@ import type { ComposeState } from '../app/screens'
 import { formatSize } from '../attachmentText'
 import { withContact, type Contact } from '../contacts'
 import { hasRecipient, isChanged, type Draft } from '../draft'
+import { withIdentity } from '../signature'
 import { autosaveText } from './autosaveText'
 import type { Files } from '../files'
 import { Button, Chip, Spinner, SwitchRow } from './controls'
@@ -30,11 +31,13 @@ export function ComposeScreen(props: {
   onDiscard: (draft: Draft) => void
 }) {
   const styles = useStyles()
-  const { account, busy, error } = props.state
+  const { account, busy, error, identities } = props.state
   const form = useComposeForm(props.state.draft, props.files)
   const { draft } = form
   const [discarding, setDiscarding] = useState(false)
   const [typing, setTyping] = useState<'to' | 'cc' | 'bcc' | null>(null)
+  // The identity the message is from: the one it names, or the default of the account when it names none.
+  const sender = identities.find((identity) => identity.id === draft.identityId) ?? identities[0]
   const forTo = useSuggestions(props.suggest, draft.to, typing === 'to')
   const forCc = useSuggestions(props.suggest, draft.cc, typing === 'cc')
   const forBcc = useSuggestions(props.suggest, draft.bcc, typing === 'bcc')
@@ -81,7 +84,19 @@ export function ComposeScreen(props: {
           }
         ]}
       />
-      <Text style={styles.subtitle}>Von {account.emailAddress || account.displayName}</Text>
+      <Text style={styles.subtitle}>Von {sender?.emailAddress || account.emailAddress || account.displayName}</Text>
+      {identities.length > 1 ? (
+        <View style={styles.actions}>
+          {identities.map((identity) => (
+            <Chip
+              key={identity.id}
+              label={identity.displayName === '' || identity.displayName === identity.emailAddress ? identity.emailAddress : identity.displayName}
+              active={sender?.id === identity.id}
+              onPress={() => form.update(withIdentity(draft, sender, identity))}
+            />
+          ))}
+        </View>
+      ) : null}
       {props.state.autosave ? <Text style={styles.hint}>{autosaveText(props.state.autosave)}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FormInput

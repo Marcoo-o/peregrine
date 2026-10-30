@@ -7,8 +7,10 @@ import {
   DEFAULT_QUIET_HOURS,
   loadListSettings,
   loadNotificationSettings,
+  loadSendSettings,
   saveListSettings,
   saveNotificationSettings,
+  saveSendSettings,
   type NotificationSettings
 } from '../settings'
 import type { Navigator } from './Navigator'
@@ -37,6 +39,7 @@ export class SettingsController {
       name: 'settings',
       settings: await loadNotificationSettings(db),
       list: await loadListSettings(db),
+      sending: await loadSendSettings(db),
       accounts: await listAccounts(db),
       contactsPermitted: await this.services.deviceContacts.permitted(),
       permitted: await notifications.permitted(),
@@ -63,6 +66,12 @@ export class SettingsController {
       return
     }
     await saveListSettings(db, { deviceContacts: on })
+    await this.show()
+  }
+
+  /** How long a message that was sent is held back so that it can be taken back, in seconds, 0 for not at all. */
+  async setUndoSeconds(undoSeconds: number): Promise<void> {
+    await saveSendSettings(this.services.db, { undoSeconds })
     await this.show()
   }
 

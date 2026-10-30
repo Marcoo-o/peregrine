@@ -77,7 +77,7 @@ describe('starting a message with what the user wants of every message', () => {
     await t.app.protection.change({ sign: true, encrypt: true })
     await t.app.protection.load()
     t.app.compose.startNew(t.work, returnTo)
-    expect((t.store.screen as ComposeState).draft).toEqual(emptyDraft)
+    expect((t.store.screen as ComposeState).draft).toEqual({ ...emptyDraft, identityId: `${t.work.id}-default` })
   })
 
   it('does not count as a change that has to be kept: leaving it as it started loses nothing', async () => {
@@ -91,7 +91,7 @@ describe('starting a message with what the user wants of every message', () => {
 describe('starting a message', () => {
   it('starts an empty one that goes back to where it was started from', async () => {
     const t = await composing()
-    expect(t.state).toEqual({ name: 'compose', session: expect.any(String), account: t.work, returnTo, draft: emptyDraft, busy: false })
+    expect(t.state).toEqual({ name: 'compose', session: expect.any(String), account: t.work, returnTo, draft: { ...emptyDraft, identityId: `${t.work.id}-default` }, identities: [expect.objectContaining({ id: `${t.work.id}-default` })], busy: false })
   })
 
   it('starts an empty one from the first account where there is no account to start it from', async () => {

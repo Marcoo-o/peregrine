@@ -2,8 +2,10 @@ import { addAccount, removeAccount, updateAccount, type Account } from '../accou
 import { applyPush, forgetPush } from '../background/push'
 import { explainError } from '../errors'
 import { findServers, type FoundServers } from '../discovery'
+import { followAccount } from '../identities'
 import { smtpSettingsOf } from '../send'
 import { connectionsChanged, imapLoginOf, newAccountFrom, patchFromEdit, type AccountForm, type EditFields } from './accountForm'
+import type { Identities } from './Identities'
 import type { Navigator } from './Navigator'
 import type { Services } from './services'
 import type { AppStore } from './store'
@@ -16,7 +18,8 @@ export class AccountSetup {
   constructor(
     private readonly services: Services,
     private readonly store: AppStore,
-    private readonly navigator: Navigator
+    private readonly navigator: Navigator,
+    private readonly identities: Identities
   ) {}
 
   /**
@@ -41,6 +44,7 @@ export class AccountSetup {
         }
       }
       const account = await addAccount(this.services.db, kept)
+      await this.identities.load()
       this.services.connections.adopt(account.id, session)
       await applyPush(this.services)
       await this.navigator.showFolders(account, session)
@@ -88,6 +92,8 @@ export class AccountSetup {
       }
     }
     const saved = (await updateAccount(this.services.db, account.id, patch)) ?? next
+    await followAccount(this.services.db, account, saved)
+    await this.identities.load()
     if (session) this.services.connections.adopt(saved.id, session)
     if (reading || sending) await applyPush(this.services)
     if (session) await this.navigator.showFolders(saved, session)
@@ -99,6 +105,7 @@ export class AccountSetup {
     this.services.connections.drop(account.id)
     await forgetPush(this.services, account.id)
     await removeAccount(this.services.db, account.id)
+    await this.identities.load()
     await this.services.sweepCopies()
     await this.navigator.showAccounts()
   }

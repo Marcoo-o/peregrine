@@ -3,8 +3,9 @@ import type { Account } from '../accounts'
 import type { AttachmentInfo } from '../attachments'
 import type { PushState } from '../background/devices'
 import type { Draft } from '../draft'
-import type { ListSettings, NotificationSettings } from '../settings'
+import type { ListSettings, NotificationSettings, SendSettings } from '../settings'
 import type { Folder } from '../folders'
+import type { Identity } from '../identities'
 import type { ContactKey, OwnKey } from '../pgp/keyStore'
 import type { KeyState, ScannedKey } from '../pgp/pgpService'
 import type { MessageAssessment } from '../reading/assessment'
@@ -128,6 +129,8 @@ export interface SettingsState {
   settings: NotificationSettings
   /** What is set about the lists of messages. */
   list: ListSettings
+  /** What is set about sending. */
+  sending: SendSettings
   /** Whether the system lets the application read the address book, whatever is switched on here. */
   contactsPermitted: boolean
   accounts: Account[]
@@ -154,6 +157,8 @@ export interface ComposeState {
   /** The screen that is shown again when the message has gone into the queue or is given up. */
   returnTo: Screen
   draft: Draft
+  /** The identities of the account, which the sender is chosen from. */
+  identities: Identity[]
   /** The drafts folder this message was opened from, when it was opened from a draft: leaving it shows that folder again. */
   fromDraft?: Folder
   /** Where the server keeps the last revision of this message that was kept: sending or keeping it again replaces it. */
@@ -182,6 +187,16 @@ export interface KeysState {
   found?: ScannedKey[]
   /** What is being done that takes long, said on the screen. */
   working?: string
+  notice?: string
+  error?: string
+}
+
+/** The addresses an account sends under, with the name and signature of each. */
+export interface IdentitiesState {
+  name: 'identities'
+  account: Account
+  identities: Identity[]
+  /** What was done last, in a line. */
   notice?: string
   error?: string
 }
@@ -229,6 +244,7 @@ export type Screen =
   | SettingsState
   | KeysState
   | EditAccountState
+  | IdentitiesState
   | FolderToolsState
   | TagsState
 

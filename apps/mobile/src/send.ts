@@ -8,6 +8,7 @@ import { composeMessage, type Attachment, type ComposeInput as SmtpInput, type C
 import { getAccount, type Account } from './accounts'
 import { MAX_ATTACHMENT_BYTES, type FileAccess } from './files'
 import { getFolderBySpecialUse } from './folders'
+import { getIdentity } from './identities'
 import { contentTypeFor } from './mimeTypes'
 import { composeProtectedMessage } from './pgp/protect'
 
@@ -68,10 +69,15 @@ export function smtpSettingsOf(
 }
 
 /** What the message is made of, from what the account and the input say; the addressing and the content, before they are signed or encrypted. */
-async function smtpInputOf(account: Account, input: ComposeInput, files: FileAccess | undefined): Promise<SmtpInput> {
+async function smtpInputOf(db: SqlDb, account: Account, input: ComposeInput, files: FileAccess | undefined): Promise<SmtpInput> {
+  // The identity the message names, when it is one of this account's: an identity that was taken away since, or one of another account, is the account's own.
+  const found = input.identityId ? await getIdentity(db, input.identityId) : undefined
+  const identity = found && found.accountId === account.id ? found : undefined
+  const name = identity ? identity.displayName : account.displayName
+  const address = identity ? identity.emailAddress : account.emailAddress
   return {
     // A name that is only the address again says nothing, and shows twice in a mail client.
-    from: { name: account.displayName === account.emailAddress ? undefined : account.displayName, address: account.emailAddress },
+    from: { name: name === '' || name === address ? undefined : name, address },
     to: input.to,
     cc: input.cc,
     bcc: input.bcc,
@@ -97,7 +103,7 @@ export async function composeFromInput(
   files: FileAccess | undefined,
   options: ComposeOptions = {}
 ): Promise<ReturnType<typeof composeMessage>> {
-  const message = await smtpInputOf(account, input, files)
+  const message = await smtpInputOf(db, account, input, files)
   const protection = { encrypt: input.encrypt === true, sign: input.sign === true }
   if (!protection.encrypt && !protection.sign) return composeMessage(message, options)
   return composeProtectedMessage(db, account.id, protection, message, options)

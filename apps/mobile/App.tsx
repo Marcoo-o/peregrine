@@ -16,6 +16,7 @@ import { LoadingScreen } from './src/ui/LoadingScreen'
 import { ScreenView } from './src/ui/ScreenView'
 import { Sidebar } from './src/ui/Sidebar'
 import { StatusLine } from './src/ui/StatusLine'
+import { UndoBar } from './src/ui/UndoBar'
 import { useStyles } from './src/ui/useStyles'
 import { useTheme } from './src/ui/useTheme'
 
@@ -120,6 +121,9 @@ export default function App() {
             <TagsContext.Provider value={state.tags}>
               {application ? <ScreenView application={application} screen={state.screen} /> : <LoadingScreen />}
             </TagsContext.Provider>
+            {application && state.undo ? (
+              <UndoBar undo={state.undo} onUndo={() => application.compose.undoSend()} onDone={() => application.compose.clearUndo()} />
+            ) : null}
           </SafeAreaView>
         </DrawerContext.Provider>
       </DrawerLayoutAndroid>

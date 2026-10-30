@@ -26,6 +26,8 @@ export interface Draft {
   encrypt?: boolean
   /** The content is to carry a signature that says who wrote it. */
   sign?: boolean
+  /** Which of the account's identities the message is from: its name and address. Without one, the account's own. */
+  identityId?: string
 }
 
 export const emptyDraft: Draft = { to: '', cc: '', bcc: '', subject: '', body: '', attachments: [] }
@@ -198,7 +200,8 @@ export function toComposeInput(accountId: string, draft: Draft): ComposeInput {
     inReplyTo: draft.inReplyTo,
     references: draft.references,
     encrypt: draft.encrypt === true ? true : undefined,
-    sign: draft.sign === true ? true : undefined
+    sign: draft.sign === true ? true : undefined,
+    identityId: draft.identityId
   }
 }
 
