@@ -7,6 +7,7 @@ import type { Notifications, PushDevice, SyncSchedule } from '../background/devi
 import { Connections } from '../connections'
 import type { DeviceContacts } from '../contacts'
 import type { DeviceLock } from '../lock'
+import type { Printer } from '../printing'
 import { describeError } from '../errors'
 import type { Files } from '../files'
 import { MailActions } from '../mailActions'
@@ -30,6 +31,8 @@ export interface Platform {
   deviceContacts: DeviceContacts
   /** The screen lock of the device, which is the lock of the application. */
   deviceLock: DeviceLock
+  /** The print service of the device, which also makes a PDF. */
+  printer: Printer
   notifications: Notifications
   /** When the platform looks for new mail while the application is closed. */
   syncSchedule: SyncSchedule
@@ -47,6 +50,7 @@ export interface Services {
   files: Files
   deviceContacts: DeviceContacts
   deviceLock: DeviceLock
+  printer: Printer
   notifications: Notifications
   syncSchedule: SyncSchedule
   push: PushDevice
@@ -74,7 +78,7 @@ export interface ServiceListeners {
  * and sends what was written, and the actions the screens ask for, which go through the queue.
  */
 export function createServices(db: SqlDb, platform: Platform, listeners: ServiceListeners): Services {
-  const { log, files, deviceContacts, deviceLock, notifications, syncSchedule, push } = platform
+  const { log, files, deviceContacts, deviceLock, printer, notifications, syncSchedule, push } = platform
   const connections = new Connections(
     (account) => platform.connectImap(imapLoginOf(account)),
     listeners.connectionsChanged
@@ -93,6 +97,7 @@ export function createServices(db: SqlDb, platform: Platform, listeners: Service
     files,
     deviceContacts,
     deviceLock,
+    printer,
     notifications,
     syncSchedule,
     push,

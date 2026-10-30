@@ -1,4 +1,5 @@
 import type { PgpStatus } from '@peregrine/core/types'
+import { printDocumentOf } from '../printing'
 import { decodeUtf8 } from '@peregrine/imap/utf8'
 import { safeFilename } from '@peregrine/core/safeFilename'
 import { parseAddress } from '@peregrine/smtp/headers'
@@ -257,6 +258,17 @@ export class MessageController {
     const account = await getAccount(db, item.accountId)
     const folder = await getFolder(db, item.folderId)
     if (account && folder) await this.open(account, folder, item.message, state.origin)
+  }
+
+  /** Hands the message, as it is read, to the print service, which prints it or saves it as a PDF as the user chooses there. */
+  async print(state: MessageState): Promise<void> {
+    if (!state.message) return
+    try {
+      const { jobName, html } = printDocumentOf(state.message)
+      await this.services.printer.print(jobName, html)
+    } catch (error) {
+      this.showNotice(state, `Drucken ging nicht: ${explainError(error)}`)
+    }
   }
 
   /** The most of a source that is shown: a message with a large attachment is not a text to read, and would hold the screen. */

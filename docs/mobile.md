@@ -1447,7 +1447,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 8. *Saved searches* (done, see "What saved searches, more of the look and the rest of the key search found").
 9. *Formatted text when writing.* Reading HTML is done; writing is plain text and a formatted draft is refused. There is no good rich editor for the platform
    that does not live in a web view. L, and a decision to make before work.
-10. *Tools for a message:* the source and saving it as an `.eml` are done (see "What sorting and the first tools found"); printing and saving as PDF are left (M, the platform has a print service).
+10. *Tools for a message:* the source, saving it as an `.eml`, printing and saving as a PDF are all done (see "What sorting and the first tools found" and "What printing found").
 11. *The safety switches* (done, see "What sorting and the first tools found").
 12. *Locking the application.* (Done: see "What locking the application found".)
 13. *Appearance:* light, dark or the system's, a text size, an accent, the date format and the density are done; what is left of the desktop's is small.
@@ -1808,3 +1808,16 @@ enough to be driven).
 
 Covered by tests: the saved searches (kept, not twice, the limit, taken away, what is stored that is not one), the sidebar and the search screen, every accent against both schemes, the dates, the density, the look that is stored, the
 upload and the mail that confirms it (confirmed already, refused, a token that is missing, unreachable, a second step refused) and the keys screen for both. Not seen on the device (the emulator did not answer fast enough to be driven).
+
+## What printing found
+
+- *"Drucken oder als PDF speichern"* in the menu of a message hands the message to the system's print service (`PeregrinePrintModule`: a web view of its own, `PrintManager`). "Save as PDF" is one of the printers the service offers, so printing and
+  making a PDF are one function and the PDF is named after the subject.
+- *The page* (`printing.ts`) is the lines above the message (subject, from, to, copy, date, the ones the message has) and then the message as it is read: HTML through the reader's own document builder (nothing that runs, the
+  images it carries, under the policy of the reader), and a message that is only text in a block that keeps its lines, escaped.
+- *Nothing is fetched for it.* The page is served under the reader's policy with remote images off, and the web view runs no script, reads no file of the application and has network loads blocked, so printing a message does not tell the sender that it was read.
+  Images from the sender's servers are therefore not on paper, as in the reader before the user asks for them.
+- *Not done:* printing with the remote images the user allowed on the screen, a choice of what goes on the page (the headers in full), and printing several messages or a conversation.
+
+Covered by tests: the name of the job, the page (the lines, a message without one, text escaped, HTML without script and with its inline images, the policy against fetching, the subject), the service through the native module, and the controller (a print, a failure, nothing before the message has arrived). The Kotlin module is compiled by the build.
+Not seen on the device (the emulator did not answer fast enough to be driven).

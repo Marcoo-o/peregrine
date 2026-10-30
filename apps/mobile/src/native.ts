@@ -3,6 +3,7 @@ import { RnNotifications, RnSyncSchedule } from './background/RnNotifications'
 import { RnPush } from './background/RnPush'
 import { RnContacts } from './RnContacts'
 import { RnDeviceLock } from './RnDeviceLock'
+import { RnPrinter } from './RnPrinter'
 import { RnFiles } from './RnFiles'
 import { RnPgp } from './RnPgp'
 import { RnTransport } from './RnTransport'
@@ -19,6 +20,11 @@ export function createTransport(): RnTransport {
 /** The files of the device: picking, reading what was picked, saving, handing a file to another application. */
 export function createFiles(): RnFiles {
   return new RnFiles(NativeModules.PeregrineFiles)
+}
+
+/** The print service of the device, which also makes a PDF. */
+export function createPrinter(): RnPrinter {
+  return new RnPrinter(NativeModules.PeregrinePrint)
 }
 
 /** The screen lock of the device, which locks the application. */
