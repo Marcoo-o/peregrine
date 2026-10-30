@@ -7,7 +7,7 @@ import { FolderController } from './FolderController'
 import { LockController } from './LockController'
 import { SenderController } from './SenderController'
 import { loadSort } from '../listSort'
-import { appearance, loadAppearance } from '../appearance'
+import { appearance, fontScale, loadAppearance, loadFontScale } from '../appearance'
 import { loadSafety } from '../safety'
 import { loadConversations } from '../threads'
 import { Identities } from './Identities'
@@ -80,6 +80,7 @@ export class Application {
     this.store.setSafety(await loadSafety(this.services.db))
     this.store.setConversations(await loadConversations(this.services.db))
     appearance.set(await loadAppearance(this.services.db))
+    fontScale.set(await loadFontScale(this.services.db))
     await this.navigator.start()
     await this.openLaunchTarget()
     await this.openIncoming()

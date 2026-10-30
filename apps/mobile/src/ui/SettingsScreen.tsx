@@ -3,7 +3,7 @@ import { Text, View } from 'react-native'
 import type { SettingsState } from '../app/screens'
 import { delayLabel, LOCK_DELAYS } from '../lock'
 import { hasQuietHours, INTERVAL_CHOICES, UNDO_CHOICES } from '../settings'
-import { APPEARANCE_CHOICES, appearance, type AppearanceMode } from '../appearance'
+import { APPEARANCE_CHOICES, appearance, FONT_SCALES, fontScale, type AppearanceMode, type FontScale } from '../appearance'
 import type { SafetySettings } from '../safety'
 import { useSafety } from './safety'
 import { useSort } from './sort'
@@ -45,6 +45,7 @@ export function SettingsScreen(props: {
   onUndoSeconds: (seconds: number) => void
   onSafety: (change: Partial<SafetySettings>) => void
   onAppearance: (mode: AppearanceMode) => void
+  onFontScale: (scale: FontScale) => void
   onLock: (on: boolean) => void
   onConversations: (on: boolean) => void
   onLockDelay: (seconds: number) => void
@@ -96,6 +97,14 @@ export function SettingsScreen(props: {
           <Chip key={choice.mode} label={choice.label} active={appearance.mode === choice.mode} onPress={() => props.onAppearance(choice.mode)} />
         ))}
       </View>
+
+      <Text style={styles.section}>Schriftgröße</Text>
+      <View style={styles.actions}>
+        {FONT_SCALES.map((choice) => (
+          <Chip key={choice.scale} label={choice.label} active={fontScale.scale === choice.scale} onPress={() => props.onFontScale(choice.scale)} />
+        ))}
+      </View>
+      <Text style={styles.hint}>Kommt zu der Schriftgröße hinzu, die das Telefon in seinen Einstellungen hat.</Text>
 
       <Text style={styles.section}>Listen</Text>
       <View style={styles.group}>

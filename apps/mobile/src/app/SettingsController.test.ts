@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appearance } from '../appearance'
+import { appearance, fontScale } from '../appearance'
 import { loadNotificationSettings } from '../settings'
 import { appHarness } from '../testing/appHarness'
 import type { SettingsState } from './screens'
@@ -136,6 +136,16 @@ describe('the settings screen', () => {
     t.store.setConversations(true)
     await t.app.start()
     expect(t.store.state.conversations).toBe(false)
+  })
+
+  it('has the texts larger or smaller at once, and keeps the choice over a start', async () => {
+    const t = await onSettings()
+    await t.app.settings.setFontScale('xlarge')
+    expect(fontScale.scale).toBe('xlarge')
+    fontScale.set('normal')
+    await t.app.start()
+    expect(fontScale.scale).toBe('xlarge')
+    fontScale.set('normal')
   })
 
   describe('the address book of the device', () => {
