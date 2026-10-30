@@ -80,6 +80,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSearch={(query) => navigator.showSearch(query, 'typing')}
           onOpen={(message) => messages.openFromSearch(message, screen.query)}
           onBack={() => navigator.showAccounts()}
+          onSave={() => navigator.saveCurrentSearch()}
+          onRemove={() => navigator.removeCurrentSearch()}
         />
       )
     case 'folders':
@@ -143,6 +145,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onJunk={() => messages.markAsJunk(screen)}
           onSource={() => messages.showSource(screen)}
           onSaveSource={() => messages.saveSource(screen)}
+          onFindKey={(address) => keys.findFor(address)}
           onDelete={() => messages.delete(screen)}
           onSave={(attachment) => messages.saveAttachment(screen, attachment)}
           onOpenAttachment={(attachment) => messages.openAttachment(screen, attachment)}
@@ -235,6 +238,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onRemoveOwn={(accountId, fingerprint) => void keys.removeOwn(accountId, fingerprint)}
           onRemoveContact={(fingerprint) => void keys.removeContact(fingerprint)}
           onExport={(accountId, fingerprint) => void keys.exportPublic(accountId, fingerprint)}
+          onPublish={(accountId, fingerprint) => void keys.publish(accountId, fingerprint)}
           onDefault={(which, on) => void keys.setDefault(which, on)}
         />
       )
@@ -251,6 +255,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSafety={(change) => settings.setSafety(change)}
           onAppearance={(mode) => settings.setAppearance(mode)}
           onFontScale={(scale) => settings.setFontScale(scale)}
+          onLook={(change) => settings.setLook(change)}
           onLock={(on) => settings.setLock(on)}
           onConversations={(on) => settings.setConversations(on)}
           onLockDelay={(seconds) => settings.setLockDelay(seconds)}

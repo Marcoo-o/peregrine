@@ -118,6 +118,8 @@ export function KeysScreen(props: {
   onRemoveOwn: (accountId: string, fingerprint: string) => void
   onRemoveContact: (fingerprint: string) => void
   onExport: (accountId: string, fingerprint: string) => void
+  /** Publishes the public key on the keyserver. */
+  onPublish: (accountId: string, fingerprint: string) => void
   onDefault: (which: 'sign' | 'encrypt', on: boolean) => void
 }) {
   const styles = useStyles()
@@ -125,6 +127,7 @@ export function KeysScreen(props: {
   const [pasted, setPasted] = useState('')
   const [searched, setSearched] = useState('')
   const [removing, setRemoving] = useState<{ title: string; text: string; remove: () => void } | null>(null)
+  const [publishing, setPublishing] = useState<{ accountId: string; fingerprint: string; address: string } | null>(null)
   const idle = working === undefined
 
   const askToRemoveOwn = (account: KeysState['accounts'][number], key: OwnKey) =>
@@ -191,6 +194,7 @@ export function KeysScreen(props: {
               <Fingerprint value={key.fingerprint} />
               <View style={{ height: 12 }} />
               <Button label="Öffentlichen Teil speichern" variant="secondary" disabled={!idle} onPress={() => props.onExport(account.id, key.fingerprint)} />
+              <Button label="Auf keys.openpgp.org veröffentlichen" variant="secondary" disabled={!idle || !account.emailAddress} onPress={() => setPublishing({ accountId: account.id, fingerprint: key.fingerprint, address: account.emailAddress })} />
               <Button label="Entfernen" variant="danger" disabled={!idle} onPress={() => askToRemoveOwn(account, key)} />
             </View>
           ))}
@@ -280,6 +284,22 @@ export function KeysScreen(props: {
         </>
       ) : null}
 
+      <ConfirmDialog
+        visible={publishing !== null}
+        title="Schlüssel veröffentlichen?"
+        text={`Der öffentliche Schlüssel und die Adresse ${publishing?.address ?? ''} werden auf keys.openpgp.org abgelegt. Das lässt sich nicht zurücknehmen: die Adresse kann dort versteckt werden, der Schlüssel bleibt. Gefunden wird er erst, wenn du den Link in der Mail bestätigst, die der Server dir schickt.`}
+        answers={[
+          { label: 'Abbrechen', onPress: () => setPublishing(null) },
+          {
+            label: 'Veröffentlichen',
+            variant: 'secondary',
+            onPress: () => {
+              if (publishing) props.onPublish(publishing.accountId, publishing.fingerprint)
+              setPublishing(null)
+            }
+          }
+        ]}
+      />
       <ConfirmDialog
         visible={removing !== null}
         title={removing?.title ?? ''}

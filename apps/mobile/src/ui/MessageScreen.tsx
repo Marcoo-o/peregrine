@@ -7,6 +7,7 @@ import { FLAGGED } from '../flags'
 import { assessPage, linksInText, type PageFacts } from '../reading/assessment'
 import { hintsFor } from '../reading/hints'
 import { tagCoverage, type Tag } from '../tags'
+import { parseAddress } from '@peregrine/smtp/headers'
 import { roleOf } from '../unified'
 import { decideLink } from '../reading/linkGuard'
 import { ActionSheet } from './ActionSheet'
@@ -48,6 +49,8 @@ export function MessageScreen(props: {
   onArchive: () => void
   onJunk: () => void
   onSource: () => void
+  /** Looks for the public key of the sender, on the keyserver and in the directory of the sender's domain. */
+  onFindKey: (address: string) => void
   onSaveSource: () => void
   onDelete: () => void
   onSave: (attachment: AttachmentInfo) => void
@@ -58,6 +61,7 @@ export function MessageScreen(props: {
   const { account, summary, message, attachments, assessment, notice, error } = props.state
   const known = props.state.knownDomains ?? []
   const safety = useSafety()
+  const senderAddress = message ? parseAddress(message.from).address : ''
   const flagged = summary.flags.includes(FLAGGED)
 
   const [showImages, setShowImages] = useState(false)
@@ -142,6 +146,7 @@ export function MessageScreen(props: {
             : { label: 'Später erinnern …', onPress: () => setSnoozing(true) },
           { label: 'Verschieben …', onPress: props.onMove },
           { label: 'Als Spam markieren', onPress: props.onJunk },
+          ...(senderAddress ? [{ label: 'Schlüssel des Absenders suchen', onPress: () => props.onFindKey(senderAddress) }] : []),
           ...(props.state.raw
             ? [
                 { label: 'Quelltext anzeigen', onPress: props.onSource },

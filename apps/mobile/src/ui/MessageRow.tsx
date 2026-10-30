@@ -6,7 +6,7 @@ import { TagChips } from './TagChips'
 import { Icon } from './Icon'
 import { shortDate } from './shortDate'
 import { useStyles } from './useStyles'
-import { useTheme } from './useTheme'
+import { useLook, useTheme } from './useTheme'
 
 /**
  * One message in a list, as the desktop shows one: who it is from and when, its subject, both bold while it
@@ -37,6 +37,7 @@ export function MessageRow(props: {
 }) {
   const styles = useStyles()
   const { colors } = useTheme()
+  const { dateFormat } = useLook()
   const { message } = props
   const unread = !message.flags.includes(SEEN) || props.conversationUnread === true
   const starred = message.flags.includes(FLAGGED)
@@ -60,7 +61,7 @@ export function MessageRow(props: {
             {senderName(props.sender)}
           </Text>
           {props.count && props.count > 1 ? <Text style={styles.threadCount}>{props.count}</Text> : null}
-          {message.dateMs ? <Text style={styles.date}>{shortDate(message.dateMs, new Date())}</Text> : null}
+          {message.dateMs ? <Text style={styles.date}>{shortDate(message.dateMs, new Date(), dateFormat)}</Text> : null}
         </View>
         <View style={styles.markRow}>
           {starred ? <Icon name="star" size={14} color={colors.warning} fill={colors.warning} /> : null}

@@ -302,3 +302,78 @@ describe('looking for the key of an address', () => {
     expect(t.shown().error).toMatch(/Die Suche ging schief/)
   })
 })
+
+describe('looking for the key of the sender of a message', () => {
+  it('shows the keys screen and what is found, to be placed like any key', async () => {
+    const t = await keys()
+    t.app.keys.lookup = async () => ({ source: 'WKD', keys: await scanKeys(sam.publicKey) })
+    await t.app.keys.findFor('sam@example.net')
+    expect(t.store.screen).toMatchObject({ name: 'keys' })
+    expect(t.shown().found).toHaveLength(1)
+    expect(t.shown().found?.[0].fingerprint).toBe(sam.fingerprint)
+  })
+
+  it('says that none is published for the address, on the keys screen', async () => {
+    const t = await keys()
+    t.app.keys.lookup = async () => {
+      throw new KeyLookupError('notFound')
+    }
+    await t.app.keys.findFor('sam@example.net')
+    expect(t.shown().error).toContain('kein Schlüssel veröffentlicht')
+  })
+})
+
+describe('publishing the key of an account', () => {
+  async function withKey() {
+    const t = await keys()
+    await t.app.keys.generate(t.work.id)
+    const [own] = await listOwnKeys(t.db, t.work.id)
+    return { ...t, own }
+  }
+
+  it('uploads the public key, asks for the mail that confirms the address, and says that the key is found only once the link is followed', async () => {
+    const t = await withKey()
+    const sent: string[] = []
+    t.app.keys.poster = async (url, init) => {
+      sent.push(`${url.split('/').pop()} ${init.body.includes(t.work.emailAddress) ? 'with the address' : init.body.slice(0, 20)}`)
+      return url.endsWith('/upload')
+        ? { ok: true, status: 200, json: async () => ({ key_fpr: 'F', token: 'tok', status: { [t.work.emailAddress]: 'unpublished' } }) }
+        : { ok: true, status: 200, json: async () => ({}) }
+    }
+    await t.app.keys.publish(t.work.id, t.own.fingerprint)
+    expect(sent).toHaveLength(2)
+    expect(t.shown().notice).toContain('hochgeladen')
+    expect(t.shown().notice).toContain(t.work.emailAddress)
+  })
+
+  it('says that the address is confirmed when it was', async () => {
+    const t = await withKey()
+    t.app.keys.poster = async () => ({ ok: true, status: 200, json: async () => ({ key_fpr: 'F', token: 'tok', status: { [t.work.emailAddress]: 'published' } }) })
+    await t.app.keys.publish(t.work.id, t.own.fingerprint)
+    expect(t.shown().notice).toContain('bestätigt')
+  })
+
+  it('says why when the server refuses, and when it cannot be reached', async () => {
+    const t = await withKey()
+    t.app.keys.poster = async () => ({ ok: false, status: 400, json: async () => ({ error: 'Malformed key' }) })
+    await t.app.keys.publish(t.work.id, t.own.fingerprint)
+    expect(t.shown().error).toContain('Malformed key')
+    t.app.keys.poster = async () => {
+      throw new Error('down')
+    }
+    await t.app.keys.publish(t.work.id, t.own.fingerprint)
+    expect(t.shown().error).toContain('nicht erreichen')
+  })
+
+  it('does nothing for a key the account does not have', async () => {
+    const t = await keys()
+    let asked = false
+    t.app.keys.poster = async () => {
+      asked = true
+      return { ok: true, status: 200, json: async () => ({}) }
+    }
+    await t.app.keys.publish(t.work.id, 'NOPE')
+    expect(asked).toBe(false)
+  })
+})
+
