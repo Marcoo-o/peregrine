@@ -111,6 +111,37 @@ export async function addAccount(
   return { ...input, id, createdAt, color }
 }
 
+/** What of an account the user can change: everything but what it is called by (its id), when it was made, and the colour it was given... which they can change too. */
+export type AccountPatch = Partial<Omit<Account, 'id' | 'createdAt'>>
+
+const COLUMN_OF: Record<keyof AccountPatch, string> = {
+  displayName: 'display_name',
+  emailAddress: 'email_address',
+  imapHost: 'imap_host',
+  imapPort: 'imap_port',
+  imapSecure: 'imap_secure',
+  imapUsername: 'imap_username',
+  smtpHost: 'smtp_host',
+  smtpPort: 'smtp_port',
+  smtpSecure: 'smtp_secure',
+  smtpUsername: 'smtp_username',
+  password: 'password',
+  smtpPassword: 'smtp_password',
+  color: 'color'
+}
+
+/**
+ * Changes some of what an account is and returns it as it is stored now, or undefined for an account that is not there. What is not in the patch
+ * is left as it is; a value that is `null` in it is stored as nothing, which is how an account loses its server for sending.
+ */
+export async function updateAccount(db: SqlDb, id: string, patch: AccountPatch): Promise<Account | undefined> {
+  const keys = (Object.keys(patch) as Array<keyof AccountPatch>).filter((key) => patch[key] !== undefined)
+  if (keys.length > 0) {
+    await db.run(`UPDATE accounts SET ${keys.map((key) => `${COLUMN_OF[key]} = ?`).join(', ')} WHERE id = ?`, ...keys.map((key) => patch[key]), id)
+  }
+  return getAccount(db, id)
+}
+
 /**
  * Removes an account and everything of it: its folders, its messages, its own keys, and what waits in the queue
  * for it. In one transaction, so that a failure part way does not leave an account that is gone and

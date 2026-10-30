@@ -24,6 +24,8 @@ export function backAction(
       return () => void messages.cancelMove(screen)
     case 'settings':
       return () => void settings.back()
+    case 'editAccount':
+      return () => void navigator.showStoredFolders(screen.account)
     case 'tags':
     case 'keys':
       return () => void settings.show()

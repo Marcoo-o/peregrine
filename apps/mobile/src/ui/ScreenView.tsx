@@ -3,6 +3,7 @@ import type { Application } from '../app/Application'
 import type { Screen } from '../app/screens'
 import { AccountsScreen } from './AccountsScreen'
 import { ComposeScreen } from './ComposeScreen'
+import { EditAccountScreen } from './EditAccountScreen'
 import { FoldersScreen } from './FoldersScreen'
 import { LoadingScreen } from './LoadingScreen'
 import { LoginScreen } from './LoginScreen'
@@ -39,6 +40,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           error={screen.error}
           previous={accounts.lastAttempt}
           onSubmit={(form) => accounts.signIn(form)}
+          onFind={(email) => accounts.find(email)}
           onCancel={() => navigator.leaveLogin()}
         />
       )
@@ -75,6 +77,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSearch={() => navigator.showSearch('')}
           onSettings={() => settings.show()}
           onRemove={() => accounts.remove(screen.account)}
+          onEdit={() => accounts.startEdit(screen.account)}
           onConnect={() => navigator.openAccount(screen.account)}
           onCompose={() => compose.startNew(screen.account, screen)}
         />
@@ -149,6 +152,15 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onMove={(tag, by) => void tags.move(tag.id, by)}
           onSave={(tag, name, color) => void (tag ? tags.update(tag.id, name, color) : tags.create(name, color))}
           onDelete={(tag) => void tags.remove(tag.id)}
+        />
+      )
+    case 'editAccount':
+      return (
+        <EditAccountScreen
+          key={screen.account.id}
+          state={screen}
+          onSave={(fields) => accounts.save(screen.account, fields)}
+          onBack={() => navigator.showStoredFolders(screen.account)}
         />
       )
     case 'keys':

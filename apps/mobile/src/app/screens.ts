@@ -184,6 +184,15 @@ export interface KeysState {
   error?: string
 }
 
+/** Changing an account: its name and colour, its servers and its logins. */
+export interface EditAccountState {
+  name: 'editAccount'
+  account: Account
+  /** What is being tried against the servers before it is kept. */
+  busy?: boolean
+  error?: string
+}
+
 /** The tags of the user, which are shown from the store, and how many messages have each, by keyword in lower case. */
 export interface TagsState {
   name: 'tags'
@@ -203,6 +212,7 @@ export type Screen =
   | ComposeState
   | SettingsState
   | KeysState
+  | EditAccountState
   | TagsState
 
 /** The screens that are about the mail of the accounts and so show what waits in the queue. */

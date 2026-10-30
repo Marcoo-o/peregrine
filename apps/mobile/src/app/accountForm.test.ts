@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { account } from '../testing/appHarness'
 import {
+  connectionsChanged,
+  editFieldsOf,
   imapLoginOf,
+  isEditSubmittable,
+  looksLikeAddress,
+  patchFromEdit,
+  withFound,
   initialFields,
   isSubmittable,
   newAccountFrom,
@@ -130,5 +136,62 @@ describe('the login of an account', () => {
   it('is what it takes to connect to its mailbox', () => {
     const stored = { ...account('work'), id: 'x', createdAt: 0, color: '#2f5d9f' }
     expect(imapLoginOf(stored)).toEqual({ host: 'imap.example.org', port: 993, secure: 'tls', username: 'work', password: 'secret' })
+  })
+})
+
+describe('the form for changing an account', () => {
+  const stored = {
+    ...account('work', { smtpHost: 'smtp.example.org', smtpPort: 587, smtpSecure: 'starttls', smtpUsername: 'sender', smtpPassword: 'send secret' }),
+    id: 'a1',
+    color: '#2f5d9f',
+    createdAt: 1
+  }
+
+  it('is the account as it is, with the passwords empty and the colour it has', () => {
+    expect(editFieldsOf(stored)).toMatchObject({ password: '', smtpPassword: '', smtpUsername: 'sender', color: stored.color, host: stored.imapHost })
+  })
+
+  it('leaves a password as it is when the field is empty, and takes a new one when it is not', () => {
+    expect(patchFromEdit(stored, editFieldsOf(stored))).toMatchObject({ smtpPassword: 'send secret' })
+    expect(patchFromEdit(stored, editFieldsOf(stored))).not.toHaveProperty('password')
+    expect(patchFromEdit(stored, { ...editFieldsOf(stored), password: 'new', smtpPassword: 'new send' })).toMatchObject({ password: 'new', smtpPassword: 'new send' })
+  })
+
+  it('makes an account that only reads of one whose server for sending is emptied', () => {
+    expect(patchFromEdit(stored, { ...editFieldsOf(stored), smtpHost: ' ' })).toMatchObject({ smtpHost: null, smtpPort: null, smtpSecure: null, smtpUsername: null, smtpPassword: null })
+  })
+
+  it('tries only what changed', () => {
+    const same = { ...stored }
+    expect(connectionsChanged(stored, same)).toEqual({ reading: false, sending: false })
+    expect(connectionsChanged(stored, { ...same, displayName: 'x', color: '#000000' })).toEqual({ reading: false, sending: false })
+    expect(connectionsChanged(stored, { ...same, imapHost: 'other.example.org' })).toEqual({ reading: true, sending: false })
+    expect(connectionsChanged(stored, { ...same, smtpPort: 465 })).toEqual({ reading: false, sending: true })
+    expect(connectionsChanged(stored, { ...same, smtpHost: null, smtpPort: null, smtpSecure: null })).toEqual({ reading: false, sending: false })
+  })
+
+  it('can be submitted with a server and a login for reading, and a port when there is a server for sending', () => {
+    const fields = editFieldsOf(stored)
+    expect(isEditSubmittable(fields)).toBe(true)
+    expect(isEditSubmittable({ ...fields, host: '' })).toBe(false)
+    expect(isEditSubmittable({ ...fields, smtpPort: '' })).toBe(false)
+    expect(isEditSubmittable({ ...fields, smtpHost: '', smtpPort: '' })).toBe(true)
+  })
+})
+
+describe('the form with what was found', () => {
+  it('takes the servers, the ports, the kinds of connection and the login', () => {
+    const fields = withFound(initialFields(), {
+      source: 'provider',
+      imap: { host: 'imap.example.net', port: 143, secure: 'starttls', username: 'sam' },
+      smtp: { host: 'smtp.example.net', port: 465, secure: 'tls' },
+      oauth2: false
+    })
+    expect(fields).toMatchObject({ host: 'imap.example.net', port: '143', secure: 'starttls', username: 'sam', smtpHost: 'smtp.example.net', smtpPort: '465', smtpSecure: 'tls' })
+  })
+
+  it('is asked for an address that looks like one', () => {
+    expect(looksLikeAddress(' sam@example.net ')).toBe(true)
+    for (const bad of ['', 'sam', 'sam@', 'sam@example', '@example.net', 'sa m@example.net']) expect(looksLikeAddress(bad)).toBe(false)
   })
 })

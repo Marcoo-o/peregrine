@@ -19,6 +19,7 @@ export function FoldersScreen(props: {
   onSearch: () => void
   onSettings: () => void
   onRemove: () => void
+  onEdit: () => void
   onConnect: () => void
   onCompose: () => void
 }) {
@@ -75,10 +76,16 @@ export function FoldersScreen(props: {
         }}
         // What cannot be taken back is at the end of the list, away from what is opened and written every day.
         ListFooterComponent={
+          <>
+            <Pressable accessibilityRole="button" style={styles.removeRow} onPress={props.onEdit}>
+              <Icon name="settings" size={18} color={colors.accent} />
+              <Text style={styles.editText}>Konto bearbeiten</Text>
+            </Pressable>
           <Pressable accessibilityRole="button" style={styles.removeRow} onPress={() => setConfirmingRemove(true)}>
             <Icon name="trash" size={18} color={colors.danger} />
             <Text style={styles.removeText}>Konto entfernen</Text>
           </Pressable>
+          </>
         }
       />
       <Fab label="Neue Nachricht" onPress={props.onCompose} />
