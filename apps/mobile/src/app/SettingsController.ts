@@ -16,6 +16,7 @@ import {
 import { saveSort, type ListSort } from '../listSort'
 import { loadLock } from '../lock'
 import { appearance, saveAppearance, type AppearanceMode } from '../appearance'
+import { saveConversations } from '../threads'
 import { saveSafety, type SafetySettings } from '../safety'
 import type { LockController } from './LockController'
 import type { Navigator } from './Navigator'
@@ -97,6 +98,11 @@ export class SettingsController {
   async setAppearance(mode: AppearanceMode): Promise<void> {
     appearance.set(await saveAppearance(this.services.db, mode))
     await this.show()
+  }
+
+  /** Groups replies into conversations in the lists, or lists every message by itself: kept, and every list shown follows at once. */
+  async setConversations(on: boolean): Promise<void> {
+    this.store.setConversations(await saveConversations(this.services.db, on))
   }
 
   /** Switches the checks of links and attachments on or off: kept, and in force for the next link that is tapped. */

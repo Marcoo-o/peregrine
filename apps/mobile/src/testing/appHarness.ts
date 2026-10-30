@@ -23,6 +23,9 @@ export interface FakeMessage {
   subject?: string
   date?: Date
   flags?: string[]
+  /** Its Message-ID and the one it answers, for a conversation. */
+  messageId?: string
+  inReplyTo?: string
   /** The whole message as text. Without it the message can be listed and not fetched. */
   source?: string
 }
@@ -193,6 +196,8 @@ function toFetched(message: FakeMessage): FetchedMessage {
     hasAttachment: false,
     envelope: {
       subject: message.subject ?? `s${message.uid}`,
+      messageId: message.messageId,
+      inReplyTo: message.inReplyTo,
       date: message.date,
       from: [{ address: 'sender@example.net' }]
     }

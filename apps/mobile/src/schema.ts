@@ -173,7 +173,10 @@ const MIGRATIONS: string[][] = [
     'CREATE INDEX idx_identities_account ON identities(account_id, sort_order)',
     `INSERT INTO identities (id, account_id, display_name, email_address, signature, is_default, sort_order)
      SELECT id || '-default', id, display_name, email_address, '', 1, 0 FROM accounts`
-  ]
+  ],
+  // 13. The Message-ID of a message and the one it answers, which is what a conversation is made of. Null for the messages that were stored before this: they
+  // are grouped by their subject until a sync fetches them again.
+  ['ALTER TABLE messages ADD COLUMN message_id TEXT', 'ALTER TABLE messages ADD COLUMN in_reply_to TEXT']
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */

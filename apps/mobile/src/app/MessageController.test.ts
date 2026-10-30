@@ -528,3 +528,30 @@ describe('the checks that can be switched off', () => {
     expect(t.files.opened).toEqual([])
   })
 })
+
+describe('a conversation', () => {
+  it('is shown with its messages, and the screen it came from is shown again when it is left', async () => {
+    const t = await connectedInbox()
+    const back = t.store.screen
+    t.app.messages.showThread({ subject: 'Contract', origin: 'folder', returnTo: back, items: [{ message: t.summary, accountId: t.work.id, folderId: t.folder.id }] })
+    expect(t.store.screen).toMatchObject({ name: 'thread', subject: 'Contract', origin: 'folder' })
+    t.app.messages.closeThread(t.store.screen as never)
+    expect(t.store.screen).toBe(back)
+  })
+
+  it('opens a message of it as it is opened from the list it was in', async () => {
+    const t = await connectedInbox()
+    t.app.messages.showThread({ subject: 'Contract', origin: 'unified', returnTo: t.store.screen, items: [{ message: t.summary, accountId: t.work.id, folderId: t.folder.id }] })
+    const thread = t.store.screen as Extract<typeof t.store.screen, { name: 'thread' }>
+    await t.app.messages.openFromThread(thread, thread.items[0])
+    expect(t.store.screen).toMatchObject({ name: 'message', origin: 'unified', summary: { uid: 1 } })
+  })
+
+  it('opens nothing for a message whose account or folder is gone', async () => {
+    const t = await connectedInbox()
+    t.app.messages.showThread({ subject: 'x', origin: 'folder', returnTo: t.store.screen, items: [{ message: t.summary, accountId: 'gone', folderId: 'gone' }] })
+    const thread = t.store.screen as Extract<typeof t.store.screen, { name: 'thread' }>
+    await t.app.messages.openFromThread(thread, thread.items[0])
+    expect(t.store.screen.name).toBe('thread')
+  })
+})

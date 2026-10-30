@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { FlatList, Text, View } from 'react-native'
 import type { UnifiedState } from '../app/screens'
 import { filterMessages, NO_FILTER } from '../listFilter'
-import { sortMessages } from '../listSort'
+import { conversationRows } from '../threads'
 import type { Tag } from '../tags'
 import type { UnifiedMessage } from '../unified'
 import { Fab } from './controls'
@@ -29,14 +29,18 @@ export function UnifiedScreen(props: {
   onCompose: () => void
   onCreateTag: (name: string, color: string) => Promise<Tag | undefined>
   onOpen: (message: UnifiedMessage) => void
+  /** Shows the messages of a conversation of the list. */
+  onThread: (messages: UnifiedMessage[]) => void
   /** Shows older messages, loading them where the phone has no more. */
   onOlder: () => void
 }) {
   const styles = useStyles()
   const { role, messages, busy, problems, more, loadingMore } = props.state
   const [filter, setFilter] = useState(NO_FILTER)
-  const { sort } = useSort()
-  const shown = useMemo(() => sortMessages(filterMessages(messages, filter), sort), [messages, filter, sort])
+  const { sort, conversations } = useSort()
+  const listed = useMemo(() => conversationRows(messages, filter, sort, conversations), [messages, filter, sort, conversations])
+  const conversationOf = useMemo(() => new Map(listed.map((row) => [`${row.message.folderId}:${row.message.uid}`, row])), [listed])
+  const shown = useMemo(() => listed.map((row) => row.message), [listed])
   const selection = useSelection(shown, props.actions)
 
   return (
@@ -94,7 +98,14 @@ export function UnifiedScreen(props: {
             }
               choosing={selection.selecting}
               chosen={selection.isChosen(item)}
-              onPress={() => (selection.selecting ? selection.toggle(item) : props.onOpen(item))}
+              count={conversationOf.get(`${item.folderId}:${item.uid}`)?.count}
+              conversationUnread={conversationOf.get(`${item.folderId}:${item.uid}`)?.unread}
+              onPress={() => {
+                const conversation = conversationOf.get(`${item.folderId}:${item.uid}`)
+                if (selection.selecting) selection.toggle(item)
+                else if (conversation && conversation.count > 1) props.onThread(conversation.messages)
+                else props.onOpen(item)
+              }}
               onLongPress={() => selection.toggle(item)}
             />
           </SwipeableRow>

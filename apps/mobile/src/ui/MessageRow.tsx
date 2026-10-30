@@ -21,6 +21,9 @@ export function MessageRow(props: {
   showPreview?: boolean
   /** The account it is in, said under the subject when the list holds the mail of several. */
   account?: string
+  /** How many messages the conversation this is the newest of has, when it has more than one, and whether any of them is not read. */
+  count?: number
+  conversationUnread?: boolean
   /** The colour of that account, as a stripe at the edge of the row. */
   accountColor?: string
   /** What is said about a move that waits for a connection, or nothing. */
@@ -35,7 +38,7 @@ export function MessageRow(props: {
   const styles = useStyles()
   const { colors } = useTheme()
   const { message } = props
-  const unread = !message.flags.includes(SEEN)
+  const unread = !message.flags.includes(SEEN) || props.conversationUnread === true
   const starred = message.flags.includes(FLAGGED)
   return (
     <Pressable
@@ -56,6 +59,7 @@ export function MessageRow(props: {
           <Text style={[styles.sender, unread && styles.unread]} numberOfLines={1}>
             {senderName(props.sender)}
           </Text>
+          {props.count && props.count > 1 ? <Text style={styles.threadCount}>{props.count}</Text> : null}
           {message.dateMs ? <Text style={styles.date}>{shortDate(message.dateMs, new Date())}</Text> : null}
         </View>
         <View style={styles.markRow}>

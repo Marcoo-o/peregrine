@@ -39,8 +39,8 @@ export default function App() {
   const drawer = useRef<InstanceType<typeof DrawerLayoutAndroid>>(null)
   const [sidebar, setSidebar] = useState<SidebarData | null>(null)
   const sortControl = useMemo(
-    () => ({ sort: state.sort, setSort: (sort: typeof state.sort) => void application?.settings.setSort(sort) }),
-    [state.sort, application]
+    () => ({ sort: state.sort, setSort: (sort: typeof state.sort) => void application?.settings.setSort(sort), conversations: state.conversations }),
+    [state.sort, state.conversations, application]
   )
   const drawerControl = useMemo(() => ({ open: () => drawer.current?.openDrawer() }), [])
   const drawerOpen = useRef(false)

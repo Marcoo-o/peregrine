@@ -5,8 +5,10 @@ import { DEFAULT_SORT, type ListSort } from '../listSort'
 export interface SortControl {
   sort: ListSort
   setSort: (sort: ListSort) => void
+  /** Whether replies are grouped into conversations, which the lists are drawn by as well as ordered. */
+  conversations: boolean
 }
 
-export const SortContext = createContext<SortControl>({ sort: DEFAULT_SORT, setSort: () => undefined })
+export const SortContext = createContext<SortControl>({ sort: DEFAULT_SORT, setSort: () => undefined, conversations: true })
 
 export const useSort = (): SortControl => useContext(SortContext)
