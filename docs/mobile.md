@@ -1445,8 +1445,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 6. *Sending at a later time.* (Done: see "What sending later found".)
 7. *Sorting* and *conversations* (both done, see "What sorting and the first tools found" and "What conversations found").
 8. *Saved searches* (done, see "What saved searches, more of the look and the rest of the key search found").
-9. *Formatted text when writing.* Reading HTML is done; writing is plain text and a formatted draft is refused. There is no good rich editor for the platform
-   that does not live in a web view. L, and a decision to make before work.
+9. *Formatted text when writing* (done with markers and a toolbar, see "What formatted text found").
 10. *Tools for a message:* the source, saving it as an `.eml`, printing and saving as a PDF are all done (see "What sorting and the first tools found" and "What printing found").
 11. *The safety switches* (done, see "What sorting and the first tools found").
 12. *Locking the application.* (Done: see "What locking the application found".)
@@ -1862,3 +1861,15 @@ The desktop's rules, kept on the phone and run where mail arrives. The part of t
 - *What it does not do.* A condition on the text of a message does not match when the rule runs on arrival, since the text is not fetched with the headers (the desktop has the same limit for a message not opened yet). Rules do not run on a message that is moved into the inbox, on other folders, or while nothing fetches; they are not read from Thunderbird (the desktop's import has no file to read from on a phone); and the rules are not shared with the desktop's, which keeps its own per account.
 
 Covered by tests: what a rule needs to be kept, the order of the actions (switched off, all or any, a move or a delete or a stop ending the chain, the size, the text), keeping, changing, ordering, switching and removing, the rules going with the account, the mail that arrives being moved and marked and flagged and nothing else, a rule that is off, an action the server refuses not stopping the sync, applying one rule to the inbox, and the screen's lines. Not seen on the device.
+
+## What formatted text found
+
+There is no good rich-text editor for the platform that does not live in a web view, and one in a web view brings a second keyboard, selection and scrolling to a screen that has to work with the first. So the phone writes formatted text the way a plain-text mail with a little markup has always been written, and draws it only where it is read.
+
+- *What is typed* (`richText.ts`): `**bold**`, `_italic_` or `*italic*`, `~~struck~~`, `` `code` ``, `[words](address)` and a bare web address as a link, `# ` headings, `- ` lists, `1. ` numbered lists, `> ` quotes (also inside each other) and `---` for a rule. A switch "Formatierung" in the compose screen turns on the buttons (bold, italic, link, heading, list, numbered, quote) which type the markers round the selection or before the lines it touches and take them off again; a link asks for its address. "Vorschau" shows the message as the recipient will see it, in the same page that messages are read in (no script, no remote image).
+- *What goes out* is `multipart/alternative`: the text as typed with its markers as the plain part (which reads well in a client that draws nothing) and the HTML made from it. Everything typed is escaped before it is marked up, so nothing typed becomes a tag; a link goes only to a web or mail address. The signature, the quote of a reply and the other texts are part of the text and so are marked up with it. Encrypted and signed messages carry the HTML inside, as before.
+- *Writing on a draft again.* The HTML carries a mark (`<!--peregrine-markdown-->`); a draft with it is opened from its plain part, which is the text as it was typed, with formatting on. A draft with somebody else's formatting is still refused, since writing on it would lose what the phone cannot show. The line ends of a draft that is opened are LF whatever the message had.
+- *What it does not do.* No colours, fonts, sizes, images in the text or tables; the buttons do not show the effect while typing (the preview does); a formatted message is not turned back into markers when it is replied to or forwarded (the quote of a reply is its plain text, as before); and the editor of the desktop is not matched: its drafts are refused on the phone, the phone's open on the desktop as formatted text.
+
+Covered by tests: the HTML made of each marker and what it must not make (snake_case_name, a sum, a signature's two dashes, scripts, other schemes), what the buttons do to text and selection, the draft in both directions, formatting on and off being a change, and the whole way from a typed draft through a message to a draft that is written on again. Not seen on the device.
+

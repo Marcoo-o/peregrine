@@ -4,13 +4,16 @@ import type { ComposeState } from '../app/screens'
 import { formatSize } from '../attachmentText'
 import { withContact, type Contact } from '../contacts'
 import { hasRecipient, isChanged, type Draft } from '../draft'
+import { renderHtml, type Selection } from '../richText'
 import { withIdentity } from '../signature'
 import { autosaveText } from './autosaveText'
 import type { Files } from '../files'
 import { Button, Chip, Spinner, SwitchRow } from './controls'
 import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
+import { FormatBar } from './FormatBar'
 import { Header } from './Header'
+import { MailView } from './MailView'
 import { SnoozeSheet } from './SnoozeSheet'
 import { SuggestionList } from './SuggestionList'
 import { useStyles } from './useStyles'
@@ -39,6 +42,10 @@ export function ComposeScreen(props: {
   const [discarding, setDiscarding] = useState(false)
   const [choosingMoment, setChoosingMoment] = useState(false)
   const [typing, setTyping] = useState<'to' | 'cc' | 'bcc' | null>(null)
+  // Where the cursor is in the text, for the buttons of the formatting; `forced` is set for the moment after a button changed the text and moved it.
+  const [cursor, setCursor] = useState<Selection>({ start: 0, end: 0 })
+  const [forced, setForced] = useState<Selection | undefined>(undefined)
+  const [previewing, setPreviewing] = useState(false)
   // The identity the message is from: the one it names, or the default of the account when it names none.
   const sender = identities.find((identity) => identity.id === draft.identityId) ?? identities[0]
   const forTo = useSuggestions(props.suggest, draft.to, typing === 'to')
@@ -140,14 +147,45 @@ export function ComposeScreen(props: {
         value={draft.subject}
         onChangeText={(subject) => form.update({ subject })}
       />
-      <FormInput
-        style={styles.multiline}
-        placeholder={t('Nachricht')}
-        multiline
-        textAlignVertical="top"
-        value={draft.body}
-        onChangeText={(body) => form.update({ body })}
+      <SwitchRow
+        label={t('Formatierung')}
+        hint={t('Fett, kursiv, Listen, Zitate und Links. Der Text geht mit den Zeichen, wie du ihn schreibst, und daneben als formatierte Fassung.')}
+        value={draft.formatted === true}
+        onChange={(formatted) => {
+          form.update({ formatted })
+          if (!formatted) setPreviewing(false)
+        }}
       />
+      {draft.formatted ? (
+        <FormatBar
+          body={draft.body}
+          selection={cursor}
+          previewing={previewing}
+          onPreview={setPreviewing}
+          onEdit={(edit) => {
+            form.update({ body: edit.text })
+            setForced(edit.selection)
+            setCursor(edit.selection)
+          }}
+        />
+      ) : null}
+      {draft.formatted && previewing ? (
+        <MailView html={renderHtml(draft.body)} inlineImages={{}} allowRemoteImages={false} onFacts={() => undefined} onLink={() => undefined} />
+      ) : (
+        <FormInput
+          style={styles.multiline}
+          placeholder={t('Nachricht')}
+          multiline
+          textAlignVertical="top"
+          value={draft.body}
+          selection={forced}
+          onSelectionChange={(event) => {
+            setCursor(event.nativeEvent.selection)
+            setForced(undefined)
+          }}
+          onChangeText={(body) => form.update({ body })}
+        />
+      )}
       {draft.attachments.map((attached) => (
         <View key={attached.path} style={styles.attachment}>
           <Text style={styles.itemTitle}>📎 {attached.filename}</Text>
