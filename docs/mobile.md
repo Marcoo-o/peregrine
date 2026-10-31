@@ -1877,7 +1877,7 @@ Covered by tests: the HTML made of each marker and what it must not make (snake_
 
 - *Naming a saved search.* A kept search is called by its query until it is given a name: "Umbenennen" under the search that is shown (`renameSavedSearch`), at most 40 characters and white space made single, and an empty name is the search itself again. The sidebar says the name.
 - *The open message in the list.* While two panes are shown, the row of the message that is open is marked as a chosen row is (`OpenMessageContext`, read by `MessageRow` and compared by folder and UID, so the same UID in another folder is not marked). It holds in the folder, all accounts, search and conversation lists.
-- *Still open:* choosing which key signs when an account has several, a key per recipient with a choice among several, and starting the key search from a recipient while writing. They need a decision about what several keys of one address mean, and are left.
+- *The OpenPGP leftovers* are done, see "What the choice of keys found".
 
 Covered by tests: renaming (the name in the sidebar, empty, long, a search that is not kept). The mark in the list is a style on a row and was not seen on a device.
 
@@ -1895,4 +1895,15 @@ The desktop's daily list, on the phone, with the same rules: `@peregrine/core/re
 In a wide window the list now keeps its place on the left from the start, and on the right a line says to choose a message. The list is the same view in the same place when a message is opened, so it keeps where it was scrolled to. Only a screen that is a list (folder, all accounts, search, conversation) is placed like this; the rest have the window.
 
 Covered by tests: the rule of a task from its start day, what is due on which day, finishing per day, the checklist's ticks being per day, moving, removing, tidying, finding the message of a task after it moved or when it is gone, and the lines of the screen. The empty pane and the screens were not seen on a device.
+
+## What the choice of keys found
+
+An account can hold several keys (a new one is made, an old one stays to open old mail) and an address can have several public keys (the person changed keys). Until now the newest that could be used was used. The decision made for what several keys mean: **the newest usable key stays the default, and the user can name another; a named key that cannot be used is passed over for the next that can, so a choice never makes a message fail that would have gone.**
+
+- *The choice* (`pgp/keyChoice.ts`) is kept as one setting: a fingerprint per account for signing, a fingerprint per address (without regard to case) for encrypting. `protect.ts` puts the chosen key first in the list it goes through, so the first that can be used is the chosen one when it can. A choice that names a key that is gone is as if there was none. Encrypting still adds the sender's own key, the one that signs, so the message can be read in Sent.
+- *On the keys screen* the key that signs is marked "Signiert damit" (the chosen one, or the newest usable), with "Damit signieren" on the others when the account has more than one. For an address with more than one key, the one in use is marked "Wird verwendet" and the others have "Für {address} verwenden".
+- *While writing.* With encryption switched on, the recipients that have no public key are listed under the switch (only complete addresses; asked again when the recipients change), each with "Schlüssel suchen". It looks where keys are published (the mail server of the address by WKD, and keys.openpgp.org), as the keys screen does and only when the user taps, and shows where it was found, the names in the key and its fingerprint. "Für {address} merken" keeps it; nothing is kept without that, since a key found on the network is the network's word for whose it is. The draft is not left.
+- *What it does not do.* The choice is not per message, only per account and per address; a key that is chosen for signing is also the one a message is encrypted to for its sender; and a key found while writing has no check beyond what the lookup does (the address is among its user IDs).
+
+Covered by tests: keeping the choice, putting the chosen key first, passing over one that cannot be used, a message that is signed with the newest and then with the chosen key (checked against both public keys), one that is encrypted to the newest key of an address and then to the chosen (opened with both private keys), the keys screen's lines, and the recipients without key, the look, its failure and the keeping. The screens were not seen on a device.
 

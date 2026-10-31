@@ -194,6 +194,8 @@ export interface KeysState {
   contacts: ContactKey[]
   /** What the user wants of every message: signed, encrypted. */
   defaults: { sign: boolean; encrypt: boolean }
+  /** The key the user chose to sign with for each account, and to encrypt to for each address; what is not chosen is the newest that can be used. */
+  choice: { signing: Record<string, string>; recipient: Record<string, string> }
   /** What each key is good for now, by fingerprint: expired, withdrawn. */
   states: Record<string, KeyState>
   /** What was read from a file or from pasted text, not stored yet: the user says where each key belongs. */
