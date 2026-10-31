@@ -1,13 +1,16 @@
 import { useState } from 'react'
-import { Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import type { FolderToolsState } from '../app/screens'
 import { isChangeable, isEmptiable } from '../folderOps'
-import { Button, Chip, Spinner } from './controls'
+import { Button, Spinner } from './controls'
+import { Dropdown } from './Dropdown'
+import { Icon } from './Icon'
 import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
 import { folderLabel } from './folderLabel'
 import { useStyles } from './useStyles'
+import { useTheme } from './useTheme'
 import { t } from '../i18n'
 
 /** What the screen asks to be done, before it is asked again in a question: the things that cannot be taken back. */
@@ -27,6 +30,7 @@ export function FolderToolsScreen(props: {
   onBack: () => void
 }) {
   const styles = useStyles()
+  const { colors } = useTheme()
   const { account, folder, folders, busy, error, notice } = props.state
   const [name, setName] = useState(folder?.displayName ?? '')
   const [parentPath, setParentPath] = useState<string | null>(null)
@@ -43,49 +47,55 @@ export function FolderToolsScreen(props: {
 
   if (!folder) {
     // Under which folder the new one sits: at the top, or in one of those the account has.
+    const places = [{ value: '', label: t('Oben') }, ...folders.map((candidate) => ({ value: candidate.imapPath, label: candidate.imapPath }))]
     return (
       <FormScroll>
         {header}
         {status}
         <FormInput placeholder={t('Name des Ordners')} autoCapitalize="none" value={name} onChangeText={setName} />
-        <Text style={styles.section}>Wo</Text>
-        <View style={styles.actions}>
-          <Chip label={t('Oben')} active={parentPath === null} onPress={() => setParentPath(null)} />
-          {folders.map((candidate) => (
-            <Chip
-              key={candidate.id}
-              label={candidate.imapPath}
-              active={parentPath === candidate.imapPath}
-              onPress={() => setParentPath(candidate.imapPath)}
-            />
-          ))}
-        </View>
+        <Dropdown caption={t('Wo')} value={parentPath ?? ''} options={places} onChange={(place) => setParentPath(place === '' ? null : place)} />
         <Button label={t('Ordner anlegen')} disabled={busy === true || name.trim() === ''} onPress={() => props.onCreate(name, parentPath)} />
       </FormScroll>
     )
   }
 
+  const renamed = name.trim() !== '' && name.trim() !== folder.displayName
   return (
     <FormScroll>
       {header}
       {status}
 
       <Text style={styles.section}>{t('Nachrichten')}</Text>
-      <Button label={t('Alle als gelesen markieren')} variant="secondary" disabled={busy === true} onPress={props.onMarkAllRead} />
-      {isEmptiable(folder) ? (
-        <Button label={t('Ordner leeren')} variant="danger" disabled={busy === true} onPress={() => setQuestion('empty')} />
-      ) : null}
+      <View style={styles.menuCard}>
+        <Pressable accessibilityRole="button" disabled={busy === true} style={[styles.menuRow, !isEmptiable(folder) && styles.menuRowLast]} onPress={props.onMarkAllRead}>
+          <Icon name="check" size={18} color={colors.accent} />
+          <Text style={styles.menuText}>{t('Alle als gelesen markieren')}</Text>
+        </Pressable>
+        {isEmptiable(folder) ? (
+          <Pressable accessibilityRole="button" disabled={busy === true} style={[styles.menuRow, styles.menuRowLast]} onPress={() => setQuestion('empty')}>
+            <Icon name="trash" size={18} color={colors.danger} />
+            <Text style={styles.menuTextDanger}>{t('Ordner leeren')}</Text>
+          </Pressable>
+        ) : null}
+      </View>
 
       <Text style={styles.section}>{t('Ordner')}</Text>
       {isChangeable(folder) ? (
         <>
-          <FormInput placeholder={t('Name des Ordners')} autoCapitalize="none" value={name} onChangeText={setName} />
-          <Button
-            label={t('Umbenennen')}
-            disabled={busy === true || name.trim() === '' || name.trim() === folder.displayName}
-            onPress={() => props.onRename(name)}
-          />
-          <Button label={t('Ordner löschen')} variant="danger" disabled={busy === true} onPress={() => setQuestion('delete')} />
+          <View style={styles.fieldRow}>
+            <View style={{ flex: 1 }}>
+              <FormInput placeholder={t('Name des Ordners')} autoCapitalize="none" value={name} onChangeText={setName} />
+            </View>
+            <Pressable accessibilityRole="button" disabled={busy === true || !renamed} style={styles.smallAction} onPress={() => props.onRename(name)}>
+              <Text style={renamed ? styles.smallActionText : styles.hint}>{t('Umbenennen')}</Text>
+            </Pressable>
+          </View>
+          <View style={styles.menuCard}>
+            <Pressable accessibilityRole="button" disabled={busy === true} style={[styles.menuRow, styles.menuRowLast]} onPress={() => setQuestion('delete')}>
+              <Icon name="trash" size={18} color={colors.danger} />
+              <Text style={styles.menuTextDanger}>{t('Ordner löschen')}</Text>
+            </Pressable>
+          </View>
         </>
       ) : (
         <Text style={styles.hint}>

@@ -63,6 +63,46 @@ function createStyles({ colors }: Theme) {
 
     input: field,
     inputFocused: { borderColor: colors.accent },
+    // A choice that takes one line and opens as a list: what is chosen, and a small caption above it.
+    dropdownBox: { flex: 1, minWidth: 140 },
+    dropdownCaption: { fontSize: 12, color: colors.muted, marginBottom: 4 },
+    dropdown: {
+      minHeight: SIZE.target,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      paddingHorizontal: 12,
+      borderRadius: SIZE.radius,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface
+    },
+    dropdownText: { flexShrink: 1, fontSize: 16, color: colors.text },
+    dropdownPlaceholder: { flexShrink: 1, fontSize: 16, color: colors.muted },
+    // Things that sit beside each other on a line, and a small action on a line of its own.
+    fieldRow: { flexDirection: 'row', gap: SIZE.gap, alignItems: 'flex-end' },
+    smallAction: { minHeight: 40, justifyContent: 'center', alignSelf: 'flex-start' },
+    smallActionText: { fontSize: 14, fontWeight: '500', color: colors.accent },
+    smallActionDanger: { fontSize: 14, fontWeight: '500', color: colors.danger },
+    // A card of rows that are tapped, as the settings of a system are: a line each, with a thin line between.
+    menuCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: SIZE.radius, marginTop: 4, overflow: 'hidden' },
+    menuRow: { minHeight: SIZE.target, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+    menuRowLast: { borderBottomWidth: 0 },
+    menuText: { flex: 1, fontSize: 16, color: colors.text },
+    menuTextDanger: { flex: 1, fontSize: 16, color: colors.danger },
+    // The daily list: a row per task with a round tick, and the points of its checklist under it, indented.
+    taskRow: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, gap: 6 },
+    taskLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    taskTitle: { fontSize: 16, color: colors.text },
+    taskDone: { color: colors.muted, textDecorationLine: 'line-through' },
+    taskMore: { padding: 4 },
+    taskPoint: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 38 },
+    taskPointText: { flex: 1, fontSize: 15, color: colors.text },
+    tick: { borderWidth: 2, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+    tickOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+    // A rule's condition or action: its own small card.
+    ruleBlock: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: SIZE.radius, padding: 12, gap: SIZE.gap, marginTop: SIZE.gap },
     multiline: { minHeight: 200 },
 
     button: { ...button, backgroundColor: colors.accent, borderColor: colors.accent, marginTop: SIZE.gap },
@@ -250,7 +290,6 @@ function createStyles({ colors }: Theme) {
     undoBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: SIZE.target, paddingHorizontal: SIZE.padding, backgroundColor: colors.sunken },
     undoText: { flex: 1, fontSize: 14, color: colors.text },
     undoAction: { fontSize: 14, fontWeight: '600', color: colors.accent },
-    toolsButton: { minHeight: SIZE.target, minWidth: SIZE.target, alignItems: 'center', justifyContent: 'center' },
 
     // The sidebar: the same rows as the desktop's, with a picture, a name, a count and what opens them.
     sidebar: { flex: 1, backgroundColor: colors.sunken },
@@ -292,8 +331,8 @@ function createStyles({ colors }: Theme) {
 
     body: { fontSize: 16, lineHeight: 24, color: colors.text, paddingBottom: 24 },
     section: {
-      marginTop: 24,
-      marginBottom: 4,
+      marginTop: 18,
+      marginBottom: 2,
       fontSize: 12,
       fontWeight: '700',
       letterSpacing: 0.8,
