@@ -92,6 +92,7 @@ export function MessagesScreen(props: {
           >
             <MessageRow
               message={item.message}
+              folderId={folder.id}
               sender={item.message.sender}
               showPreview={showPreview}
               pendingNote={pendingNote(item.message, folderNames)}

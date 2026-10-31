@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { appHarness } from './testing/appHarness'
-import { MAX_SAVED, listSavedSearches, nameOf, removeSavedSearch, saveSearch, savedSearchFor } from './savedSearches'
+import { MAX_SAVED, listSavedSearches, nameOf, removeSavedSearch, renameSavedSearch, saveSearch, savedSearchFor } from './savedSearches'
 import { loadSidebar } from './sidebar'
 import { migratedDatabase } from './testing/testDb'
 
@@ -93,5 +93,31 @@ describe('keeping the search that is shown', () => {
     await t.app.navigator.saveCurrentSearch()
     await t.app.navigator.removeCurrentSearch()
     expect(t.store.screen.name).toBe('login')
+  })
+})
+
+describe('naming a search that is kept', () => {
+  it('shows the name in the sidebar, and the search itself again for an empty name', async () => {
+    const t = await appHarness()
+    await t.givenAccount('work', {})
+    await t.app.navigator.showSearch('ist:ungelesen hat:anhang')
+    await t.app.navigator.saveCurrentSearch()
+    await t.app.navigator.renameCurrentSearch('  Unread   with files ')
+    expect(t.store.screen).toMatchObject({ saved: { name: 'Unread with files', query: 'ist:ungelesen hat:anhang' }, notice: expect.stringContaining('Unread with files') })
+    expect((await loadSidebar(t.db)).searches.map((search) => search.name)).toEqual(['Unread with files'])
+    await t.app.navigator.renameCurrentSearch('')
+    expect(t.store.screen).toMatchObject({ saved: { name: 'ist:ungelesen hat:anhang' } })
+  })
+
+  it('keeps a long name to what a row holds, and does nothing for a search that is not kept', async () => {
+    const t = await appHarness()
+    await t.givenAccount('work', {})
+    await t.app.navigator.showSearch('x')
+    await t.app.navigator.renameCurrentSearch('name')
+    expect(await listSavedSearches(t.db)).toEqual([])
+    await t.app.navigator.saveCurrentSearch()
+    await t.app.navigator.renameCurrentSearch('n'.repeat(80))
+    expect((await listSavedSearches(t.db))[0].name).toHaveLength(40)
+    expect(await renameSavedSearch(t.db, 'nothing', 'x')).toBeUndefined()
   })
 })
