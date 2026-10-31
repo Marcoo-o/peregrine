@@ -3,6 +3,7 @@ import { parseAddress } from '@peregrine/smtp/headers'
 import { MAX_ATTACHMENT_BYTES, type FileAccess, type PickedFile } from './files'
 import type { ReadableMessage } from './messageText'
 import { t } from './i18n'
+import { isFormattedHtml, renderHtml } from './richText'
 
 /** A file attached to a draft: a copy in the application's storage, and what to show of it. */
 export interface DraftAttachment {
@@ -29,6 +30,8 @@ export interface Draft {
   sign?: boolean
   /** Which of the account's identities the message is from: its name and address. Without one, the account's own. */
   identityId?: string
+  /** The text is written with the markers of `richText.ts`, and goes out as HTML beside the text as typed. */
+  formatted?: boolean
 }
 
 export const emptyDraft: Draft = { to: '', cc: '', bcc: '', subject: '', body: '', attachments: [] }
@@ -40,7 +43,7 @@ export const emptyDraft: Draft = { to: '', cc: '', bcc: '', subject: '', body: '
  * draft this gives: they are made files of the phone (`bringAttachments`) and put on it, since that takes the files.
  */
 export function editableDraft(message: ReadableMessage): { draft: Draft } | { refusal: string } {
-  if (message.html !== null) {
+  if (message.html !== null && !isFormattedHtml(message.html)) {
     return { refusal: t('Dieser Entwurf hat eine Formatierung, die das Handy noch nicht bearbeiten kann, ohne sie zu verlieren.') }
   }
   return {
@@ -49,10 +52,13 @@ export function editableDraft(message: ReadableMessage): { draft: Draft } | { re
       cc: message.cc,
       bcc: message.bcc,
       subject: message.subject,
-      body: message.text,
+      // The line ends of a message are CRLF; the text that is written on has LF, as a draft that was typed has.
+      body: message.text.replace(/\r\n/g, '\n'),
       attachments: [],
       inReplyTo: message.headers['in-reply-to']?.trim() || undefined,
-      references: message.references || undefined
+      references: message.references || undefined,
+      // A draft the phone wrote with formatting is written on again from its text, which is the text as it was typed.
+      formatted: message.html !== null ? true : undefined
     }
   }
 }
@@ -68,6 +74,7 @@ export function isChanged(start: Draft, now: Draft): boolean {
     start.body !== now.body ||
     (start.encrypt === true) !== (now.encrypt === true) ||
     (start.sign === true) !== (now.sign === true) ||
+    (start.formatted === true) !== (now.formatted === true) ||
     files(start) !== files(now)
   )
 }
@@ -196,7 +203,7 @@ export function toComposeInput(accountId: string, draft: Draft): ComposeInput {
     bcc: parseAddressList(draft.bcc),
     subject: draft.subject,
     textBody: draft.body,
-    htmlBody: '',
+    htmlBody: draft.formatted === true ? renderHtml(draft.body) : '',
     attachments: draft.attachments.map(({ filename, path, contentType }) => ({ filename, path, contentType })),
     inReplyTo: draft.inReplyTo,
     references: draft.references,
@@ -223,7 +230,8 @@ export function draftFromInput(input: ComposeInput): Draft {
     references: input.references,
     encrypt: input.encrypt === true ? true : undefined,
     sign: input.sign === true ? true : undefined,
-    identityId: input.identityId
+    identityId: input.identityId,
+    formatted: isFormattedHtml(input.htmlBody) ? true : undefined
   }
 }
 

@@ -49,7 +49,8 @@ function looksLikeText(text) {
   if (/^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|PRAGMA|WITH|BEGIN|EXISTS)\b/i.test(t)) return false // SQL
   if (/\b(LIKE \?|ESCAPE|json_each|NOT NULL|date_ms|account_id|special_use)\b|^NOT \{\}$|^\(?[a-z]\.[a-z_]+/.test(t)) return false // SQL
   if (/function\s*\(|=>|\bvar \w+ =/.test(t)) return false // code
-  if (/<\/?[a-z][a-z0-9]*[ >/]|<!doctype|^[a-z-]+\{|^[a-z_]+(, [a-z_]+){3,}/i.test(t)) return false // HTML, CSS, a list of columns
+  if (/^[a-z-]+:[^;]*;/.test(t)) return false // a CSS declaration
+  if (/<\/?\{\}|<\/?[a-z][a-z0-9]*(\{\}|[ >/])|<!doctype|^[a-z-]+\{|^[a-z_]+(, [a-z_]+){3,}/i.test(t)) return false // HTML, CSS, a list of columns
   if (/^(This|The|A|An|Not connected|Sending at|NotSupported|Peregrine[A-Z]|nothing to do|application\/)\b/.test(t) && !/[ÄÖÜäöüß]/.test(t)) return false // an English message for the developer
   return /[ÄÖÜäöüß]/.test(t) || /\s/.test(t) || /^[A-ZÄÖÜ][a-zäöüß]{2,}/.test(t)
 }
