@@ -2,6 +2,7 @@ import type { ImapSession } from '@peregrine/core/imapSession'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import { cachedBounds, clearMessages, knownUidValidity, reconcile, rememberUidValidity, resetFolder, type FolderReset } from './folderChanges'
 import type { Folder } from './folders'
+import { applyRules, isInboxFolder, listRules } from './filterRules'
 import { saveMessages } from './messages'
 
 /** How many of the newest messages a folder that was never synced fetches. */
@@ -36,6 +37,14 @@ async function sync(session: ImapSession, db: SqlDb, folder: Folder, onReset?: (
   })
   await saveMessages(db, folder, result.messages)
   await reconcile(db, folder, result.flags)
+  // What arrives in an inbox is sorted by the rules of its account. A rule that cannot be done does not make the sync fail.
+  if (isInboxFolder(folder) && result.messages.length > 0) {
+    try {
+      await applyRules(session, db, folder, result.messages, await listRules(db, folder.accountId))
+    } catch {
+      // The mail is there; sorting it is tried again for the next that arrives.
+    }
+  }
   return { fetched: result.messages.length, onServer: result.flags }
 }
 

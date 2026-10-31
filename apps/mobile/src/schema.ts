@@ -186,6 +186,21 @@ const MIGRATIONS: string[][] = [
        created_at INTEGER NOT NULL
      )`,
     'CREATE UNIQUE INDEX idx_contacts_email ON contacts(lower(email))'
+  ],
+  // 15. The rules that sort the mail of an account as it arrives: when they match, and what is done, as the desktop keeps them (lists of conditions and
+  // actions as JSON). Lower `sort_order` runs first. They go with the account.
+  [
+    `CREATE TABLE filter_rules (
+       id TEXT PRIMARY KEY,
+       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+       name TEXT NOT NULL,
+       match_mode TEXT NOT NULL DEFAULT 'all',
+       conditions_json TEXT NOT NULL,
+       actions_json TEXT NOT NULL,
+       enabled INTEGER NOT NULL DEFAULT 1,
+       sort_order INTEGER NOT NULL DEFAULT 0
+     )`,
+    'CREATE INDEX idx_filter_rules_account ON filter_rules(account_id, sort_order)'
   ]
 ]
 

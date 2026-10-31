@@ -52,6 +52,7 @@ export function SettingsScreen(props: {
   onLook: (change: Partial<Look>) => void
   onLock: (on: boolean) => void
   onContacts: () => void
+  onFilters: () => void
   onConversations: (on: boolean) => void
   onLockDelay: (seconds: number) => void
   onTags: () => void
@@ -169,6 +170,10 @@ export function SettingsScreen(props: {
 
       <Text style={styles.section}>{t('Adressen')}</Text>
       <Button label={t('Kontakte verwalten')} variant="secondary" onPress={props.onContacts} />
+
+      <Text style={styles.section}>{t('Filterregeln')}</Text>
+      <Text style={styles.hint}>{t('Sortieren, was im Posteingang ankommt: verschieben, als gelesen markieren, markieren oder löschen.')}</Text>
+      <Button label={t('Filterregeln verwalten')} variant="secondary" onPress={props.onFilters} />
       <View style={styles.group}>
         <SwitchRow label={t('Kontakte des Geräts vorschlagen')} value={list.deviceContacts} onChange={props.onDeviceContacts} />
       </View>

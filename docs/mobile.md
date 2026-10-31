@@ -1456,7 +1456,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 
 **Third**
 
-16. *Filter rules.* The engine (`src/main/filters`) is not portable yet, and a rule has to run where mail arrives: here that is the look for mail in the background. L.
+16. *Filter rules* (done, see "What filter rules found").
 17. *The daily list and tasks* (recurring tasks, linked to messages). L, and unclear whether it is wanted on a phone.
 18. *Diagnostics:* a log that can be recorded and exported for a bug report (S to M).
 19. *What is left of OpenPGP:* publishing the own key and the search for the key of the sender of a message are done; choosing which of several keys signs (the newest does), one key for each of several recipients with the choice shown, and the search from a recipient that has none are left (S each).
@@ -1849,3 +1849,16 @@ Every text a person reads goes through `t(...)`, `tn(...)` (a text with a number
 - *What it does not do:* the search syntax (`von:`, `betreff:`, `hat:anhang`, `ist:ungelesen`) stays German, since it is the desktop's and is typed, not read; a name the user gave or a server's (a folder, a tag) is not translated; the text of a message that was written in the code (the line that introduces a quote, the header of a forwarded message) follows the language that is in force when it is written.
 
 Covered by tests: the catalogs, the choice and its resolving against the phone's languages, the plural forms, the fallback, the change at once and its being kept and read at the start. All of the earlier tests run in German, unchanged. Not seen on the device.
+
+## What filter rules found
+
+The desktop's rules, kept on the phone and run where mail arrives. The part of the engine that decides is pure, so it moved to the shared package (`@peregrine/core/filterMatch`: `matchesCondition`, `matchesRule`, `fieldValue`) and the desktop imports it from there; its tests did not change.
+
+- *The rules* (migration 15, `filterRules.ts`). Per account, as the desktop keeps them: a name, all or any of a list of conditions (sender, to, cc, subject, text, size, attachment; contains, does not contain, is, starts with, ends with, a pattern, larger or smaller than, present or missing), and a list of actions (move to a folder, mark as read or unread, flag, delete, apply no more rules). The order of the list is the order they run in, a rule can be switched off, and they go with the account. A rule is kept only whole: a name, a condition with a value, a size that is a number, a pattern that compiles, an action, a folder for a move.
+- *What they do with a message* (`actionsFor`, pure): every rule that is on and matches applies, in order. A move or a delete ends the chain for that message since it is no longer where the rest would act, and so does "apply no more rules". Deleting moves to the trash and removes for good only where there is none, as deleting is everywhere else.
+- *Where they run.* In `syncFolder`, for the messages a sync fetched into an inbox, on the open connection: so when the application brings the inbox up to date, and when the look for mail in the background does. The server is told (flags, move) and the cache follows, so the message that was moved is not in the inbox list and is not announced by a notification. An action that fails is counted and does not keep the others, or the sync, from going on; the mail stays where it is and the next that arrives is sorted. Only inboxes are sorted, since a rule that moved what the user sent would surprise.
+- *"Jetzt anwenden"* runs one rule, on or off, over the messages the phone has of the inbox: their headers are asked of the server in chunks of 100 (the addresses are not kept in the cache), and the line says how many were sorted or why an action did not go. It needs a connection.
+- *The screen* is under the settings ("Filterregeln verwalten"): an account chooser, the list (switch, up, down, apply now), and a form with the conditions and actions as chips.
+- *What it does not do.* A condition on the text of a message does not match when the rule runs on arrival, since the text is not fetched with the headers (the desktop has the same limit for a message not opened yet). Rules do not run on a message that is moved into the inbox, on other folders, or while nothing fetches; they are not read from Thunderbird (the desktop's import has no file to read from on a phone); and the rules are not shared with the desktop's, which keeps its own per account.
+
+Covered by tests: what a rule needs to be kept, the order of the actions (switched off, all or any, a move or a delete or a stop ending the chain, the size, the text), keeping, changing, ordering, switching and removing, the rules going with the account, the mail that arrives being moved and marked and flagged and nothing else, a rule that is off, an action the server refuses not stopping the sync, applying one rule to the inbox, and the screen's lines. Not seen on the device.

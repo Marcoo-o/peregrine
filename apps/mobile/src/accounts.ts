@@ -157,6 +157,7 @@ export async function removeAccount(db: SqlDb, id: string): Promise<void> {
     await tx.run('DELETE FROM folders WHERE account_id = ?', id)
     await tx.run('DELETE FROM own_keys WHERE account_id = ?', id)
     await tx.run('DELETE FROM identities WHERE account_id = ?', id)
+    await tx.run('DELETE FROM filter_rules WHERE account_id = ?', id)
     await tx.run('DELETE FROM accounts WHERE id = ?', id)
   })
 }

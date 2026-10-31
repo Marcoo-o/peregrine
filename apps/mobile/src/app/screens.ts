@@ -1,4 +1,4 @@
-import type { PgpStatus } from '@peregrine/core/types'
+import type { FilterRule, PgpStatus } from '@peregrine/core/types'
 import type { Account } from '../accounts'
 import type { AttachmentInfo } from '../attachments'
 import type { PushState } from '../background/devices'
@@ -212,6 +212,20 @@ export interface ContactsState {
   error?: string
 }
 
+/** The rules that sort the mail of an account as it arrives. */
+export interface FilterRulesState {
+  name: 'filterRules'
+  accounts: Account[]
+  /** The account whose rules are shown. */
+  account: Account
+  rules: FilterRule[]
+  /** The folders of the account, to choose where a rule moves a message to. */
+  folders: Folder[]
+  busy?: boolean
+  notice?: string
+  error?: string
+}
+
 /** The messages of one conversation, to open one of them from. */
 export interface ThreadState {
   name: 'thread'
@@ -300,6 +314,7 @@ export type Screen =
   | SourceState
   | ThreadState
   | ContactsState
+  | FilterRulesState
   | FolderToolsState
   | TagsState
 
