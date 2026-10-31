@@ -7,6 +7,7 @@ import type { Account } from '../accounts'
 import type { ReadableMessage } from '../messageText'
 import { addressKey, contactKeysFor, listOwnKeys } from './keyStore'
 import { decryptMessage, verifyCleartext, verifyDetached, type SignatureCheck } from './pgpService'
+import { t } from '../i18n'
 
 /** What reading a message that may be signed or encrypted came to. */
 export interface ProtectedReading {
@@ -107,6 +108,6 @@ export async function readProtected(
 
 async function privateKeys(db: SqlDb, account: Account): Promise<string[]> {
   const keys = await listOwnKeys(db, account.id)
-  if (keys.length === 0) throw new Error('Das Konto hat keinen Schlüssel')
+  if (keys.length === 0) throw new Error(t('Das Konto hat keinen Schlüssel'))
   return keys.map((key) => key.privateKey)
 }

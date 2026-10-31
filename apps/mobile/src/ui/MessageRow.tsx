@@ -7,6 +7,7 @@ import { Icon } from './Icon'
 import { shortDate } from './shortDate'
 import { useStyles } from './useStyles'
 import { useLook, useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /**
  * One message in a list, as the desktop shows one: who it is from and when, its subject, both bold while it
@@ -67,7 +68,7 @@ export function MessageRow(props: {
           {starred ? <Icon name="star" size={14} color={colors.warning} fill={colors.warning} /> : null}
           {message.hasAttachment ? <Icon name="attachment" size={14} color={colors.muted} /> : null}
           <Text style={[styles.subject, styles.fill, unread && styles.unread]} numberOfLines={1}>
-            {message.subject || '(ohne Betreff)'}
+            {message.subject || t('(ohne Betreff)')}
           </Text>
         </View>
         <TagChips flags={message.flags} />

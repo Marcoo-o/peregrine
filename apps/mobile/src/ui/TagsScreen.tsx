@@ -9,6 +9,7 @@ import { TagEditor } from './TagEditor'
 import { tagMeta } from './tagMeta'
 import { useTags } from './tags'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** The tags of the user, to be renamed, recoloured, forgotten, and made, as the settings of the desktop have them. */
 export function TagsScreen(props: {
@@ -28,14 +29,14 @@ export function TagsScreen(props: {
   const [deleting, setDeleting] = useState<Tag | null>(null)
   return (
     <View style={styles.fill}>
-      <Header title="Tags" back={{ label: 'Einstellungen', onPress: props.onBack }} />
+      <Header title={t('Tags')} back={{ label: t('Einstellungen'), onPress: props.onBack }} />
       <Text style={styles.hint}>
-        Ein Tag ist ein Schlüsselwort an der Nachricht auf dem Server. In Webmail und am Desktop ist es auch zu sehen.
+        {t('Ein Tag ist ein Schlüsselwort an der Nachricht auf dem Server. In Webmail und am Desktop ist es auch zu sehen.')}
       </Text>
       <FlatList
         data={tags}
         keyExtractor={(tag) => tag.id}
-        ListEmptyComponent={<Text style={styles.hint}>Noch keine Tags.</Text>}
+        ListEmptyComponent={<Text style={styles.hint}>{t('Noch keine Tags.')}</Text>}
         renderItem={({ item }) => (
           <ListRow
             title={item.name}
@@ -45,7 +46,7 @@ export function TagsScreen(props: {
           />
         )}
       />
-      <Button label="Neuer Tag" onPress={() => setEditing(null)} />
+      <Button label={t('Neuer Tag')} onPress={() => setEditing(null)} />
       {editing !== undefined ? (
         <TagEditor
           key={editing?.id ?? 'new'}
@@ -62,16 +63,16 @@ export function TagsScreen(props: {
       ) : null}
       <ConfirmDialog
         visible={deleting !== null}
-        title={deleting ? `${deleting.name} löschen?` : ''}
+        title={deleting ? t('{name} löschen?', { name: deleting.name }) : ''}
         text={
           deleting
-            ? `Die Nachrichten behalten das Schlüsselwort ${deleting.keyword} auf dem Server und zeigen es grau, unter diesem Namen. Es wird nirgends entfernt.`
+            ? t('Die Nachrichten behalten das Schlüsselwort {keyword} auf dem Server und zeigen es grau, unter diesem Namen. Es wird nirgends entfernt.', { keyword: deleting.keyword })
             : ''
         }
         answers={[
-          { label: 'Abbrechen', onPress: () => setDeleting(null) },
+          { label: t('Abbrechen'), onPress: () => setDeleting(null) },
           {
-            label: 'Tag löschen',
+            label: t('Tag löschen'),
             variant: 'danger',
             onPress: () => {
               if (deleting) props.onDelete(deleting)

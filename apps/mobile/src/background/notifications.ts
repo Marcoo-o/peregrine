@@ -2,6 +2,7 @@ import { shouldNotify } from '@peregrine/core/notificationPolicy'
 import { senderName } from '../senderName'
 import { policyOf, type NotificationSettings } from '../settings'
 import type { NewMessage } from './newMail'
+import { msg, t, tn } from '../i18n'
 
 /** What opening a notification leads to: the message it is about. */
 export interface MessageTarget {
@@ -28,23 +29,23 @@ export interface Notifier {
   show(notification: MailNotification): Promise<void>
 }
 
-const NEW_MESSAGE = 'Neue Nachricht'
+const NEW_MESSAGE = msg('Neue Nachricht')
 
 /** What is said when the preview is off, or when there is more than one: how many, and nothing else. */
 export function countText(count: number): string {
-  return count === 1 ? '1 neue Nachricht' : `${count} neue Nachrichten`
+  return tn(count, '{count} neue Nachricht', '{count} neue Nachrichten')
 }
 
 /** The same for messages that were put aside and are back, as the desktop says it. */
 export function backCountText(count: number): string {
-  return count === 1 ? 'Nachricht ist wieder da' : `${count} Nachrichten sind wieder da`
+  return tn(count, 'Nachricht ist wieder da', '{count} Nachrichten sind wieder da')
 }
 
 /** What the notifications are for: mail that arrived, or messages that were put aside whose moment has come. */
 export type NotificationKind = 'new' | 'back'
 
 /** What the notification of a single message says under it: the account, and for a message that is back, that it is. */
-const subtitleFor = (kind: NotificationKind, accountName: string): string => (kind === 'back' ? `Wiedervorlage für ${accountName}` : accountName)
+const subtitleFor = (kind: NotificationKind, accountName: string): string => (kind === 'back' ? t('Wiedervorlage für {accountName}', { accountName }) : accountName)
 
 /**
  * The notifications for new mail, one for each account that is to be told, as the desktop makes them.
@@ -78,7 +79,7 @@ export function buildNotifications(
       notifications.push({
         accountId,
         title: senderName(newest.sender) || accountName,
-        body: newest.subject || NEW_MESSAGE,
+        body: newest.subject || t(NEW_MESSAGE),
         subtitle: subtitleFor(kind, accountName),
         count: 1,
         target

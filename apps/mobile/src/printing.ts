@@ -1,5 +1,6 @@
 import { buildMailDocument } from './reading/mailDocument'
 import type { ReadableMessage } from './messageText'
+import { t } from './i18n'
 
 /** The system's print service, which also makes a PDF of a page. The native module is behind it. */
 export interface Printer {
@@ -13,22 +14,22 @@ const escapeHtml = (text: string): string =>
 /** A name for the job and for the PDF that the service proposes: the subject, without what a file cannot be called. */
 export function jobNameOf(subject: string): string {
   const name = subject.replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
-  return name === '' ? 'Nachricht' : name
+  return name === '' ? t('Nachricht') : name
 }
 
 /** The lines above a message on paper: who it is from and to and when, as the message says them. A line that the message does not have is left out. */
 function headerOf(message: ReadableMessage): string {
   const rows: Array<[string, string]> = [
-    ['Von', message.from],
+    [t('Von'), message.from],
     ['An', message.to],
-    ['Kopie', message.cc],
-    ['Datum', message.date]
+    [t('Kopie'), message.cc],
+    [t('Datum'), message.date]
   ]
   const lines = rows
     .filter(([, value]) => value.trim() !== '')
     .map(([label, value]) => `<tr><th style="text-align:left;padding-right:12px;color:#5c6570;font-weight:600;vertical-align:top">${label}</th><td>${escapeHtml(value)}</td></tr>`)
     .join('')
-  return `<h1 style="font-size:20px;margin:0 0 8px">${escapeHtml(message.subject || '(ohne Betreff)')}</h1><table style="margin-bottom:12px;border-collapse:collapse">${lines}</table><hr>`
+  return `<h1 style="font-size:20px;margin:0 0 8px">${escapeHtml(message.subject || t('(ohne Betreff)'))}</h1><table style="margin-bottom:12px;border-collapse:collapse">${lines}</table><hr>`
 }
 
 /**

@@ -24,8 +24,9 @@ import {
 import { refreshQueueStatus } from './queueStatus'
 import type { Services } from './services'
 import type { AppStore } from './store'
+import { t, msg } from '../i18n'
 
-const NO_CONNECTION_NOTICE = 'Keine Verbindung. Gezeigt wird, was schon geladen ist.'
+const NO_CONNECTION_NOTICE = msg('Keine Verbindung. Gezeigt wird, was schon geladen ist.')
 
 /**
  * Which screen is shown when: the list of accounts, the unified inbox, the folders of an account and
@@ -239,7 +240,7 @@ export class Navigator {
     const shown = this.store.screen
     if (shown.name !== 'search') return
     const { saved, reason } = await saveSearch(this.services.db, shown.query)
-    const notice = saved ? 'Die Suche steht jetzt in der Seitenleiste.' : reason === 'full' ? `Es lassen sich höchstens ${MAX_SAVED} Suchen behalten.` : 'Es gibt nichts zu behalten.'
+    const notice = saved ? t('Die Suche steht jetzt in der Seitenleiste.') : reason === 'full' ? t('Es lassen sich höchstens {MAX_SAVED} Suchen behalten.', { MAX_SAVED }) : t('Es gibt nichts zu behalten.')
     if (this.store.screen === shown) this.store.showScreen({ ...shown, saved: saved ?? undefined, notice })
   }
 
@@ -248,14 +249,14 @@ export class Navigator {
     const shown = this.store.screen
     if (shown.name !== 'search' || !shown.saved) return
     await removeSavedSearch(this.services.db, shown.saved.id)
-    if (this.store.screen === shown) this.store.showScreen({ ...shown, saved: undefined, notice: 'Die Suche ist aus der Seitenleiste entfernt.' })
+    if (this.store.screen === shown) this.store.showScreen({ ...shown, saved: undefined, notice: t('Die Suche ist aus der Seitenleiste entfernt.') })
   }
 
   /** The messages of a folder from the database, and a sync with the server when asked to and there is one. */
   async showMessages(account: Account, folder: Folder, options: { sync: boolean }): Promise<void> {
     const imap = this.services.connections.get(account.id)
     if (!options.sync) return this.showStoredMessages(account, folder, { busy: false })
-    if (!imap) return this.showStoredMessages(account, folder, { busy: false, error: NO_CONNECTION_NOTICE })
+    if (!imap) return this.showStoredMessages(account, folder, { busy: false, error: t(NO_CONNECTION_NOTICE) })
 
     await this.showStoredMessages(account, folder, { busy: true })
     try {
@@ -302,7 +303,7 @@ export class Navigator {
     if (this.loadingOlder) return
     const imap = this.services.connections.get(account.id)
     if (!imap) {
-      await this.showStoredMessages(account, folder, { busy: false, error: NO_CONNECTION_NOTICE })
+      await this.showStoredMessages(account, folder, { busy: false, error: t(NO_CONNECTION_NOTICE) })
       return
     }
     this.loadingOlder = true

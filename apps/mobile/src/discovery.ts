@@ -1,6 +1,7 @@
 import { discoverMailConfig, type FetchText } from '@peregrine/core/mailDiscovery'
 import { findPresetForEmail } from '@peregrine/core/providerPresets'
 import type { SecureMode } from '@peregrine/core/types'
+import { t } from './i18n'
 
 /** Where the settings that were found came from: the application's own list of the large providers, or what the address's domain publishes. */
 export type FoundBy = 'preset' | 'provider' | 'wellKnown' | 'mozilla' | 'srv'
@@ -89,19 +90,19 @@ export async function findServers(email: string, fetcher: Fetcher = fetch as unk
 
 /** What the screen says of what was found, or of finding nothing. */
 export function foundText(found: FoundServers | null): string {
-  if (!found) return 'Für diese Adresse sind keine Einstellungen veröffentlicht. Trage die Server selbst ein.'
+  if (!found) return t('Für diese Adresse sind keine Einstellungen veröffentlicht. Trage die Server selbst ein.')
   const where: Record<FoundBy, string> = {
-    preset: `Bekannter Anbieter: ${found.label ?? ''}.`,
-    provider: 'Gefunden beim Anbieter der Adresse.',
-    wellKnown: 'Gefunden auf der Webseite der Domain der Adresse.',
-    mozilla: 'Gefunden in der Datenbank von Mozilla. Dorthin ging nur die Domain, nicht die Adresse.',
-    srv: 'Gefunden in den DNS-Einträgen der Domain.'
+    preset: t('Bekannter Anbieter: {n}.', { n: found.label ?? '' }),
+    provider: t('Gefunden beim Anbieter der Adresse.'),
+    wellKnown: t('Gefunden auf der Webseite der Domain der Adresse.'),
+    mozilla: t('Gefunden in der Datenbank von Mozilla. Dorthin ging nur die Domain, nicht die Adresse.'),
+    srv: t('Gefunden in den DNS-Einträgen der Domain.')
   }
   const parts = [where[found.source]]
   if (found.oauth2) {
-    parts.push('Dieser Anbieter verlangt eine Anmeldung über OAuth2, die diese App noch nicht kann. Geht es mit einem App-Passwort, gib es als Passwort ein.')
+    parts.push(t('Dieser Anbieter verlangt eine Anmeldung über OAuth2, die diese App noch nicht kann. Geht es mit einem App-Passwort, gib es als Passwort ein.'))
   } else if (found.appPasswordUrl) {
-    parts.push('Dieser Anbieter verlangt meist ein App-Passwort statt des Passworts des Kontos.')
+    parts.push(t('Dieser Anbieter verlangt meist ein App-Passwort statt des Passworts des Kontos.'))
   }
   return parts.join(' ')
 }

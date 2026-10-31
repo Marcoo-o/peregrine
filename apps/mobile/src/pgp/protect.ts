@@ -4,6 +4,7 @@ import { parseAddress } from '@peregrine/smtp/headers'
 import { encryptedBody, signedBody } from '@peregrine/smtp/pgpMime'
 import { contactKeysFor, listOwnKeys, type OwnKey } from './keyStore'
 import { encryptEntity, keyState, signEntity, type KeyState } from './pgpService'
+import { t, msg } from '../i18n'
 
 /** What is asked of a message: that it be readable only by those it goes to, that it say who wrote it, or both. */
 export interface Protection {
@@ -55,7 +56,7 @@ async function usableOwnKey(db: SqlDb, accountId: string): Promise<{ key: OwnKey
   return { fault: newest ?? 'unusable' }
 }
 
-const FAULT_WORDS: Record<KeyFault, string> = { expired: 'abgelaufen', revoked: 'widerrufen', unusable: 'nicht zu gebrauchen' }
+const FAULT_WORDS: Record<KeyFault, string> = { expired: msg('abgelaufen'), revoked: msg('widerrufen'), unusable: msg('nicht zu gebrauchen') }
 
 /**
  * Why a message cannot be protected as asked, in the words of the screen, or null when it can. The compose screen asks
@@ -76,8 +77,8 @@ export async function protectionProblem(
   const own = await usableOwnKey(db, accountId)
   if ('fault' in own) {
     return own.fault === 'missing'
-      ? 'Für dieses Konto gibt es keinen Schlüssel. In den Einstellungen lässt sich einer anlegen oder einlesen.'
-      : `Der Schlüssel dieses Kontos ist ${FAULT_WORDS[own.fault]}. In den Einstellungen lässt sich ein neuer anlegen.`
+      ? t('Für dieses Konto gibt es keinen Schlüssel. In den Einstellungen lässt sich einer anlegen oder einlesen.')
+      : t('Der Schlüssel dieses Kontos ist {n}. In den Einstellungen lässt sich ein neuer anlegen.', { n: t(FAULT_WORDS[own.fault]) })
   }
   if (!protection.encrypt || options.draft) return null
   const missing: string[] = []
@@ -87,12 +88,12 @@ export async function protectionProblem(
     if ('fault' in found) (found.fault === 'missing' ? missing : faults[found.fault]).push(address)
   }
   const parts = [
-    missing.length > 0 ? `Für ${missing.join(', ')} ist kein Schlüssel hinterlegt.` : '',
+    missing.length > 0 ? t('Für {n} ist kein Schlüssel hinterlegt.', { n: missing.join(', ') }) : '',
     ...(Object.keys(faults) as KeyFault[]).map((fault) =>
-      faults[fault].length > 0 ? `Der Schlüssel für ${faults[fault].join(', ')} ist ${FAULT_WORDS[fault]}.` : ''
+      faults[fault].length > 0 ? t('Der Schlüssel für {n} ist {n2}.', { n: faults[fault].join(', '), n2: t(FAULT_WORDS[fault]) }) : ''
     )
   ].filter((part) => part !== '')
-  return parts.length === 0 ? null : `${parts.join(' ')} Ohne einen gültigen Schlüssel lässt sich die Nachricht nicht verschlüsseln.`
+  return parts.length === 0 ? null : t('{n} Ohne einen gültigen Schlüssel lässt sich die Nachricht nicht verschlüsseln.', { n: parts.join(' ') })
 }
 
 /**
@@ -112,7 +113,7 @@ export async function composeProtectedMessage(
   const problem = await protectionProblem(db, accountId, protection, recipientsOf(input), options)
   if (problem) throw new Error(problem)
   const usable = await usableOwnKey(db, accountId)
-  if ('fault' in usable) throw new Error('Für dieses Konto gibt es keinen Schlüssel, der sich gebrauchen ließe.')
+  if ('fault' in usable) throw new Error(t('Für dieses Konto gibt es keinen Schlüssel, der sich gebrauchen ließe.'))
   const own = usable.key
 
   if (options.draft) {
@@ -125,7 +126,7 @@ export async function composeProtectedMessage(
     const keys: string[] = []
     for (const address of recipientsOf(input)) {
       const found = await recipientKey(db, address)
-      if ('fault' in found) throw new Error(`Für ${address} gibt es keinen Schlüssel, der sich gebrauchen ließe.`)
+      if ('fault' in found) throw new Error(t('Für {address} gibt es keinen Schlüssel, der sich gebrauchen ließe.', { address }))
       keys.push(found.publicKey)
     }
     return composeProtected(input, options, async (entity) =>

@@ -22,13 +22,14 @@ import type { LockController } from './LockController'
 import type { Navigator } from './Navigator'
 import type { Services } from './services'
 import type { AppStore } from './store'
+import { language, msg, saveLanguageChoice, t } from '../i18n'
 
 const NOT_ALLOWED =
-  'Peregrine darf keine Benachrichtigungen zeigen. Das lässt sich in den Systemeinstellungen für die App ändern.'
+  msg('Peregrine darf keine Benachrichtigungen zeigen. Das lässt sich in den Systemeinstellungen für die App ändern.')
 const CONTACTS_NOT_ALLOWED =
-  'Peregrine darf die Kontakte nicht lesen. Das lässt sich in den Systemeinstellungen für die App ändern.'
-const SWITCHED_OFF = 'Benachrichtigungen sind ausgeschaltet.'
-const LOOKING = 'Der Abruf läuft. Neue Nachrichten erscheinen als Benachrichtigung.'
+  msg('Peregrine darf die Kontakte nicht lesen. Das lässt sich in den Systemeinstellungen für die App ändern.')
+const SWITCHED_OFF = msg('Benachrichtigungen sind ausgeschaltet.')
+const LOOKING = msg('Der Abruf läuft. Neue Nachrichten erscheinen als Benachrichtigung.')
 
 /** The settings screen: what is said about new mail, and how often the phone looks for it. */
 export class SettingsController {
@@ -71,7 +72,7 @@ export class SettingsController {
     const { db, deviceContacts } = this.services
     if (on && !(await deviceContacts.ensurePermission())) {
       await saveListSettings(db, { deviceContacts: false })
-      await this.show(CONTACTS_NOT_ALLOWED)
+      await this.show(t(CONTACTS_NOT_ALLOWED))
       return
     }
     await saveListSettings(db, { deviceContacts: on })
@@ -97,6 +98,12 @@ export class SettingsController {
   /** The accent, the way dates are written and how close the lines of a list sit: kept, and in force at once. */
   async setLook(change: Partial<Look>): Promise<void> {
     look.set(await saveLook(this.services.db, change))
+    await this.show()
+  }
+
+  /** The language of the application: kept, and in force at once on every screen. `system` follows the telephone. */
+  async setLanguage(choice: string): Promise<void> {
+    language.apply(await saveLanguageChoice(this.services.db, choice))
     await this.show()
   }
 
@@ -142,7 +149,7 @@ export class SettingsController {
       await saveNotificationSettings(db, { enabled: false })
       await this.applySchedule()
       await this.applyPush()
-      await this.show(NOT_ALLOWED)
+      await this.show(t(NOT_ALLOWED))
       return
     }
     await saveNotificationSettings(db, { enabled })
@@ -180,7 +187,7 @@ export class SettingsController {
   /** Changes one end of the quiet hours. What is not a time of day is not taken, and says so. */
   async setQuietTime(end: 'quietFrom' | 'quietTo', value: string): Promise<void> {
     if (parseTimeOfDay(value) === null) {
-      await this.show('Bitte eine Uhrzeit wie 22:00 angeben.')
+      await this.show(t('Bitte eine Uhrzeit wie 22:00 angeben.'))
       return
     }
     await this.change({ [end]: value })
@@ -205,14 +212,14 @@ export class SettingsController {
   async runNow(): Promise<void> {
     const { db, syncSchedule } = this.services
     if (!(await loadNotificationSettings(db)).enabled) {
-      await this.show(SWITCHED_OFF)
+      await this.show(t(SWITCHED_OFF))
       return
     }
     try {
       await syncSchedule.runNow()
-      await this.show(LOOKING)
+      await this.show(t(LOOKING))
     } catch (error) {
-      await this.show(`Der Abruf ging nicht: ${explainError(error)}`)
+      await this.show(t('Der Abruf ging nicht: {n}', { n: explainError(error) }))
     }
   }
 

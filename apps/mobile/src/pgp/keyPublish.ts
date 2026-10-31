@@ -1,3 +1,4 @@
+import { language, t } from '../i18n'
 /** What publishing needs of the network: a POST of JSON, and the answer as far as it is read here. */
 export type Poster = (
   url: string,
@@ -41,7 +42,7 @@ async function post(poster: Poster, path: string, body: unknown, timeoutMs: numb
       signal: controller.signal
     })
     const parsed = (await response.json().catch(() => ({}))) as Record<string, unknown>
-    if (!response.ok) throw new PublishError('refused', typeof parsed.error === 'string' ? parsed.error : `Der Server antwortete mit ${response.status}.`)
+    if (!response.ok) throw new PublishError('refused', typeof parsed.error === 'string' ? parsed.error : t('Der Server antwortete mit {status}.', { status: response.status }))
     return { status: response.status, body: parsed }
   } catch (error) {
     if (error instanceof PublishError) throw error
@@ -66,7 +67,7 @@ export async function publishKey(publicKey: string, address: string, poster: Pos
   const wanted = address.trim().toLowerCase()
   const status = Object.entries(statuses).find(([email]) => email.toLowerCase() === wanted)?.[1]
   if (status === 'published') return { fingerprint, confirmed: true, mailSent: false }
-  if (!token) throw new PublishError('refused', 'Der Server hat die Adresse nicht in dem Schlüssel gefunden.')
-  await post(poster, '/vks/v1/request-verify', { token, addresses: [address.trim()], locale: ['de'] }, timeoutMs)
+  if (!token) throw new PublishError('refused', t('Der Server hat die Adresse nicht in dem Schlüssel gefunden.'))
+  await post(poster, '/vks/v1/request-verify', { token, addresses: [address.trim()], locale: [language.code] }, timeoutMs)
   return { fingerprint, confirmed: false, mailSent: true }
 }

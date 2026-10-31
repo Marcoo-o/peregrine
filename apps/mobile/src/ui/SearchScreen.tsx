@@ -8,16 +8,17 @@ import { Header } from './Header'
 import { MessageRow } from './MessageRow'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t, msg } from '../i18n'
 
 /** How long typing has to stop before what was typed is searched for, so that a word is not searched for letter by letter. */
 const TYPING_PAUSE_MS = 250
 
-const HELP =
-  'Wörter suchen im Betreff, beim Absender und im Text der Nachrichten, die schon geladen sind. Dazu geht von:, betreff:, hat:anhang, ist:ungelesen, ist:markiert, ' +
-  'tag:Name, vor:2026-10-01 und nach:2026-09-01. Mehrere Angaben grenzen weiter ein.'
+const HELP = msg(
+  'Wörter suchen im Betreff, beim Absender und im Text der Nachrichten, die schon geladen sind. Dazu geht von:, betreff:, hat:anhang, ist:ungelesen, ist:markiert, tag:Name, vor:2026-10-01 und nach:2026-09-01. Mehrere Angaben grenzen weiter ein.'
+)
 
 const UNSUPPORTED: Record<SearchState['unsupported'][number], string> = {
-  to: 'Nach Empfängern (an:) lässt sich auf dem Handy noch nicht suchen. Die Suche lief ohne diese Angabe.'
+  to: msg('Nach Empfängern (an:) lässt sich auf dem Handy noch nicht suchen. Die Suche lief ohne diese Angabe.')
 }
 
 /** Looking through the messages that are on the phone, with the syntax of the desktop's search. */
@@ -45,13 +46,13 @@ export function SearchScreen(props: {
 
   return (
     <View style={styles.fill}>
-      <Header title="Suchen" back={{ label: 'Konten', onPress: props.onBack }} />
+      <Header title={t('Suchen')} back={{ label: t('Konten'), onPress: props.onBack }} />
       <TextInput
         autoFocus={query === ''}
         autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="search"
-        placeholder="Suchen"
+        placeholder={t('Suchen')}
         placeholderTextColor={colors.muted}
         style={styles.input}
         value={typed}
@@ -59,15 +60,15 @@ export function SearchScreen(props: {
       />
       {query.trim() !== '' ? (
         saved ? (
-          <Button label="Aus der Seitenleiste entfernen" variant="secondary" onPress={props.onRemove} />
+          <Button label={t('Aus der Seitenleiste entfernen')} variant="secondary" onPress={props.onRemove} />
         ) : (
-          <Button label="Suche in der Seitenleiste behalten" variant="secondary" onPress={props.onSave} />
+          <Button label={t('Suche in der Seitenleiste behalten')} variant="secondary" onPress={props.onSave} />
         )
       ) : null}
       {notice ? <Text style={styles.hint}>{notice}</Text> : null}
       {unsupported.map((field) => (
         <Text key={field} style={styles.hint}>
-          {UNSUPPORTED[field]}
+          {t(UNSUPPORTED[field])}
         </Text>
       ))}
       <FlatList
@@ -75,7 +76,7 @@ export function SearchScreen(props: {
         keyboardShouldPersistTaps="handled"
         keyExtractor={(message) => `${message.folderId}:${message.uid}`}
         ListEmptyComponent={
-          <Text style={styles.hint}>{query.trim() === '' ? HELP : 'Nichts gefunden.'}</Text>
+          <Text style={styles.hint}>{query.trim() === '' ? t(HELP) : t('Nichts gefunden.')}</Text>
         }
         renderItem={({ item }) => (
           <MessageRow
@@ -84,7 +85,7 @@ export function SearchScreen(props: {
             showPreview={props.state.showPreview}
             account={`${item.accountName}, ${folderLabel(item.folder)}`}
             accountColor={item.accountColor}
-            pendingNote={item.pendingMoveTo ? 'wird verschoben, sobald es geht' : undefined}
+            pendingNote={item.pendingMoveTo ? t('wird verschoben, sobald es geht') : undefined}
             onPress={() => props.onOpen(item)}
           />
         )}

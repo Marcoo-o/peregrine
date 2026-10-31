@@ -4,6 +4,7 @@ import { Icon } from './Icon'
 import { COMMIT_FRACTION, isSwipe, swipeResult } from './swipe'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /**
  * A row of a list that can be swiped sideways to do something to it: to the right archives, to the left deletes, as
@@ -64,8 +65,8 @@ export function SwipeableRow(props: {
     <View
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       accessibilityActions={[
-        { name: 'archive', label: 'Archivieren' },
-        { name: 'delete', label: 'Löschen' }
+        { name: 'archive', label: t('Archivieren') },
+        { name: 'delete', label: t('Löschen') }
       ]}
       onAccessibilityAction={(event) => (event.nativeEvent.actionName === 'archive' ? props.onArchive() : props.onDelete())}
     >
@@ -76,7 +77,7 @@ export function SwipeableRow(props: {
       >
         <Animated.View style={[styles.swipeContent, { opacity: shown, transform: [{ scale: grown }] }]}>
           <Icon name="archive" size={22} color={colors.onAccent} />
-          <Text style={styles.swipeLabel} numberOfLines={1}>Archivieren</Text>
+          <Text style={styles.swipeLabel} numberOfLines={1}>{t('Archivieren')}</Text>
         </Animated.View>
       </Animated.View>
       <Animated.View
@@ -85,7 +86,7 @@ export function SwipeableRow(props: {
       >
         <Animated.View style={[styles.swipeContent, { opacity: shown, transform: [{ scale: grown }] }]}>
           <Icon name="trash" size={22} color={colors.onAccent} />
-          <Text style={styles.swipeLabel} numberOfLines={1}>Löschen</Text>
+          <Text style={styles.swipeLabel} numberOfLines={1}>{t('Löschen')}</Text>
         </Animated.View>
       </Animated.View>
       <Animated.View style={[styles.swipeRow, { transform: [{ translateX: x }] }]} {...responder.panHandlers}>

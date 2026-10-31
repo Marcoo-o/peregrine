@@ -7,6 +7,7 @@ import type { Navigator } from './Navigator'
 import { groupByFolder, type Picked } from './selection'
 import type { Services } from './services'
 import type { AppStore } from './store'
+import { t } from '../i18n'
 
 /**
  * Doing one thing to several messages chosen in a list. What is chosen is grouped by folder, since the queue
@@ -54,12 +55,12 @@ export class SelectionController {
 
   /** Puts the messages into the archive of their accounts. Returns what is to be said when an account has none. */
   archive(picked: Picked[]): Promise<string | undefined> {
-    return this.moveToRole(picked, '\\Archive', 'Archivordner')
+    return this.moveToRole(picked, '\\Archive', t('Archivordner'))
   }
 
   /** Puts the messages into the spam folder of their accounts. Returns what is to be said when an account has none. */
   markAsJunk(picked: Picked[]): Promise<string | undefined> {
-    return this.moveToRole(picked, '\\Junk', 'Spam-Ordner')
+    return this.moveToRole(picked, '\\Junk', t('Spam-Ordner'))
   }
 
   /** Deletes the messages, into the trash of their accounts. */
@@ -78,7 +79,7 @@ export class SelectionController {
       }
       await this.services.mail.move(folder, uids, target)
     })
-    return without.size > 0 ? `Für ${[...without].join(', ')} ist kein ${name} vorhanden` : undefined
+    return without.size > 0 ? t('Für {n} ist kein {name} vorhanden', { n: [...without].join(', '), name }) : undefined
   }
 
   private async allStarred(picked: Picked[]): Promise<boolean> {

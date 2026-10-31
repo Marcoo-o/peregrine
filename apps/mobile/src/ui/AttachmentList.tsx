@@ -5,6 +5,7 @@ import { looksLikeKeyFile } from '../pgp/keyText'
 import { Chip } from './controls'
 import { Icon } from './Icon'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** The attachments of an open message, each with what its name gives away and what can be done with it. */
 export function AttachmentList(props: {
@@ -18,7 +19,7 @@ export function AttachmentList(props: {
   if (props.attachments.length === 0) return null
   return (
     <View style={styles.attachments}>
-      <Text style={styles.section}>Anhänge</Text>
+      <Text style={styles.section}>{t('Anhänge')}</Text>
       {props.attachments.map((attachment) => (
         <View key={attachment.id} style={styles.attachment}>
           <View style={styles.noticeHead}>
@@ -33,10 +34,10 @@ export function AttachmentList(props: {
             </Text>
           ))}
           <View style={styles.actions}>
-            <Chip label="Speichern" active={false} onPress={() => props.onSave(attachment)} />
-            <Chip label="Öffnen" active={false} onPress={() => props.onOpen(attachment)} />
+            <Chip label={t('Speichern')} active={false} onPress={() => props.onSave(attachment)} />
+            <Chip label={t('Öffnen')} active={false} onPress={() => props.onOpen(attachment)} />
             {props.onTakeKey && looksLikeKeyFile(attachment) ? (
-              <Chip label="Schlüssel übernehmen" icon="key" active={false} onPress={() => props.onTakeKey?.(attachment)} />
+              <Chip label={t('Schlüssel übernehmen')} icon="key" active={false} onPress={() => props.onTakeKey?.(attachment)} />
             ) : null}
           </View>
         </View>

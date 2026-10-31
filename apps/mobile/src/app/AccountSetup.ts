@@ -9,6 +9,7 @@ import type { Identities } from './Identities'
 import type { Navigator } from './Navigator'
 import type { Services } from './services'
 import type { AppStore } from './store'
+import { t } from '../i18n'
 
 /** Adding an account, changing one, and removing one. */
 export class AccountSetup {
@@ -39,7 +40,7 @@ export class AccountSetup {
           await this.services.checkSending(sending)
         } catch (error) {
           await session.disconnect().catch(() => undefined)
-          this.store.showScreen({ name: 'login', error: `Zum Senden: ${explainError(error)}` })
+          this.store.showScreen({ name: 'login', error: t('Zum Senden: {n}', { n: explainError(error) }) })
           return
         }
       }
@@ -77,7 +78,7 @@ export class AccountSetup {
       try {
         session = await this.services.connectImap(imapLoginOf(next))
       } catch (error) {
-        fail(`Zum Lesen: ${explainError(error)}`)
+        fail(t('Zum Lesen: {n}', { n: explainError(error) }))
         return
       }
     }
@@ -87,7 +88,7 @@ export class AccountSetup {
         await this.services.checkSending(settings)
       } catch (error) {
         await session?.disconnect().catch(() => undefined)
-        fail(`Zum Senden: ${explainError(error)}`)
+        fail(t('Zum Senden: {n}', { n: explainError(error) }))
         return
       }
     }

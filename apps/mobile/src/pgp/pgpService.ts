@@ -3,6 +3,7 @@ import { decodeUtf8 } from '@peregrine/imap/utf8'
 import type { Key, PrivateKey } from 'openpgp'
 import { installNativeS2k, type NativeS2k } from './nativeS2k'
 import { openpgp } from './openpgp'
+import { t } from '../i18n'
 
 /** A key pair, both halves as ASCII armor, the private one open. */
 export interface KeyPair {
@@ -48,12 +49,12 @@ const armoredBlocks = (text: string): string[] =>
 async function readAllKeys(material: string | Uint8Array): Promise<Key[]> {
   const text = typeof material === 'string' ? material : decodeUtf8(material.subarray(0, 64))
   if (!text.includes('-----BEGIN PGP')) {
-    if (typeof material === 'string') throw new Error('Das ist kein PGP-Schlüssel.')
+    if (typeof material === 'string') throw new Error(t('Das ist kein PGP-Schlüssel.'))
     return openpgp.readKeys({ binaryKeys: material })
   }
   const whole = typeof material === 'string' ? material : decodeUtf8(material)
   const blocks = armoredBlocks(whole)
-  if (blocks.length === 0) throw new Error('Das ist kein PGP-Schlüssel.')
+  if (blocks.length === 0) throw new Error(t('Das ist kein PGP-Schlüssel.'))
   return (await Promise.all(blocks.map((armoredKeys) => openpgp.readKeys({ armoredKeys })))).flat()
 }
 

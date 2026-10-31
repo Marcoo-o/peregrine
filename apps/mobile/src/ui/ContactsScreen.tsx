@@ -7,6 +7,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** What is being edited: one of the contacts, a new one, or none, which is the list. */
 type Editing = BookContact | 'new' | null
@@ -47,15 +48,15 @@ export function ContactsScreen(props: {
   if (editing === null) {
     return (
       <FormScroll>
-        <Header title="Kontakte" back={{ label: 'Einstellungen', onPress: props.onBack }} />
+        <Header title={t('Kontakte')} back={{ label: t('Einstellungen'), onPress: props.onBack }} />
         {status}
-        <Text style={styles.hint}>Die Personen, die du selbst behältst. Sie werden beim Tippen einer Adresse vorgeschlagen.</Text>
-        <Button label="Kontakt hinzufügen" onPress={() => open('new')} />
-        <Button label="vCard-Datei einlesen" variant="secondary" onPress={props.onImport} />
-        {contacts.length > 0 ? <Button label="Alle als vCard speichern" variant="secondary" onPress={() => props.onExport()} /> : null}
-        {contacts.length > 0 ? <FormInput placeholder="In den Kontakten suchen" autoCapitalize="none" autoCorrect={false} value={looking} onChangeText={setLooking} /> : null}
-        {contacts.length === 0 ? <Text style={styles.hint}>Noch keine Kontakte.</Text> : null}
-        {contacts.length > 0 && shown.length === 0 ? <Text style={styles.hint}>Nichts gefunden.</Text> : null}
+        <Text style={styles.hint}>{t('Die Personen, die du selbst behältst. Sie werden beim Tippen einer Adresse vorgeschlagen.')}</Text>
+        <Button label={t('Kontakt hinzufügen')} onPress={() => open('new')} />
+        <Button label={t('vCard-Datei einlesen')} variant="secondary" onPress={props.onImport} />
+        {contacts.length > 0 ? <Button label={t('Alle als vCard speichern')} variant="secondary" onPress={() => props.onExport()} /> : null}
+        {contacts.length > 0 ? <FormInput placeholder={t('In den Kontakten suchen')} autoCapitalize="none" autoCorrect={false} value={looking} onChangeText={setLooking} /> : null}
+        {contacts.length === 0 ? <Text style={styles.hint}>{t('Noch keine Kontakte.')}</Text> : null}
+        {contacts.length > 0 && shown.length === 0 ? <Text style={styles.hint}>{t('Nichts gefunden.')}</Text> : null}
         {shown.map((contact) => (
           <Pressable
             key={contact.id}
@@ -74,11 +75,11 @@ export function ContactsScreen(props: {
   const current = editing === 'new' ? null : editing
   return (
     <FormScroll>
-      <Header title={current ? 'Kontakt' : 'Neuer Kontakt'} back={{ label: 'Kontakte', onPress: () => setEditing(null) }} />
+      <Header title={current ? t('Kontakt') : t('Neuer Kontakt')} back={{ label: t('Kontakte'), onPress: () => setEditing(null) }} />
       {status}
-      <FormInput placeholder="Name" value={fields.name} onChangeText={(name) => setFields((now) => ({ ...now, name }))} />
+      <FormInput placeholder={t('Name')} value={fields.name} onChangeText={(name) => setFields((now) => ({ ...now, name }))} />
       <FormInput
-        placeholder="E-Mail-Adresse"
+        placeholder={t('E-Mail-Adresse')}
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="email-address"
@@ -86,20 +87,20 @@ export function ContactsScreen(props: {
         onChangeText={(address) => setFields((now) => ({ ...now, address }))}
       />
       <Button
-        label="Speichern"
+        label={t('Speichern')}
         disabled={fields.address.trim() === ''}
         onPress={() => props.onSave(current?.id ?? null, fields)}
       />
-      {current ? <Button label="Als vCard speichern" variant="secondary" onPress={() => props.onExport(current.id)} /> : null}
-      {current ? <Button label="Kontakt entfernen" variant="danger" onPress={() => setRemoving(true)} /> : null}
+      {current ? <Button label={t('Als vCard speichern')} variant="secondary" onPress={() => props.onExport(current.id)} /> : null}
+      {current ? <Button label={t('Kontakt entfernen')} variant="danger" onPress={() => setRemoving(true)} /> : null}
       <ConfirmDialog
         visible={removing}
-        title="Kontakt entfernen?"
-        text="Der Kontakt wird von diesem Telefon entfernt. Nachrichten von und an ihn bleiben, wie sie sind."
+        title={t('Kontakt entfernen?')}
+        text={t('Der Kontakt wird von diesem Telefon entfernt. Nachrichten von und an ihn bleiben, wie sie sind.')}
         answers={[
-          { label: 'Abbrechen', onPress: () => setRemoving(false) },
+          { label: t('Abbrechen'), onPress: () => setRemoving(false) },
           {
-            label: 'Kontakt entfernen',
+            label: t('Kontakt entfernen'),
             variant: 'danger',
             onPress: () => {
               setRemoving(false)

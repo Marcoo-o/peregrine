@@ -2,13 +2,14 @@ import { Text, View } from 'react-native'
 import { parseAddress } from '@peregrine/smtp/headers'
 import { senderName } from '../senderName'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** Who a message is from: a circle in the colour of the account it came to, the name, the address, and who else it went to. */
 export function SenderBlock(props: { from: string; to: string; cc: string; color: string }) {
   const styles = useStyles()
   const name = senderName(props.from)
   const { address } = parseAddress(props.from)
-  const recipients = [props.to && `An: ${props.to}`, props.cc && `Kopie: ${props.cc}`].filter(Boolean).join('\n')
+  const recipients = [props.to && `An: ${props.to}`, props.cc && t('Kopie: {cc}', { cc: props.cc })].filter(Boolean).join('\n')
   return (
     <View>
       <View style={styles.senderRow}>

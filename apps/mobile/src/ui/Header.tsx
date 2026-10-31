@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native'
 import { Icon } from './Icon'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /** The way back to the screen before, which every screen but the first has. What it leads to is its label. */
 export function BackBar(props: { label: string; onPress: () => void }) {
@@ -10,7 +11,7 @@ export function BackBar(props: { label: string; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Zurück: ${props.label}`}
+      accessibilityLabel={t('Zurück: {label}', { label: props.label })}
       style={styles.back}
       onPress={props.onPress}
     >

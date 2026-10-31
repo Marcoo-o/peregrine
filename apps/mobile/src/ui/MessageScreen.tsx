@@ -25,11 +25,12 @@ import { TagSheet } from './TagSheet'
 import { useTags } from './tags'
 import { useSafety } from './safety'
 import { useStyles } from './useStyles'
+import { language, t } from '../i18n'
 
 /** When a message was written, for the line under who it is from. */
 function writtenAt(dateMs: number | null | undefined): string {
   if (!dateMs) return ''
-  return new Date(dateMs).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' })
+  return new Date(dateMs).toLocaleString(language.locale, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 export function MessageScreen(props: {
@@ -91,9 +92,9 @@ export function MessageScreen(props: {
 
   return (
     <View style={styles.fill}>
-      <BackBar label="Zurück" onPress={props.onBack} />
+      <BackBar label={t('Zurück')} onPress={props.onBack} />
       <ScrollView style={styles.fill} contentContainerStyle={styles.form}>
-        <Title text={message?.subject || summary.subject || '(ohne Betreff)'} />
+        <Title text={message?.subject || summary.subject || t('(ohne Betreff)')} />
         <SenderBlock
           from={message?.from || summary.sender}
           to={message?.to ?? ''}
@@ -142,20 +143,20 @@ export function MessageScreen(props: {
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}
         actions={[
-          { label: 'Als ungelesen markieren', onPress: props.onToggleSeen },
-          { label: 'Tags …', onPress: () => setTagging(true) },
+          { label: t('Als ungelesen markieren'), onPress: props.onToggleSeen },
+          { label: t('Tags …'), onPress: () => setTagging(true) },
           summary.snoozedUntil !== null && summary.snoozedUntil > Date.now()
-            ? { label: 'Jetzt zurückholen', onPress: props.onUnsnooze }
-            : { label: 'Später erinnern …', onPress: () => setSnoozing(true) },
-          { label: 'Verschieben …', onPress: props.onMove },
-          { label: 'Als Spam markieren', onPress: props.onJunk },
-          ...(message ? [{ label: 'Drucken oder als PDF speichern', onPress: props.onPrint }] : []),
-          ...(message ? [{ label: 'Zu Kontakten hinzufügen', onPress: props.onAddContact }] : []),
-          ...(senderAddress ? [{ label: 'Schlüssel des Absenders suchen', onPress: () => props.onFindKey(senderAddress) }] : []),
+            ? { label: t('Jetzt zurückholen'), onPress: props.onUnsnooze }
+            : { label: t('Später erinnern …'), onPress: () => setSnoozing(true) },
+          { label: t('Verschieben …'), onPress: props.onMove },
+          { label: t('Als Spam markieren'), onPress: props.onJunk },
+          ...(message ? [{ label: t('Drucken oder als PDF speichern'), onPress: props.onPrint }] : []),
+          ...(message ? [{ label: t('Zu Kontakten hinzufügen'), onPress: props.onAddContact }] : []),
+          ...(senderAddress ? [{ label: t('Schlüssel des Absenders suchen'), onPress: () => props.onFindKey(senderAddress) }] : []),
           ...(props.state.raw
             ? [
-                { label: 'Quelltext anzeigen', onPress: props.onSource },
-                { label: 'Als .eml speichern', onPress: props.onSaveSource }
+                { label: t('Quelltext anzeigen'), onPress: props.onSource },
+                { label: t('Als .eml speichern'), onPress: props.onSaveSource }
               ]
             : [])
         ]}

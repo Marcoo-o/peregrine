@@ -10,6 +10,7 @@ import {
   spamText,
   trackingPixelsText
 } from './warningText'
+import { t } from '../i18n'
 
 /** One thing a message has to say for itself, to be shown above its text. */
 export interface Hint {
@@ -35,49 +36,49 @@ function pgpHint(status: PgpStatus): Hint | undefined {
         id: 'pgp',
         tone: 'good',
         icon: 'lock',
-        title: 'Verschlüsselt und signiert, die Signatur stimmt',
-        detail: 'Nur dieses Konto konnte die Nachricht öffnen, und sie stammt vom Besitzer des Schlüssels, den du für den Absender hinterlegt hast.'
+        title: t('Verschlüsselt und signiert, die Signatur stimmt'),
+        detail: t('Nur dieses Konto konnte die Nachricht öffnen, und sie stammt vom Besitzer des Schlüssels, den du für den Absender hinterlegt hast.')
       }
     case 'encrypted-unverified':
       return {
         id: 'pgp',
         tone: 'info',
         icon: 'lock',
-        title: 'Verschlüsselt, der Absender ist nicht bestätigt',
+        title: t('Verschlüsselt, der Absender ist nicht bestätigt'),
         detail:
-          'Die Nachricht war für dich verschlüsselt und ist geöffnet. Ob sie vom angegebenen Absender stammt, lässt sich nicht sagen: Sie ist nicht signiert, oder für den Absender ist kein Schlüssel hinterlegt.'
+          t('Die Nachricht war für dich verschlüsselt und ist geöffnet. Ob sie vom angegebenen Absender stammt, lässt sich nicht sagen: Sie ist nicht signiert, oder für den Absender ist kein Schlüssel hinterlegt.')
       }
     case 'encrypted-failed':
       return {
         id: 'pgp',
         tone: 'warning',
         icon: 'alert',
-        title: 'Verschlüsselt, und das Handy kann sie nicht öffnen',
-        detail: 'Für dieses Konto fehlt der Schlüssel, mit dem die Nachricht verschlüsselt wurde, oder sie ist beschädigt.'
+        title: t('Verschlüsselt, und das Handy kann sie nicht öffnen'),
+        detail: t('Für dieses Konto fehlt der Schlüssel, mit dem die Nachricht verschlüsselt wurde, oder sie ist beschädigt.')
       }
     case 'signed-verified':
       return {
         id: 'pgp',
         tone: 'good',
         icon: 'shieldOk',
-        title: 'Signiert, die Signatur stimmt',
-        detail: 'Der Inhalt ist unverändert und stammt vom Besitzer des Schlüssels, den du für den Absender hinterlegt hast.'
+        title: t('Signiert, die Signatur stimmt'),
+        detail: t('Der Inhalt ist unverändert und stammt vom Besitzer des Schlüssels, den du für den Absender hinterlegt hast.')
       }
     case 'signed-unverified':
       return {
         id: 'pgp',
         tone: 'info',
         icon: 'shieldUnknown',
-        title: 'Signiert, die Signatur ist nicht geprüft',
-        detail: 'Für den Absender ist kein Schlüssel hinterlegt, mit dem sich die Signatur prüfen ließe.'
+        title: t('Signiert, die Signatur ist nicht geprüft'),
+        detail: t('Für den Absender ist kein Schlüssel hinterlegt, mit dem sich die Signatur prüfen ließe.')
       }
     case 'signed-invalid':
       return {
         id: 'pgp',
         tone: 'danger',
         icon: 'alert',
-        title: 'Die Signatur dieser Nachricht stimmt nicht',
-        detail: 'Der Inhalt wurde nach dem Signieren verändert, oder die Signatur stammt nicht von dem Schlüssel, den du für den Absender hinterlegt hast.'
+        title: t('Die Signatur dieser Nachricht stimmt nicht'),
+        detail: t('Der Inhalt wurde nach dem Signieren verändert, oder die Signatur stammt nicht von dem Schlüssel, den du für den Absender hinterlegt hast.')
       }
   }
 }
@@ -124,7 +125,7 @@ export function hintsFor(input: {
     hints.push({
       id: 'auth',
       tone: 'danger',
-      title: AUTH_BANNER,
+      title: t(AUTH_BANNER),
       detail: assessment.failedAuth
         .map((check) => authFailedText(check))
         .map(({ name, text }) => `${name}: ${text}`)
@@ -141,7 +142,7 @@ export function hintsFor(input: {
     hints.push({
       id: 'links',
       tone: 'danger',
-      title: 'Dieser Link führt woanders hin, als er aussieht',
+      title: t('Dieser Link führt woanders hin, als er aussieht'),
       detail: page.links
         .map((link) => `${link.displayHost}: ${link.findings.map((finding) => linkFindingText(finding).title).join(', ')}`)
         .join('\n')
@@ -154,11 +155,11 @@ export function hintsFor(input: {
   }
 
   if (assessment.firstContact) {
-    hints.push({ id: 'first-contact', tone: 'info', title: FIRST_CONTACT.banner, detail: FIRST_CONTACT.detail })
+    hints.push({ id: 'first-contact', tone: 'info', title: t(FIRST_CONTACT.banner), detail: t(FIRST_CONTACT.detail) })
   }
 
   if (input.remoteImages > 0 && !input.showingImages) {
-    hints.push({ id: 'images', tone: 'info', title: REMOTE_CONTENT_BLOCKED, action: 'showImages' })
+    hints.push({ id: 'images', tone: 'info', title: t(REMOTE_CONTENT_BLOCKED), action: 'showImages' })
   }
 
   return hints

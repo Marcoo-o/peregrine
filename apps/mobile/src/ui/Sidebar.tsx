@@ -11,6 +11,7 @@ import { folderLabel, roleLabel } from './folderLabel'
 import { Icon, type IconName } from './Icon'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /** How far a row is moved in for each level it sits below another. */
 const INDENT = 18
@@ -39,7 +40,7 @@ function Row(props: {
       {props.expanded !== undefined ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={props.expanded ? 'Zuklappen' : 'Aufklappen'}
+          accessibilityLabel={props.expanded ? t('Zuklappen') : t('Aufklappen')}
           disabled={props.expanded === null}
           hitSlop={8}
           style={styles.expander}
@@ -91,7 +92,7 @@ export function Sidebar(props: {
       <ScrollView contentContainerStyle={{ paddingVertical: 12 }}>
         <View style={styles.sidebarAccount}>
           <Icon name="unified" size={18} color={colors.text} />
-          <Text style={styles.sidebarAccountName}>Vereinheitlicht</Text>
+          <Text style={styles.sidebarAccountName}>{t('Vereinheitlicht')}</Text>
         </View>
         {UNIFIED_ROLES.map((role) => (
           <Row
@@ -110,7 +111,7 @@ export function Sidebar(props: {
             <View style={styles.sidebarDivider} />
             <View style={styles.sidebarAccount}>
               <Icon name="search" size={18} color={colors.text} />
-              <Text style={styles.sidebarAccountName}>Suchen</Text>
+              <Text style={styles.sidebarAccountName}>{t('Suchen')}</Text>
             </View>
             {data.searches.map((search) => (
               <Row key={search.id} label={search.name} icon="search" depth={1} chosen={false} count={0} onPress={() => props.onSearch(search.query)} />
@@ -138,7 +139,7 @@ export function Sidebar(props: {
                   {account.displayName}
                 </Text>
                 <View
-                  accessibilityLabel={props.connected.includes(account.id) ? 'Verbunden' : 'Nicht verbunden'}
+                  accessibilityLabel={props.connected.includes(account.id) ? t('Verbunden') : t('Nicht verbunden')}
                   style={[styles.statusDot, { backgroundColor: props.connected.includes(account.id) ? colors.success : colors.warning }]}
                 />
               </Pressable>
@@ -162,9 +163,9 @@ export function Sidebar(props: {
         })}
 
         <View style={styles.sidebarDivider} />
-        <Row label="Konten" icon="folder" depth={0} chosen={false} count={0} onPress={props.onAccounts} />
-        <Row label="Konto hinzufügen" icon="plus" depth={0} chosen={false} count={0} onPress={props.onAddAccount} />
-        <Row label="Einstellungen" icon="settings" depth={0} chosen={false} count={0} onPress={props.onSettings} />
+        <Row label={t('Konten')} icon="folder" depth={0} chosen={false} count={0} onPress={props.onAccounts} />
+        <Row label={t('Konto hinzufügen')} icon="plus" depth={0} chosen={false} count={0} onPress={props.onAddAccount} />
+        <Row label={t('Einstellungen')} icon="settings" depth={0} chosen={false} count={0} onPress={props.onSettings} />
       </ScrollView>
     </View>
   )

@@ -17,11 +17,12 @@ import { SwipeableRow } from './SwipeableRow'
 import { TopBar } from './TopBar'
 import { useSelection, type SelectionActions } from './useSelection'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** What is said about a message whose move waits for a connection: where it is going. */
 function pendingNote(message: StoredMessage, folderNames: Record<string, string>): string | undefined {
   if (!message.pendingMoveTo) return undefined
-  return `→ ${folderNames[message.pendingMoveTo] ?? 'anderer Ordner'}, sobald es geht`
+  return t('→ {n}, sobald es geht', { n: folderNames[message.pendingMoveTo] ?? t('anderer Ordner') })
 }
 
 export function MessagesScreen(props: {
@@ -109,7 +110,7 @@ export function MessagesScreen(props: {
           </SwipeableRow>
         )}
       />
-      {selection.selecting ? <SelectionBar selection={selection} flagLists={selection.picked.map((row) => row.message.flags)} onCreateTag={props.onCreateTag} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
+      {selection.selecting ? <SelectionBar selection={selection} flagLists={selection.picked.map((row) => row.message.flags)} onCreateTag={props.onCreateTag} /> : <Fab label={t('Neue Nachricht')} onPress={props.onCompose} />}
     </View>
   )
 }

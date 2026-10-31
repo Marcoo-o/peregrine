@@ -6,6 +6,7 @@ import { Title } from './Header'
 import { ListRow } from './ListRow'
 import { TopBar } from './TopBar'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** The line under the name of an account: its address, unless that is the name already, which is what an account is called by default. */
 function addressLine(account: Account): string | undefined {
@@ -29,7 +30,7 @@ export function AccountsScreen(props: {
   return (
     <View style={styles.fill}>
       <TopBar onSearch={props.onSearch} onSettings={props.onSettings} />
-      <Title text="Konten" />
+      <Title text={t('Konten')} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FlatList
         data={accounts}
@@ -43,7 +44,7 @@ export function AccountsScreen(props: {
           />
         )}
       />
-      <Button label="Konto hinzufügen" variant="secondary" onPress={props.onAdd} />
+      <Button label={t('Konto hinzufügen')} variant="secondary" onPress={props.onAdd} />
     </View>
   )
 }

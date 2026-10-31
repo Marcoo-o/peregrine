@@ -1,5 +1,6 @@
 import { Text } from 'react-native'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /**
  * What a list says when it shows nothing, beyond what the line over it already says. That line says that there are
@@ -8,5 +9,5 @@ import { useStyles } from './useStyles'
 export function EmptyListNote(props: { busy: boolean; total: number }) {
   const styles = useStyles()
   if (props.busy || props.total === 0) return null
-  return <Text style={styles.hint}>Keine Nachricht passt zu den Filtern.</Text>
+  return <Text style={styles.hint}>{t('Keine Nachricht passt zu den Filtern.')}</Text>
 }

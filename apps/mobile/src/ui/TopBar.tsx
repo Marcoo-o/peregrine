@@ -4,6 +4,7 @@ import { useDrawer } from './drawer'
 import { Icon } from './Icon'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /**
  * The top of a list, as the top of the desktop's window is: the way to the sidebar, the search, and the two
@@ -17,15 +18,15 @@ export function TopBar(props: { onSearch: () => void; onRefresh?: () => void; on
   const drawer = useDrawer()
   return (
     <View style={styles.topBar}>
-      <IconButton name="menu" label="Menü" onPress={drawer.open} />
-      <Pressable accessibilityRole="search" accessibilityLabel="Suchen" style={styles.searchPill} onPress={props.onSearch}>
+      <IconButton name="menu" label={t('Menü')} onPress={drawer.open} />
+      <Pressable accessibilityRole="search" accessibilityLabel={t('Suchen')} style={styles.searchPill} onPress={props.onSearch}>
         <Icon name="search" size={18} color={colors.muted} />
         <Text style={styles.searchPillText} numberOfLines={1}>
-          Postfächer durchsuchen
+          {t('Postfächer durchsuchen')}
         </Text>
       </Pressable>
-      {props.onRefresh ? <IconButton name="refresh" label="Aktualisieren" onPress={props.onRefresh} /> : null}
-      <IconButton name="settings" label="Einstellungen" onPress={props.onSettings} />
+      {props.onRefresh ? <IconButton name="refresh" label={t('Aktualisieren')} onPress={props.onRefresh} /> : null}
+      <IconButton name="settings" label={t('Einstellungen')} onPress={props.onSettings} />
     </View>
   )
 }

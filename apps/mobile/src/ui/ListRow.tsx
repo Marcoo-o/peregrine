@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native'
 import { Icon, type IconName } from './Icon'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /**
  * A line of a list that leads somewhere: what it is, a line about it, and an arrow. It can carry the colour
@@ -32,7 +33,7 @@ export function ListRow(props: {
       {props.expanded !== undefined ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={props.expanded ? 'Zuklappen' : 'Aufklappen'}
+          accessibilityLabel={props.expanded ? t('Zuklappen') : t('Aufklappen')}
           accessibilityState={{ expanded: props.expanded ?? undefined }}
           disabled={props.expanded === null}
           hitSlop={8}

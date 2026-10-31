@@ -18,6 +18,7 @@ import { SwipeableRow } from './SwipeableRow'
 import { TopBar } from './TopBar'
 import { useSelection, type SelectionActions } from './useSelection'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** The folders of one role of all accounts in one list, newest first, each message marked with its account. */
 export function UnifiedScreen(props: {
@@ -52,7 +53,7 @@ export function UnifiedScreen(props: {
           <TopBar onSearch={props.onSearch} onRefresh={props.onRefresh} onSettings={props.onSettings} />
           <ListHead
             title={roleLabel(role)}
-            subtitle="Alle Konten"
+            subtitle={t('Alle Konten')}
             total={messages.length}
             shown={shown.length}
             filter={filter}
@@ -91,7 +92,7 @@ export function UnifiedScreen(props: {
               accountColor={item.accountColor}
               pendingNote={
               item.pendingMoveTo
-                ? 'wird verschoben, sobald es geht'
+                ? t('wird verschoben, sobald es geht')
                 : role === 'snoozed' && item.snoozedUntil !== null
                   ? backAtText(item.snoozedUntil)
                   : undefined
@@ -111,7 +112,7 @@ export function UnifiedScreen(props: {
           </SwipeableRow>
         )}
       />
-      {selection.selecting ? <SelectionBar selection={selection} snoozedList={role === 'snoozed'} flagLists={selection.picked.map((message) => message.flags)} onCreateTag={props.onCreateTag} /> : <Fab label="Neue Nachricht" onPress={props.onCompose} />}
+      {selection.selecting ? <SelectionBar selection={selection} snoozedList={role === 'snoozed'} flagLists={selection.picked.map((message) => message.flags)} onCreateTag={props.onCreateTag} /> : <Fab label={t('Neue Nachricht')} onPress={props.onCompose} />}
     </View>
   )
 }

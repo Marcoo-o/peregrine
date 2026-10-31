@@ -9,6 +9,7 @@ import { useTags } from './tags'
 import { useSort } from './sort'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /**
  * The line over a list, as the desktop has it over its own: what the list is, how many messages it has, and the
@@ -41,17 +42,17 @@ export function ListHead(props: {
         </Text>
         <Text style={styles.listCount}>{countText(props.shown, props.total)}</Text>
         {props.onTools ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Ordner verwalten" hitSlop={8} style={styles.toolsButton} onPress={props.onTools}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('Ordner verwalten')} hitSlop={8} style={styles.toolsButton} onPress={props.onTools}>
             <Icon name="settings" size={20} color={colors.accent} />
           </Pressable>
         ) : null}
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         <Chip label={sortLabel(sort)} active={false} onPress={() => setChoosing(true)} />
-        <Chip label="Ungelesen" icon="unread" active={filter.unread} onPress={() => props.onFilter({ ...filter, unread: !filter.unread })} />
-        <Chip label="Markiert" icon="star" active={filter.starred} onPress={() => props.onFilter({ ...filter, starred: !filter.starred })} />
+        <Chip label={t('Ungelesen')} icon="unread" active={filter.unread} onPress={() => props.onFilter({ ...filter, unread: !filter.unread })} />
+        <Chip label={t('Markiert')} icon="star" active={filter.starred} onPress={() => props.onFilter({ ...filter, starred: !filter.starred })} />
         <Chip
-          label="Anhänge"
+          label={t('Anhänge')}
           icon="attachment"
           active={filter.attachments}
           onPress={() => props.onFilter({ ...filter, attachments: !filter.attachments })}
@@ -68,7 +69,7 @@ export function ListHead(props: {
       </ScrollView>
       <ActionSheet
         visible={choosing}
-        actions={SORT_CHOICES.map((choice) => ({ label: choice.label, onPress: () => setSort(choice.sort) }))}
+        actions={SORT_CHOICES.map((choice) => ({ label: t(choice.label), onPress: () => setSort(choice.sort) }))}
         onClose={() => setChoosing(false)}
       />
     </View>

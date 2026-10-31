@@ -1,3 +1,4 @@
+import { msg } from '../i18n'
 /**
  * The colours of the screens, taken from the desktop application (`src/renderer/src/styles.css`) so that
  * the two look like one. The light values have to hold up as text on a light background, the dark ones on
@@ -37,12 +38,12 @@ export interface Theme {
 export type AccentName = 'blue' | 'teal' | 'purple' | 'amber' | 'rose' | 'slate'
 
 export const ACCENTS: Record<AccentName, { light: string; dark: string; label: string }> = {
-  blue: { light: '#2f5d9f', dark: '#6d9eeb', label: 'Blau' },
-  teal: { light: '#16736b', dark: '#5ec4ba', label: 'Petrol' },
-  purple: { light: '#6341b8', dark: '#a58bf0', label: 'Violett' },
-  amber: { light: '#8a5a00', dark: '#e0aa4a', label: 'Bernstein' },
-  rose: { light: '#b03a5b', dark: '#e88aa4', label: 'Rosé' },
-  slate: { light: '#4a5568', dark: '#a0aec0', label: 'Schiefer' }
+  blue: { light: '#2f5d9f', dark: '#6d9eeb', label: msg('Blau') },
+  teal: { light: '#16736b', dark: '#5ec4ba', label: msg('Petrol') },
+  purple: { light: '#6341b8', dark: '#a58bf0', label: msg('Violett') },
+  amber: { light: '#8a5a00', dark: '#e0aa4a', label: msg('Bernstein') },
+  rose: { light: '#b03a5b', dark: '#e88aa4', label: msg('Rosé') },
+  slate: { light: '#4a5568', dark: '#a0aec0', label: msg('Schiefer') }
 }
 
 /** The one of the desktop's default. */

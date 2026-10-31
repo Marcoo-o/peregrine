@@ -23,6 +23,7 @@ import { StatusLine } from './src/ui/StatusLine'
 import { UndoBar } from './src/ui/UndoBar'
 import { useStyles } from './src/ui/useStyles'
 import { useTheme } from './src/ui/useTheme'
+import { language } from './src/i18n'
 
 /**
  * The prototype of stage 5: any number of accounts, a unified inbox, the folders of an account, a
@@ -35,6 +36,7 @@ export default function App() {
   const [store] = useState(() => new AppStore())
   const [application, setApplication] = useState<Application | null>(null)
   const state = useSyncExternalStore(store.subscribe, () => store.state)
+  useSyncExternalStore(language.subscribe, () => language.code + language.choice)
   const styles = useStyles()
   const { scheme, colors } = useTheme()
   const drawer = useRef<InstanceType<typeof DrawerLayoutAndroid>>(null)

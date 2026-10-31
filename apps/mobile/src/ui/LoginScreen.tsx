@@ -17,6 +17,7 @@ import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
 import { ServerFields } from './ServerFields'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** The form for a new account. It starts with what was typed last, so a failed sign-in is not typed again. */
 export function LoginScreen(props: {
@@ -41,7 +42,7 @@ export function LoginScreen(props: {
       if (servers) setFields((current) => withFound(current, servers))
       setFound({ text: foundText(servers), appPasswordUrl: servers?.appPasswordUrl })
     } catch {
-      setFound({ text: 'Die Suche ging schief. Trage die Server selbst ein.' })
+      setFound({ text: t('Die Suche ging schief. Trage die Server selbst ein.') })
     } finally {
       setFinding(false)
     }
@@ -49,11 +50,11 @@ export function LoginScreen(props: {
 
   return (
     <FormScroll>
-      <Header title="Peregrine" back={{ label: 'Konten', onPress: props.onCancel }} />
-      <Text style={styles.hint}>Ein Konto per IMAP verbinden. Das Passwort bleibt verschlüsselt auf diesem Gerät.</Text>
+      <Header title={t('Peregrine')} back={{ label: t('Konten'), onPress: props.onCancel }} />
+      <Text style={styles.hint}>{t('Ein Konto per IMAP verbinden. Das Passwort bleibt verschlüsselt auf diesem Gerät.')}</Text>
       {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
       <FormInput
-        placeholder="E-Mail-Adresse (alex@example.org)"
+        placeholder={t('E-Mail-Adresse (alex@example.org)')}
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="email-address"
@@ -61,23 +62,22 @@ export function LoginScreen(props: {
         onChangeText={(email) => set({ email })}
       />
       <Button
-        label="Einstellungen suchen"
+        label={t('Einstellungen suchen')}
         variant="secondary"
         disabled={finding || !looksLikeAddress(fields.email)}
         onPress={() => void find()}
       />
       <Text style={styles.hint}>
-        Fragt den Anbieter der Adresse nach seinen Servern und, wenn er nichts veröffentlicht hat, die Datenbank von Mozilla. Dorthin geht nur die Domain.
-        Nur wenn du auf den Knopf tippst.
+        {t('Fragt den Anbieter der Adresse nach seinen Servern und, wenn er nichts veröffentlicht hat, die Datenbank von Mozilla. Dorthin geht nur die Domain. Nur wenn du auf den Knopf tippst.')}
       </Text>
       {finding ? <Spinner /> : null}
       {found ? <Text style={styles.hint}>{found.text}</Text> : null}
       {found?.appPasswordUrl ? (
-        <Button label="App-Passwort anlegen" variant="secondary" onPress={() => void Linking.openURL(found.appPasswordUrl as string)} />
+        <Button label={t('App-Passwort anlegen')} variant="secondary" onPress={() => void Linking.openURL(found.appPasswordUrl as string)} />
       ) : null}
       <ServerFields
-        hostPlaceholder="IMAP-Server (mail.example.org)"
-        portPlaceholder="Port"
+        hostPlaceholder={t('IMAP-Server (mail.example.org)')}
+        portPlaceholder={t('Port')}
         host={fields.host}
         port={fields.port}
         secure={fields.secure}
@@ -86,24 +86,24 @@ export function LoginScreen(props: {
         onSecure={(secure) => setFields((current) => withImapSecurity(current, secure))}
       />
       <FormInput
-        placeholder="Benutzername"
+        placeholder={t('Benutzername')}
         autoCapitalize="none"
         autoCorrect={false}
         value={fields.username}
         onChangeText={(username) => set({ username })}
       />
       <FormInput
-        placeholder="Passwort"
+        placeholder={t('Passwort')}
         secureTextEntry
         autoCapitalize="none"
         value={fields.password}
         onChangeText={(password) => set({ password })}
       />
       <Text style={styles.hint}>
-        Zum Senden (SMTP). Ohne Server lässt sich mit diesem Konto nur lesen. Benutzername und Passwort sind die gleichen.
+        {t('Zum Senden (SMTP). Ohne Server lässt sich mit diesem Konto nur lesen. Benutzername und Passwort sind die gleichen.')}
       </Text>
       <ServerFields
-        hostPlaceholder="SMTP-Server (smtp.example.org)"
+        hostPlaceholder={t('SMTP-Server (smtp.example.org)')}
         portPlaceholder="SMTP-Port"
         host={fields.smtpHost}
         port={fields.smtpPort}
@@ -112,7 +112,7 @@ export function LoginScreen(props: {
         onPort={(smtpPort) => set({ smtpPort })}
         onSecure={(secure) => setFields((current) => withSmtpSecurity(current, secure))}
       />
-      <Button label="Verbinden" disabled={!isSubmittable(fields)} onPress={() => props.onSubmit(toAccountForm(fields))} />
+      <Button label={t('Verbinden')} disabled={!isSubmittable(fields)} onPress={() => props.onSubmit(toAccountForm(fields))} />
     </FormScroll>
   )
 }

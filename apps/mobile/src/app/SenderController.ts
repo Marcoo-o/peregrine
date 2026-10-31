@@ -7,6 +7,7 @@ import type { Navigator } from './Navigator'
 import type { IdentitiesState } from './screens'
 import type { Services } from './services'
 import type { AppStore } from './store'
+import { t } from '../i18n'
 
 /** What the form for an identity holds. */
 export interface IdentityFields {
@@ -37,7 +38,7 @@ export class SenderController {
   async save(state: IdentitiesState, id: string | null, fields: IdentityFields): Promise<void> {
     const emailAddress = fields.emailAddress.trim()
     if (!looksLikeAddress(emailAddress)) {
-      await this.show(state.account, undefined, 'Das ist keine E-Mail-Adresse.')
+      await this.show(state.account, undefined, t('Das ist keine E-Mail-Adresse.'))
       return
     }
     try {
@@ -45,7 +46,7 @@ export class SenderController {
       if (id === null) await addIdentity(this.services.db, { accountId: state.account.id, ...kept })
       else await updateIdentity(this.services.db, id, kept)
       await this.identities.load()
-      await this.show(state.account, 'Gespeichert.')
+      await this.show(state.account, t('Gespeichert.'))
     } catch (error) {
       await this.show(state.account, undefined, explainError(error))
     }
@@ -55,16 +56,16 @@ export class SenderController {
   async makeDefault(state: IdentitiesState, id: string): Promise<void> {
     await setDefaultIdentity(this.services.db, id)
     await this.identities.load()
-    await this.show(state.account, 'Neue Nachrichten beginnen jetzt mit diesem Absender.')
+    await this.show(state.account, t('Neue Nachrichten beginnen jetzt mit diesem Absender.'))
   }
 
   /** Takes an identity away, unless it is the last, which the account needs to send. */
   async remove(state: IdentitiesState, id: string): Promise<void> {
     if (!(await removeIdentity(this.services.db, id))) {
-      await this.show(state.account, undefined, 'Das ist der einzige Absender des Kontos. Ohne einen lässt sich nicht senden.')
+      await this.show(state.account, undefined, t('Das ist der einzige Absender des Kontos. Ohne einen lässt sich nicht senden.'))
       return
     }
     await this.identities.load()
-    await this.show(state.account, 'Der Absender ist entfernt.')
+    await this.show(state.account, t('Der Absender ist entfernt.'))
   }
 }

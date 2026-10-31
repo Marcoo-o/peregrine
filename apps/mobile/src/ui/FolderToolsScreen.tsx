@@ -8,6 +8,7 @@ import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
 import { folderLabel } from './folderLabel'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** What the screen asks to be done, before it is asked again in a question: the things that cannot be taken back. */
 type Question = 'delete' | 'empty' | null
@@ -31,7 +32,7 @@ export function FolderToolsScreen(props: {
   const [parentPath, setParentPath] = useState<string | null>(null)
   const [question, setQuestion] = useState<Question>(null)
 
-  const header = <Header title={folder ? folderLabel(folder) : 'Neuer Ordner'} back={{ label: folder ? 'Ordner' : account.displayName, onPress: props.onBack }} />
+  const header = <Header title={folder ? folderLabel(folder) : t('Neuer Ordner')} back={{ label: folder ? t('Ordner') : account.displayName, onPress: props.onBack }} />
   const status = (
     <>
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -46,10 +47,10 @@ export function FolderToolsScreen(props: {
       <FormScroll>
         {header}
         {status}
-        <FormInput placeholder="Name des Ordners" autoCapitalize="none" value={name} onChangeText={setName} />
+        <FormInput placeholder={t('Name des Ordners')} autoCapitalize="none" value={name} onChangeText={setName} />
         <Text style={styles.section}>Wo</Text>
         <View style={styles.actions}>
-          <Chip label="Oben" active={parentPath === null} onPress={() => setParentPath(null)} />
+          <Chip label={t('Oben')} active={parentPath === null} onPress={() => setParentPath(null)} />
           {folders.map((candidate) => (
             <Chip
               key={candidate.id}
@@ -59,7 +60,7 @@ export function FolderToolsScreen(props: {
             />
           ))}
         </View>
-        <Button label="Ordner anlegen" disabled={busy === true || name.trim() === ''} onPress={() => props.onCreate(name, parentPath)} />
+        <Button label={t('Ordner anlegen')} disabled={busy === true || name.trim() === ''} onPress={() => props.onCreate(name, parentPath)} />
       </FormScroll>
     )
   }
@@ -69,37 +70,37 @@ export function FolderToolsScreen(props: {
       {header}
       {status}
 
-      <Text style={styles.section}>Nachrichten</Text>
-      <Button label="Alle als gelesen markieren" variant="secondary" disabled={busy === true} onPress={props.onMarkAllRead} />
+      <Text style={styles.section}>{t('Nachrichten')}</Text>
+      <Button label={t('Alle als gelesen markieren')} variant="secondary" disabled={busy === true} onPress={props.onMarkAllRead} />
       {isEmptiable(folder) ? (
-        <Button label="Ordner leeren" variant="danger" disabled={busy === true} onPress={() => setQuestion('empty')} />
+        <Button label={t('Ordner leeren')} variant="danger" disabled={busy === true} onPress={() => setQuestion('empty')} />
       ) : null}
 
-      <Text style={styles.section}>Ordner</Text>
+      <Text style={styles.section}>{t('Ordner')}</Text>
       {isChangeable(folder) ? (
         <>
-          <FormInput placeholder="Name des Ordners" autoCapitalize="none" value={name} onChangeText={setName} />
+          <FormInput placeholder={t('Name des Ordners')} autoCapitalize="none" value={name} onChangeText={setName} />
           <Button
-            label="Umbenennen"
+            label={t('Umbenennen')}
             disabled={busy === true || name.trim() === '' || name.trim() === folder.displayName}
             onPress={() => props.onRename(name)}
           />
-          <Button label="Ordner löschen" variant="danger" disabled={busy === true} onPress={() => setQuestion('delete')} />
+          <Button label={t('Ordner löschen')} variant="danger" disabled={busy === true} onPress={() => setQuestion('delete')} />
         </>
       ) : (
         <Text style={styles.hint}>
-          Dieser Ordner hat eine feste Aufgabe, von der Archivieren, Löschen und Senden abhängen. Er lässt sich nicht umbenennen und nicht löschen.
+          {t('Dieser Ordner hat eine feste Aufgabe, von der Archivieren, Löschen und Senden abhängen. Er lässt sich nicht umbenennen und nicht löschen.')}
         </Text>
       )}
 
       <ConfirmDialog
         visible={question === 'delete'}
-        title={`${folder.displayName} löschen?`}
-        text="Der Ordner und alle Nachrichten darin werden auf dem Mailserver gelöscht. Das lässt sich nicht rückgängig machen."
+        title={t('{displayName} löschen?', { displayName: folder.displayName })}
+        text={t('Der Ordner und alle Nachrichten darin werden auf dem Mailserver gelöscht. Das lässt sich nicht rückgängig machen.')}
         answers={[
-          { label: 'Abbrechen', onPress: () => setQuestion(null) },
+          { label: t('Abbrechen'), onPress: () => setQuestion(null) },
           {
-            label: 'Ordner löschen',
+            label: t('Ordner löschen'),
             variant: 'danger',
             onPress: () => {
               setQuestion(null)
@@ -110,12 +111,12 @@ export function FolderToolsScreen(props: {
       />
       <ConfirmDialog
         visible={question === 'empty'}
-        title={`${folderLabel(folder)} leeren?`}
-        text="Alle Nachrichten in diesem Ordner werden endgültig gelöscht, auch auf dem Mailserver."
+        title={t('{n} leeren?', { n: folderLabel(folder) })}
+        text={t('Alle Nachrichten in diesem Ordner werden endgültig gelöscht, auch auf dem Mailserver.')}
         answers={[
-          { label: 'Abbrechen', onPress: () => setQuestion(null) },
+          { label: t('Abbrechen'), onPress: () => setQuestion(null) },
           {
-            label: 'Endgültig löschen',
+            label: t('Endgültig löschen'),
             variant: 'danger',
             onPress: () => {
               setQuestion(null)

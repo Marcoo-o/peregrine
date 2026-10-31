@@ -3,6 +3,7 @@ import type { ThreadState } from '../app/screens'
 import { Header } from './Header'
 import { MessageRow } from './MessageRow'
 import { useStyles } from './useStyles'
+import { t, tn } from '../i18n'
 
 /** The messages of one conversation, the newest first: each opens as it does from the list, and what was read stays read. */
 export function ThreadScreen(props: { state: ThreadState; onOpen: (item: ThreadState['items'][number]) => void; onBack: () => void }) {
@@ -10,8 +11,8 @@ export function ThreadScreen(props: { state: ThreadState; onOpen: (item: ThreadS
   const { subject, items } = props.state
   return (
     <View style={styles.fill}>
-      <Header title={subject || '(ohne Betreff)'} back={{ label: 'Zurück', onPress: props.onBack }} />
-      <Text style={styles.hint}>{items.length === 1 ? '1 Nachricht' : `${items.length} Nachrichten`}</Text>
+      <Header title={subject || t('(ohne Betreff)')} back={{ label: t('Zurück'), onPress: props.onBack }} />
+      <Text style={styles.hint}>{tn(items.length, '{count} Nachricht', '{count} Nachrichten')}</Text>
       <FlatList
         data={items}
         contentContainerStyle={styles.listBottom}

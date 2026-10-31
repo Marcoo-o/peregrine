@@ -2,6 +2,7 @@ import type { PendingSummary } from '@peregrine/core/pendingActions'
 import { explainError } from '../errors'
 import type { Services } from './services'
 import type { AppState, AppStore } from './store'
+import { t, tn } from '../i18n'
 
 /** Reads what waits in the queue into the store, for the account the status line speaks of. */
 export async function refreshQueueStatus(services: Pick<Services, 'mail'>, store: AppStore): Promise<void> {
@@ -28,22 +29,22 @@ export function waitingText(summary: PendingSummary): string | null {
   const open = summary.total
   if (open <= 0) return null
   const drafts = Math.min(summary.byKind.saveDraft, open)
-  if (drafts === open) return open === 1 ? '1 Entwurf wartet' : `${open} Entwürfe warten`
-  const base = open === 1 ? '1 Aktion wartet' : `${open} Aktionen warten`
+  if (drafts === open) return tn(open, '{count} Entwurf wartet', '{count} Entwürfe warten')
+  const base = tn(open, '{count} Aktion wartet', '{count} Aktionen warten')
   if (drafts === 0) return base
-  return drafts === 1 ? `${base}, davon 1 Entwurf` : `${base}, davon ${drafts} Entwürfe`
+  return tn(drafts, '{base}, davon {count} Entwurf', '{base}, davon {count} Entwürfe', { base })
 }
 
 /** The sentence about the messages that wait for a moment that was chosen, or null when none does. */
 export function scheduledText(summary: PendingSummary): string | null {
   if (summary.scheduled <= 0) return null
-  return summary.scheduled === 1 ? '1 Nachricht ist zum Senden geplant' : `${summary.scheduled} Nachrichten sind zum Senden geplant`
+  return tn(summary.scheduled, '{count} Nachricht ist zum Senden geplant', '{count} Nachrichten sind zum Senden geplant')
 }
 
 /** The sentence about the actions that were given up on, or null when none was. */
 export function failedText(summary: PendingSummary): string | null {
   if (summary.failed === 0) return null
-  return summary.failed === 1 ? '1 Aktion ist fehlgeschlagen.' : `${summary.failed} Aktionen sind fehlgeschlagen.`
+  return tn(summary.failed, '{count} Aktion ist fehlgeschlagen.', '{count} Aktionen sind fehlgeschlagen.')
 }
 
 /**

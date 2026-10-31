@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import type { UndoState } from '../app/store'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** How long what is said of a message that was too late to take back stays on the screen. */
 const LATE_MS = 4000
@@ -29,11 +30,11 @@ export function UndoBar(props: { undo: UndoState; onUndo: () => void; onDone: ()
   return (
     <View style={styles.undoBar}>
       <Text style={styles.undoText} numberOfLines={1}>
-        {undo.late ? 'Zu spät, die Nachricht ist schon unterwegs.' : `Wird gesendet${undo.subject ? `: ${undo.subject}` : ''}`}
+        {undo.late ? t('Zu spät, die Nachricht ist schon unterwegs.') : t('Wird gesendet{n}', { n: undo.subject ? `: ${undo.subject}` : '' })}
       </Text>
       {undo.late ? null : (
         <Pressable accessibilityRole="button" hitSlop={8} onPress={props.onUndo}>
-          <Text style={styles.undoAction}>Rückgängig ({seconds})</Text>
+          <Text style={styles.undoAction}>{t('Rückgängig ({seconds})', { seconds })}</Text>
         </Pressable>
       )}
     </View>

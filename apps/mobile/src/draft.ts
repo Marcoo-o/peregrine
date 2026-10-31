@@ -2,6 +2,7 @@ import type { ComposeInput, EmailAddress } from '@peregrine/core/types'
 import { parseAddress } from '@peregrine/smtp/headers'
 import { MAX_ATTACHMENT_BYTES, type FileAccess, type PickedFile } from './files'
 import type { ReadableMessage } from './messageText'
+import { t } from './i18n'
 
 /** A file attached to a draft: a copy in the application's storage, and what to show of it. */
 export interface DraftAttachment {
@@ -40,7 +41,7 @@ export const emptyDraft: Draft = { to: '', cc: '', bcc: '', subject: '', body: '
  */
 export function editableDraft(message: ReadableMessage): { draft: Draft } | { refusal: string } {
   if (message.html !== null) {
-    return { refusal: 'Dieser Entwurf hat eine Formatierung, die das Handy noch nicht bearbeiten kann, ohne sie zu verlieren.' }
+    return { refusal: t('Dieser Entwurf hat eine Formatierung, die das Handy noch nicht bearbeiten kann, ohne sie zu verlieren.') }
   }
   return {
     draft: {
@@ -122,7 +123,7 @@ export function replyDraft(message: ReadableMessage): Draft {
     .split('\n')
     .map((line) => (line.startsWith('>') ? `>${line}` : `> ${line}`).trimEnd())
     .join('\n')
-  const heading = `Am ${message.date || 'einem früheren Zeitpunkt'} schrieb ${message.from || 'der Absender'}:`
+  const heading = t('Am {n} schrieb {n2}:', { n: message.date || t('einem früheren Zeitpunkt'), n2: message.from || t('der Absender') })
   const references = [message.references, message.messageId].filter((value) => value !== '').join(' ')
   return {
     to: message.replyTo || message.from,
@@ -174,13 +175,13 @@ export function replyAllDraft(message: ReadableMessage, ownAddress: string): Dra
  * attachments are not in the draft this gives: they are made files of the phone and put on it (`bringAttachments`).
  */
 export function forwardDraft(message: ReadableMessage): Draft {
-  const subject = /^\s*(fwd?|wg):/i.test(message.subject) ? message.subject.trim() : `Fwd: ${message.subject.trim()}`.trim()
+  const subject = /^\s*(fwd?|wg):/i.test(message.subject) ? message.subject.trim() : t('Fwd: {n}', { n: message.subject.trim() }).trim()
   const text = message.text.replace(/\r\n/g, '\n').replace(/\n+$/, '')
   const body =
-    '\n\n---------- Weitergeleitete Nachricht ----------\n' +
-    `Von: ${message.from}\n` +
-    `Datum: ${message.date}\n` +
-    `Betreff: ${message.subject}\n` +
+    t('\n\n---------- Weitergeleitete Nachricht ----------\n') +
+    t('Von: {from}\n', { from: message.from }) +
+    t('Datum: {date}\n', { date: message.date }) +
+    t('Betreff: {subject}\n', { subject: message.subject }) +
     `An: ${message.to}\n\n` +
     `${text}\n`
   return { to: '', cc: '', bcc: '', subject, body, attachments: [] }

@@ -7,6 +7,7 @@ import type { PendingSaveDraftPayload } from '@peregrine/core/pendingActions'
 import { getFolder, getFolderBySpecialUse, type Folder } from './folders'
 import { deleteMessages } from './messages'
 import { composeFromInput } from './send'
+import { t } from './i18n'
 
 /** Where a draft is kept: the account's Drafts folder, or nothing when the account has none. */
 export const draftsFolderOf = (db: SqlDb, accountId: string): Promise<Folder | undefined> =>
@@ -28,10 +29,10 @@ export async function saveDraft(
   input: ComposeInput
 ): Promise<{ folder: Folder; uid: number | null }> {
   const account = await getAccount(db, input.accountId)
-  if (!account) throw new Error('Das Konto, für das die Nachricht geschrieben wurde, gibt es nicht mehr.')
-  if (!account.emailAddress) throw new Error('Zu diesem Konto gibt es keine Absenderadresse.')
+  if (!account) throw new Error(t('Das Konto, für das die Nachricht geschrieben wurde, gibt es nicht mehr.'))
+  if (!account.emailAddress) throw new Error(t('Zu diesem Konto gibt es keine Absenderadresse.'))
   const folder = await draftsFolderOf(db, input.accountId)
-  if (!folder) throw new Error('Dieses Konto hat keinen Ordner für Entwürfe.')
+  if (!folder) throw new Error(t('Dieses Konto hat keinen Ordner für Entwürfe.'))
   // A draft is written with its blind copy, which is all it has to remember who it was for.
   const composed = await composeFromInput(db, account, input, files, { draft: true })
   return { folder, uid: await imap.appendMessage(folder.imapPath, composed.source, ['\\Draft', '\\Seen']) }

@@ -18,11 +18,12 @@ import type { Navigator } from './Navigator'
 import type { ComposeState, MessageState, Screen } from './screens'
 import type { Services } from './services'
 import type { AppStore } from './store'
+import { t } from '../i18n'
 
 /** Why an account cannot send, as a line for the screen, or null when it can. */
 export function senderProblem(account: Account): string | null {
-  if (!account.emailAddress) return 'Zu diesem Konto gibt es keine Absenderadresse.'
-  if (!smtpSettingsOf(account)) return 'Zu diesem Konto ist kein Server zum Senden eingetragen.'
+  if (!account.emailAddress) return t('Zu diesem Konto gibt es keine Absenderadresse.')
+  if (!smtpSettingsOf(account)) return t('Zu diesem Konto ist kein Server zum Senden eingetragen.')
   return null
 }
 
@@ -152,7 +153,7 @@ export class ComposeController {
         error: notBroughtText(brought)
       })
     } catch (error) {
-      this.store.showScreen({ ...state, notice: `Die Anhänge konnten nicht übernommen werden: ${explainError(error)}` })
+      this.store.showScreen({ ...state, notice: t('Die Anhänge konnten nicht übernommen werden: {n}', { n: explainError(error) }) })
     }
   }
 
@@ -184,12 +185,12 @@ export class ComposeController {
         if (left) {
           // Not all of them are here: the copies that were made go, and the draft stays as it is on the server.
           await this.services.files.remove(brought.attachments.map((file) => file.path)).catch(() => undefined)
-          this.store.showScreen({ ...state, notice: `Dieser Entwurf hat Anhänge, die sich nicht alle übernehmen lassen. ${left}` })
+          this.store.showScreen({ ...state, notice: t('Dieser Entwurf hat Anhänge, die sich nicht alle übernehmen lassen. {left}', { left }) })
           return
         }
         draft = { ...draft, attachments: brought.attachments }
       } catch (error) {
-        this.store.showScreen({ ...state, notice: `Die Anhänge des Entwurfs konnten nicht übernommen werden: ${explainError(error)}` })
+        this.store.showScreen({ ...state, notice: t('Die Anhänge des Entwurfs konnten nicht übernommen werden: {n}', { n: explainError(error) }) })
         return
       }
     }
@@ -373,7 +374,7 @@ export class ComposeController {
    */
   private async keepOnServer(state: ComposeState, draft: Draft): Promise<'kept' | 'waiting'> {
     const { db, mail } = this.services
-    if (!(await draftsFolderOf(db, state.account.id))) throw new Error('Dieses Konto hat keinen Ordner für Entwürfe.')
+    if (!(await draftsFolderOf(db, state.account.id))) throw new Error(t('Dieses Konto hat keinen Ordner für Entwürfe.'))
     // A draft that was meant to be encrypted is not kept in the clear, and says why it is not kept.
     const unprotected = await this.protectionProblemOf(state, draft, { draft: true })
     if (unprotected) throw new Error(unprotected)

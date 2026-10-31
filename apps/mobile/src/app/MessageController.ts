@@ -28,6 +28,7 @@ import type { Navigator } from './Navigator'
 import type { MessageOrigin, MessageState, MoveState, SourceState, ThreadState } from './screens'
 import type { Services } from './services'
 import type { AppStore } from './store'
+import { t } from '../i18n'
 
 /** What can be done to an open message. */
 type OnOpenMessage = MessageState | MoveState
@@ -87,7 +88,7 @@ export class MessageController {
     try {
       const imap = await this.services.connections.ensure(account)
       const full = await imap.fetchFullMessage(folder.imapPath, summary.uid)
-      if (!full) throw new Error('Die Nachricht gibt es auf dem Server nicht mehr')
+      if (!full) throw new Error(t('Die Nachricht gibt es auf dem Server nicht mehr'))
       const outer = readMessage(full.source)
       // A message that is signed or encrypted is read for that, and an encrypted one is shown with its content opened.
       const reading = await readProtected(this.services.db, account, full.source, outer)
@@ -194,12 +195,12 @@ export class MessageController {
 
   /** Puts the message into the archive of its account, or says that there is none. */
   async archive(state: MessageState): Promise<void> {
-    await this.moveToRole(state, '\\Archive', 'Für dieses Konto ist kein Archivordner vorhanden')
+    await this.moveToRole(state, '\\Archive', t('Für dieses Konto ist kein Archivordner vorhanden'))
   }
 
   /** Puts the message into the spam folder of its account, or says that there is none. */
   async markAsJunk(state: MessageState): Promise<void> {
-    await this.moveToRole(state, '\\Junk', 'Für dieses Konto ist kein Spam-Ordner vorhanden')
+    await this.moveToRole(state, '\\Junk', t('Für dieses Konto ist kein Spam-Ordner vorhanden'))
   }
 
   private async moveToRole(state: MessageState, role: string, missing: string): Promise<void> {
@@ -266,7 +267,7 @@ export class MessageController {
     if (!state.message) return
     const { name, address } = parseAddress(state.message.from)
     const result = await saveContact(this.services.db, { name: name ?? '', address })
-    this.showNotice(state, 'problem' in result ? result.problem : `${result.saved.name || result.saved.address} ist bei den Kontakten.`)
+    this.showNotice(state, 'problem' in result ? result.problem : t('{n} ist bei den Kontakten.', { n: result.saved.name || result.saved.address }))
   }
 
   /** Hands the message, as it is read, to the print service, which prints it or saves it as a PDF as the user chooses there. */
@@ -276,7 +277,7 @@ export class MessageController {
       const { jobName, html } = printDocumentOf(state.message)
       await this.services.printer.print(jobName, html)
     } catch (error) {
-      this.showNotice(state, `Drucken ging nicht: ${explainError(error)}`)
+      this.showNotice(state, t('Drucken ging nicht: {n}', { n: explainError(error) }))
     }
   }
 
@@ -300,9 +301,9 @@ export class MessageController {
     const name = `${safeFilename(state.message?.subject || state.summary.subject, 'nachricht').replace(/\.eml$/i, '')}.eml`
     try {
       const saved = await this.services.files.save(name, 'message/rfc822', state.raw)
-      this.showNotice(state, saved ? `Gespeichert: ${name}` : undefined)
+      this.showNotice(state, saved ? t('Gespeichert: {name}', { name }) : undefined)
     } catch (error) {
-      this.showNotice(state, `Speichern ging nicht: ${explainError(error)}`)
+      this.showNotice(state, t('Speichern ging nicht: {n}', { n: explainError(error) }))
     }
   }
 
@@ -312,9 +313,9 @@ export class MessageController {
     if (!content) return
     try {
       const saved = await this.services.files.save(info.filename, info.contentType, content)
-      this.showNotice(state, saved ? `Gespeichert: ${info.filename}` : undefined)
+      this.showNotice(state, saved ? t('Gespeichert: {filename}', { filename: info.filename }) : undefined)
     } catch (error) {
-      this.showNotice(state, `Speichern ging nicht: ${explainError(error)}`)
+      this.showNotice(state, t('Speichern ging nicht: {n}', { n: explainError(error) }))
     }
   }
 
@@ -331,7 +332,7 @@ export class MessageController {
       await this.services.files.open(info.filename, info.contentType, content)
       this.showNotice(state, undefined)
     } catch (error) {
-      this.showNotice(state, `Öffnen ging nicht: ${explainError(error)}`)
+      this.showNotice(state, t('Öffnen ging nicht: {n}', { n: explainError(error) }))
     }
   }
 

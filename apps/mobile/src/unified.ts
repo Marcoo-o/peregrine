@@ -9,6 +9,7 @@ import type { MailActions } from './mailActions'
 import { toStoredMessage, type StoredMessage } from './messages'
 import type { FolderReset } from './folderChanges'
 import { loadOlder, syncFolder } from './sync'
+import { t } from './i18n'
 
 /** A message of the unified list: where it is, and whose it is. */
 export interface UnifiedMessage extends StoredMessage {
@@ -191,7 +192,7 @@ export interface RefreshResult {
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`Keine Antwort nach ${Math.round(ms / 1000)} Sekunden`)), ms)
+    const timer = setTimeout(() => reject(new Error(t('Keine Antwort nach {n} Sekunden', { n: Math.round(ms / 1000) }))), ms)
     promise.then(
       (value) => {
         clearTimeout(timer)

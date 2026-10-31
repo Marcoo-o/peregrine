@@ -1,4 +1,5 @@
 import type { FetchedMessage, ImapSession, MailboxEntry } from '@peregrine/core/imapSession'
+import { language, useSystemLanguages } from '../i18n'
 import { FakeSmtpServer } from '../../../../packages/smtp/test-support/fakeServer'
 import { addAccount, type Account, type NewAccount } from '../accounts'
 import { Application, createApplication } from '../app/Application'
@@ -465,6 +466,9 @@ export async function appHarness() {
   const files = new FakeFiles()
   const deviceContacts = new FakeContacts()
   const deviceLock = new FakeDeviceLock()
+  // The tests run in German, whatever the machine they run on is set to.
+  useSystemLanguages(() => ['de'])
+  language.apply('system')
   const printer = new FakePrinter()
   const smtp = new FakeSmtpServer()
   const notifications = new FakeNotifications()
