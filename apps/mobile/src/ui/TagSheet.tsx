@@ -8,6 +8,7 @@ import { Icon } from './Icon'
 import { TagColors } from './TagColors'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /**
  * The tags to set on the messages that were chosen, or on the one that is open, from the bottom of the screen: each
@@ -45,10 +46,10 @@ export function TagSheet(props: {
           {/* A tap inside the sheet is not a tap beside it. */}
           <Pressable style={[styles.sheet, { paddingBottom: 24 + bottom }]} onPress={() => undefined}>
             <Text accessibilityRole="header" style={styles.dialogTitle}>
-              Tags
+              {t('Tags')}
             </Text>
             <ScrollView style={styles.tagList} keyboardShouldPersistTaps="handled">
-              {props.tags.length === 0 ? <Text style={styles.hint}>Noch keine Tags. Unten lässt sich der erste anlegen.</Text> : null}
+              {props.tags.length === 0 ? <Text style={styles.hint}>{t('Noch keine Tags. Unten lässt sich der erste anlegen.')}</Text> : null}
               {props.tags.map((tag) => {
                 const coverage = props.coverage(tag.keyword)
                 return (
@@ -63,14 +64,14 @@ export function TagSheet(props: {
                     <Text style={styles.sheetText}>{tag.name}</Text>
                     <View style={styles.fill} />
                     {coverage === 'all' ? <Icon name="check" size={20} color={colors.accent} /> : null}
-                    {coverage === 'some' ? <Text style={styles.itemMeta}>teils</Text> : null}
+                    {coverage === 'some' ? <Text style={styles.itemMeta}>{t('teils')}</Text> : null}
                   </Pressable>
                 )
               })}
             </ScrollView>
             <TextInput
               style={styles.input}
-              placeholder="Neuer Tag"
+              placeholder={t('Neuer Tag')}
               placeholderTextColor={colors.muted}
               value={name}
               onChangeText={setName}
@@ -79,7 +80,7 @@ export function TagSheet(props: {
               maxLength={40}
             />
             <TagColors color={color} onChange={setColor} />
-            <Chip label="Anlegen und setzen" active={false} disabled={name.trim() === ''} onPress={() => void create()} />
+            <Chip label={t('Anlegen und setzen')} active={false} disabled={name.trim() === ''} onPress={() => void create()} />
           </Pressable>
         </Pressable>
       </KeyboardAvoidingView>

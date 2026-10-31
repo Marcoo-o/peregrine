@@ -8,6 +8,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** What is being edited: one of the identities, a new one, or none, which is the list. */
 type Editing = Identity | 'new' | null
@@ -56,19 +57,18 @@ export function IdentitiesScreen(props: {
   if (editing === null) {
     return (
       <FormScroll>
-        <Header title="Absender und Signatur" back={{ label: account.displayName, onPress: props.onBack }} />
+        <Header title={t('Absender und Signatur')} back={{ label: account.displayName, onPress: props.onBack }} />
         {status}
         <Text style={styles.hint}>
-          Die Adressen, unter denen sich mit diesem Konto schreiben lässt, jede mit ihrem Namen und ihrer Signatur. Der erste Absender ist der, mit dem eine neue
-          Nachricht beginnt. Beim Schreiben lässt sich ein anderer wählen.
+          {t('Die Adressen, unter denen sich mit diesem Konto schreiben lässt, jede mit ihrem Namen und ihrer Signatur. Der erste Absender ist der, mit dem eine neue Nachricht beginnt. Beim Schreiben lässt sich ein anderer wählen.')}
         </Text>
         {identities.map((identity) => (
           <Pressable key={identity.id} accessibilityRole="button" style={styles.attachment} onPress={() => open(identity)}>
             <Text style={styles.itemTitle}>{named(identity) ? identity.displayName : identity.emailAddress}</Text>
-            <Text style={styles.itemMeta}>{[named(identity) ? identity.emailAddress : null, identity.isDefault ? 'Standard' : null].filter(Boolean).join('  ')}</Text>
+            <Text style={styles.itemMeta}>{[named(identity) ? identity.emailAddress : null, identity.isDefault ? t('Standard') : null].filter(Boolean).join('  ')}</Text>
           </Pressable>
         ))}
-        <Button label="Absender hinzufügen" variant="secondary" onPress={() => open('new')} />
+        <Button label={t('Absender hinzufügen')} variant="secondary" onPress={() => open('new')} />
       </FormScroll>
     )
   }
@@ -77,40 +77,40 @@ export function IdentitiesScreen(props: {
   const current = isNew ? null : editing
   return (
     <FormScroll>
-      <Header title={isNew ? 'Neuer Absender' : 'Absender'} back={{ label: 'Absender und Signatur', onPress: () => setEditing(null) }} />
+      <Header title={isNew ? t('Neuer Absender') : t('Absender')} back={{ label: t('Absender und Signatur'), onPress: () => setEditing(null) }} />
       {status}
-      <FormInput placeholder="Name (wie er beim Empfänger steht)" value={fields.displayName} onChangeText={(displayName) => set({ displayName })} />
+      <FormInput placeholder={t('Name (wie er beim Empfänger steht)')} value={fields.displayName} onChangeText={(displayName) => set({ displayName })} />
       <FormInput
-        placeholder="E-Mail-Adresse"
+        placeholder={t('E-Mail-Adresse')}
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="email-address"
         value={fields.emailAddress}
         onChangeText={(emailAddress) => set({ emailAddress })}
       />
-      <Text style={styles.section}>Signatur</Text>
+      <Text style={styles.section}>{t('Signatur')}</Text>
       <FormInput
         style={styles.multiline}
-        placeholder="Text unter der Nachricht"
+        placeholder={t('Text unter der Nachricht')}
         multiline
         textAlignVertical="top"
         value={fields.signature}
         onChangeText={(signature) => set({ signature })}
       />
-      <Text style={styles.hint}>Sie steht unter dem Text, nach einer Zeile mit zwei Strichen, und wechselt mit dem Absender.</Text>
-      <Button label="Speichern" disabled={fields.emailAddress.trim() === ''} onPress={() => props.onSave(current?.id ?? null, fields)} />
+      <Text style={styles.hint}>{t('Sie steht unter dem Text, nach einer Zeile mit zwei Strichen, und wechselt mit dem Absender.')}</Text>
+      <Button label={t('Speichern')} disabled={fields.emailAddress.trim() === ''} onPress={() => props.onSave(current?.id ?? null, fields)} />
       {current && !current.isDefault ? (
-        <Button label="Als Standard festlegen" variant="secondary" onPress={() => props.onMakeDefault(current.id)} />
+        <Button label={t('Als Standard festlegen')} variant="secondary" onPress={() => props.onMakeDefault(current.id)} />
       ) : null}
-      {current ? <Button label="Absender entfernen" variant="danger" onPress={() => setRemoving(true)} /> : null}
+      {current ? <Button label={t('Absender entfernen')} variant="danger" onPress={() => setRemoving(true)} /> : null}
       <ConfirmDialog
         visible={removing}
-        title="Absender entfernen?"
-        text="Der Absender wird von diesem Gerät entfernt. Nachrichten, die schon gesendet sind, bleiben, wie sie sind."
+        title={t('Absender entfernen?')}
+        text={t('Der Absender wird von diesem Gerät entfernt. Nachrichten, die schon gesendet sind, bleiben, wie sie sind.')}
         answers={[
-          { label: 'Abbrechen', onPress: () => setRemoving(false) },
+          { label: t('Abbrechen'), onPress: () => setRemoving(false) },
           {
-            label: 'Absender entfernen',
+            label: t('Absender entfernen'),
             variant: 'danger',
             onPress: () => {
               setRemoving(false)

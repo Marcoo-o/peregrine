@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native'
 import { Button, Spinner } from './controls'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /**
  * What is at the end of a list that has older messages to load: a button, which is a spinner while they are being loaded. Scrolling to
@@ -15,10 +16,10 @@ export function OlderFooter(props: { more: boolean; loading: boolean; onLoad: ()
       {props.loading ? (
         <>
           <Spinner />
-          <Text style={styles.hint}>Ältere Nachrichten werden geladen</Text>
+          <Text style={styles.hint}>{t('Ältere Nachrichten werden geladen')}</Text>
         </>
       ) : (
-        <Button label="Ältere Nachrichten laden" variant="secondary" onPress={props.onLoad} />
+        <Button label={t('Ältere Nachrichten laden')} variant="secondary" onPress={props.onLoad} />
       )}
     </View>
   )

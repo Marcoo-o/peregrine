@@ -4,6 +4,7 @@ import type { Hint } from '../reading/hints'
 import { Icon } from './Icon'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 type HintAction = NonNullable<Hint['action']>
 
@@ -33,7 +34,7 @@ export function Notice(props: { hint: Hint; onAction: (action: HintAction) => vo
       {open && hint.detail ? <Text style={styles.noticeDetail}>{hint.detail}</Text> : null}
       {hint.action === 'showImages' ? (
         <Pressable accessibilityRole="button" hitSlop={8} onPress={() => props.onAction('showImages')}>
-          <Text style={styles.noticeAction}>Bilder anzeigen</Text>
+          <Text style={styles.noticeAction}>{t('Bilder anzeigen')}</Text>
         </Pressable>
       ) : null}
     </Pressable>

@@ -3,6 +3,7 @@ import type { LinkAnalysis } from '@peregrine/core/linkSafety'
 import { linkFindingText } from '../reading/warningText'
 import { Button } from './controls'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /**
  * Shown before a link that does not lead where it reads is opened, as the desktop shows it: what is wrong
@@ -19,7 +20,7 @@ export function LinkConfirm(props: { analysis: LinkAnalysis | null; onCancel: ()
           // A tap inside the dialog is not a tap beside it.
           <Pressable style={styles.dialog} onPress={() => undefined}>
             <Text accessibilityRole="header" style={styles.dialogTitle}>
-              Dieser Link führt woanders hin, als er aussieht
+              {t('Dieser Link führt woanders hin, als er aussieht')}
             </Text>
             {analysis.findings.map((finding) => {
               const text = linkFindingText(finding)
@@ -30,15 +31,15 @@ export function LinkConfirm(props: { analysis: LinkAnalysis | null; onCancel: ()
                 </View>
               )
             })}
-            <Text style={styles.section}>Tatsächliches Ziel</Text>
+            <Text style={styles.section}>{t('Tatsächliches Ziel')}</Text>
             <Text selectable style={styles.mono}>
               {analysis.displayHost}
             </Text>
             <Text selectable style={styles.itemMeta}>
               {analysis.href}
             </Text>
-            <Button label="Nicht öffnen" onPress={props.onCancel} />
-            <Button label="Trotzdem öffnen" variant="danger" onPress={() => props.onOpen(analysis.href)} />
+            <Button label={t('Nicht öffnen')} onPress={props.onCancel} />
+            <Button label={t('Trotzdem öffnen')} variant="danger" onPress={() => props.onOpen(analysis.href)} />
           </Pressable>
         ) : (
           <View />

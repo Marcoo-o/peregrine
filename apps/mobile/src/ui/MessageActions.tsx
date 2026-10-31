@@ -2,6 +2,7 @@ import { View } from 'react-native'
 import { IconButton } from './controls'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /**
  * What can be done to the open message, as the row of pictures the desktop has over its message, within reach of the
@@ -28,8 +29,8 @@ export function MessageActions(props: {
     return (
       <View style={styles.actionBar}>
         <View style={styles.actionIcons}>
-          <IconButton name="compose" label="Weiterschreiben" disabled={!props.ready} onPress={props.onEdit} />
-          <IconButton name="trash" label="Löschen" onPress={props.onDelete} />
+          <IconButton name="compose" label={t('Weiterschreiben')} disabled={!props.ready} onPress={props.onEdit} />
+          <IconButton name="trash" label={t('Löschen')} onPress={props.onDelete} />
         </View>
       </View>
     )
@@ -37,19 +38,19 @@ export function MessageActions(props: {
   return (
     <View style={styles.actionBar}>
       <View style={styles.actionIcons}>
-        <IconButton name="reply" label="Antworten" disabled={!props.ready} onPress={props.onReply} />
-        <IconButton name="replyAll" label="Allen antworten" disabled={!props.ready} onPress={props.onReplyAll} />
-        <IconButton name="forward" label="Weiterleiten" disabled={!props.ready} onPress={props.onForward} />
-        <IconButton name="archive" label="Archivieren" onPress={props.onArchive} />
+        <IconButton name="reply" label={t('Antworten')} disabled={!props.ready} onPress={props.onReply} />
+        <IconButton name="replyAll" label={t('Allen antworten')} disabled={!props.ready} onPress={props.onReplyAll} />
+        <IconButton name="forward" label={t('Weiterleiten')} disabled={!props.ready} onPress={props.onForward} />
+        <IconButton name="archive" label={t('Archivieren')} onPress={props.onArchive} />
         <IconButton
           name="star"
-          label={props.flagged ? 'Markierung entfernen' : 'Markieren'}
+          label={props.flagged ? t('Markierung entfernen') : t('Markieren')}
           color={props.flagged ? colors.warning : undefined}
           filled={props.flagged}
           onPress={props.onToggleFlag}
         />
-        <IconButton name="trash" label="Löschen" onPress={props.onDelete} />
-        <IconButton name="more" label="Mehr" onPress={props.onMore} />
+        <IconButton name="trash" label={t('Löschen')} onPress={props.onDelete} />
+        <IconButton name="more" label={t('Mehr')} onPress={props.onMore} />
       </View>
     </View>
   )

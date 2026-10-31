@@ -1,5 +1,6 @@
 import type { Folder } from './folders'
 import { isInbox } from './unified'
+import { language } from './i18n'
 
 /** A place in the tree of folders: a folder, or a name that folders sit under that is not one itself. */
 export interface TreeNode {
@@ -23,7 +24,7 @@ function rankOf(node: TreeNode): number {
   return role === -1 ? ROLE_ORDER.length + 1 : role + 1
 }
 
-const byName = (a: TreeNode, b: TreeNode): number => a.label.localeCompare(b.label, 'de', { sensitivity: 'base' })
+const byName = (a: TreeNode, b: TreeNode): number => a.label.localeCompare(b.label, language.code, { sensitivity: 'base' })
 
 /**
  * The folders of an account as a tree, from where each says it sits. A folder that others sit in but that cannot

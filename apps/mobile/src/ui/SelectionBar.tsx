@@ -9,6 +9,7 @@ import { useTags } from './tags'
 import type { Selection } from './useSelection'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /** The top of a list while messages are chosen: how many, and the way out of the choice, and choosing all. */
 export function SelectionHeader(props: { selection: Selection; total: number }) {
@@ -19,14 +20,14 @@ export function SelectionHeader(props: { selection: Selection; total: number }) 
     <View style={styles.selectionHeader}>
       <Pressable accessibilityRole="button" style={styles.back} onPress={selection.clear}>
         <Icon name="close" size={20} color={colors.accent} />
-        <Text style={styles.backText}>Abbrechen</Text>
+        <Text style={styles.backText}>{t('Abbrechen')}</Text>
       </Pressable>
       <Text accessibilityRole="header" style={styles.selectionCount}>
-        {selection.picked.length} ausgewählt
+        {t('{count} ausgewählt', { count: selection.picked.length })}
       </Text>
       {selection.picked.length < props.total ? (
         <Pressable accessibilityRole="button" style={styles.back} onPress={selection.chooseAll}>
-          <Text style={styles.backText}>Alle</Text>
+          <Text style={styles.backText}>{t('Alle')}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -59,18 +60,18 @@ export function SelectionBar(props: {
         onClose={() => setTagging(false)}
       />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionBarContent}>
-        <Chip label="Gelesen" active={false} onPress={() => void selection.markRead(true)} />
-        <Chip label="Ungelesen" active={false} onPress={() => void selection.markRead(false)} />
+        <Chip label={t('Gelesen')} active={false} onPress={() => void selection.markRead(true)} />
+        <Chip label={t('Ungelesen')} active={false} onPress={() => void selection.markRead(false)} />
         <Chip label="★" active={false} onPress={() => void selection.toggleStar()} />
-        <Chip label="Tags" active={false} onPress={() => setTagging(true)} />
+        <Chip label={t('Tags')} active={false} onPress={() => setTagging(true)} />
         {props.snoozedList ? (
-          <Chip label="Zurückholen" active={false} onPress={() => void selection.snooze(null)} />
+          <Chip label={t('Zurückholen')} active={false} onPress={() => void selection.snooze(null)} />
         ) : (
-          <Chip label="Später erinnern" active={false} onPress={() => setSnoozing(true)} />
+          <Chip label={t('Später erinnern')} active={false} onPress={() => setSnoozing(true)} />
         )}
-        <Chip label="Archivieren" active={false} onPress={() => void selection.archive()} />
-        <Chip label="Spam" active={false} onPress={() => void selection.markAsJunk()} />
-        <Chip label="Löschen" active={false} onPress={() => void selection.remove()} />
+        <Chip label={t('Archivieren')} active={false} onPress={() => void selection.archive()} />
+        <Chip label={t('Spam')} active={false} onPress={() => void selection.markAsJunk()} />
+        <Chip label={t('Löschen')} active={false} onPress={() => void selection.remove()} />
       </ScrollView>
     </View>
   )

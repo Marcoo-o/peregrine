@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { CustomSnooze } from './CustomSnooze'
 import { snoozeOptions } from './snoozeText'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /**
  * The moments a message can be put aside until, from the bottom of the screen: each preset with the time it comes to,
@@ -38,7 +39,7 @@ export function SnoozeSheet(props: {
         {/* A tap inside the sheet is not a tap beside it. */}
         <Pressable style={[styles.sheet, { paddingBottom: 24 + bottom }]} onPress={() => undefined}>
           <Text accessibilityRole="header" style={styles.dialogTitle}>
-            {props.title ?? 'Später erinnern'}
+            {props.title ?? t('Später erinnern')}
           </Text>
           {options.map((option) => (
             <Pressable
@@ -57,10 +58,10 @@ export function SnoozeSheet(props: {
             <CustomSnooze onChoose={choose} />
           ) : (
             <Pressable accessibilityRole="button" style={styles.tagSheetRow} onPress={() => setCustom(true)}>
-              <Text style={styles.sheetText}>Eigener Zeitpunkt …</Text>
+              <Text style={styles.sheetText}>{t('Eigener Zeitpunkt …')}</Text>
             </Pressable>
           )}
-          <Text style={styles.hint}>{props.note ?? 'Gilt nur hier: auf anderen Geräten bleibt die Nachricht im Posteingang.'}</Text>
+          <Text style={styles.hint}>{props.note ?? t('Gilt nur hier: auf anderen Geräten bleibt die Nachricht im Posteingang.')}</Text>
         </Pressable>
       </Pressable>
       </KeyboardAvoidingView>

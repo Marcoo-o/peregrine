@@ -8,6 +8,7 @@ import { FolderController } from './FolderController'
 import { LockController } from './LockController'
 import { SenderController } from './SenderController'
 import { loadSort } from '../listSort'
+import { language, loadLanguageChoice } from '../i18n'
 import { appearance, fontScale, loadAppearance, loadFontScale, loadLook, look } from '../appearance'
 import { loadSafety } from '../safety'
 import { loadConversations } from '../threads'
@@ -85,6 +86,7 @@ export class Application {
     appearance.set(await loadAppearance(this.services.db))
     fontScale.set(await loadFontScale(this.services.db))
     look.set(await loadLook(this.services.db))
+    language.apply(await loadLanguageChoice(this.services.db))
     await this.navigator.start()
     await this.openLaunchTarget()
     await this.openIncoming()

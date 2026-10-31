@@ -1,14 +1,15 @@
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { Density } from './ui/scaleStyles'
 import { ACCENTS, DEFAULT_ACCENT, type AccentName } from './ui/theme'
+import { msg } from './i18n'
 
 /** Whether the application is light or dark whatever the system is, or follows it. */
 export type AppearanceMode = 'system' | 'light' | 'dark'
 
 export const APPEARANCE_CHOICES: ReadonlyArray<{ mode: AppearanceMode; label: string }> = [
-  { mode: 'system', label: 'Wie das System' },
-  { mode: 'light', label: 'Hell' },
-  { mode: 'dark', label: 'Dunkel' }
+  { mode: 'system', label: msg('Wie das System') },
+  { mode: 'light', label: msg('Hell') },
+  { mode: 'dark', label: msg('Dunkel') }
 ]
 
 const NAME = 'appearance'
@@ -68,10 +69,10 @@ export function schemeFor(mode: AppearanceMode, system: 'light' | 'dark' | null 
 export type FontScale = 'small' | 'normal' | 'large' | 'xlarge'
 
 export const FONT_SCALES: ReadonlyArray<{ scale: FontScale; label: string; factor: number }> = [
-  { scale: 'small', label: 'Klein', factor: 0.9 },
-  { scale: 'normal', label: 'Normal', factor: 1 },
-  { scale: 'large', label: 'Groß', factor: 1.15 },
-  { scale: 'xlarge', label: 'Sehr groß', factor: 1.3 }
+  { scale: 'small', label: msg('Klein'), factor: 0.9 },
+  { scale: 'normal', label: msg('Normal'), factor: 1 },
+  { scale: 'large', label: msg('Groß'), factor: 1.15 },
+  { scale: 'xlarge', label: msg('Sehr groß'), factor: 1.3 }
 ]
 
 /** The number a size is multiplied by. */
@@ -126,16 +127,16 @@ export const fontScale = {
 export type DateFormat = 'relative' | 'short' | 'long' | 'iso'
 
 export const DATE_FORMATS: ReadonlyArray<{ format: DateFormat; label: string }> = [
-  { format: 'relative', label: 'Heute die Uhrzeit' },
-  { format: 'short', label: 'Kurz' },
-  { format: 'long', label: 'Lang' },
+  { format: 'relative', label: msg('Heute die Uhrzeit') },
+  { format: 'short', label: msg('Kurz') },
+  { format: 'long', label: msg('Lang') },
   { format: 'iso', label: 'ISO' }
 ]
 
 export const DENSITIES: ReadonlyArray<{ density: Density; label: string }> = [
-  { density: 'comfortable', label: 'Locker' },
-  { density: 'cozy', label: 'Normal' },
-  { density: 'compact', label: 'Eng' }
+  { density: 'comfortable', label: msg('Locker') },
+  { density: 'cozy', label: msg('Normal') },
+  { density: 'compact', label: msg('Eng') }
 ]
 
 /** What the user chose of how the application looks besides light and dark and the size of the text. */

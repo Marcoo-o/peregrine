@@ -1,3 +1,4 @@
+import { language, msg, t } from '../i18n'
 /** A day that can be chosen for a moment of one's own, from today on. */
 export interface SnoozeDay {
   /** The start of the day. */
@@ -26,7 +27,7 @@ export function snoozeDays(now: Date, count: number = SNOOZE_DAYS): SnoozeDay[] 
   return Array.from({ length: count }, (_, offset) => {
     const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)
     const label =
-      offset === 0 ? 'Heute' : offset === 1 ? 'Morgen' : start.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'numeric' })
+      offset === 0 ? t('Heute') : offset === 1 ? t('Morgen') : start.toLocaleDateString(language.locale, { weekday: 'short', day: 'numeric', month: 'numeric' })
     return { start, label }
   })
 }
@@ -67,6 +68,6 @@ export function customMoment(
 
 /** What is said under the time when there is no moment, in the words of the sheet. */
 export const CUSTOM_REASONS: Record<'time' | 'past', string> = {
-  time: 'Die Uhrzeit versteht das Handy so nicht. Zum Beispiel 8:30 oder 14.15.',
-  past: 'Dieser Zeitpunkt ist schon vorbei.'
+  time: msg('Die Uhrzeit versteht das Handy so nicht. Zum Beispiel 8:30 oder 14.15.'),
+  past: msg('Dieser Zeitpunkt ist schon vorbei.')
 }

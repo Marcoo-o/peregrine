@@ -17,6 +17,7 @@ import { useStyles } from './useStyles'
 import { useAutosave } from './useAutosave'
 import { useComposeForm } from './useComposeForm'
 import { useSuggestions } from './useSuggestions'
+import { t } from '../i18n'
 
 export function ComposeScreen(props: {
   state: ComposeState
@@ -61,15 +62,15 @@ export function ComposeScreen(props: {
 
   return (
     <FormScroll>
-      <Header title="Neue Nachricht" back={{ label: 'Abbrechen', onPress: leave }} />
+      <Header title={t('Neue Nachricht')} back={{ label: t('Abbrechen'), onPress: leave }} />
       <ConfirmDialog
         visible={discarding}
-        title="Nachricht noch nicht gesendet"
-        text="Die Nachricht kann als Entwurf behalten und später weitergeschrieben werden. Wird sie verworfen, geht sie verloren."
+        title={t('Nachricht noch nicht gesendet')}
+        text={t('Die Nachricht kann als Entwurf behalten und später weitergeschrieben werden. Wird sie verworfen, geht sie verloren.')}
         answers={[
-          { label: 'Weiter schreiben', onPress: () => setDiscarding(false) },
+          { label: t('Weiter schreiben'), onPress: () => setDiscarding(false) },
           {
-            label: 'Als Entwurf speichern',
+            label: t('Als Entwurf speichern'),
             variant: 'secondary',
             onPress: () => {
               setDiscarding(false)
@@ -77,7 +78,7 @@ export function ComposeScreen(props: {
             }
           },
           {
-            label: 'Verwerfen',
+            label: t('Verwerfen'),
             variant: 'danger',
             onPress: () => {
               setDiscarding(false)
@@ -86,7 +87,7 @@ export function ComposeScreen(props: {
           }
         ]}
       />
-      <Text style={styles.subtitle}>Von {sender?.emailAddress || account.emailAddress || account.displayName}</Text>
+      <Text style={styles.subtitle}>{t('Von {address}', { address: sender?.emailAddress || account.emailAddress || account.displayName })}</Text>
       {identities.length > 1 ? (
         <View style={styles.actions}>
           {identities.map((identity) => (
@@ -113,7 +114,7 @@ export function ComposeScreen(props: {
       />
       <SuggestionList contacts={forTo} onChoose={(contact) => form.update({ to: withContact(draft.to, contact) })} />
       <FormInput
-        placeholder="Kopie"
+        placeholder={t('Kopie')}
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="email-address"
@@ -124,7 +125,7 @@ export function ComposeScreen(props: {
       />
       <SuggestionList contacts={forCc} onChoose={(contact) => form.update({ cc: withContact(draft.cc, contact) })} />
       <FormInput
-        placeholder="Bcc (verdeckt)"
+        placeholder={t('Bcc (verdeckt)')}
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="email-address"
@@ -135,13 +136,13 @@ export function ComposeScreen(props: {
       />
       <SuggestionList contacts={forBcc} onChoose={(contact) => form.update({ bcc: withContact(draft.bcc, contact) })} />
       <FormInput
-        placeholder="Betreff"
+        placeholder={t('Betreff')}
         value={draft.subject}
         onChangeText={(subject) => form.update({ subject })}
       />
       <FormInput
         style={styles.multiline}
-        placeholder="Nachricht"
+        placeholder={t('Nachricht')}
         multiline
         textAlignVertical="top"
         value={draft.body}
@@ -152,49 +153,49 @@ export function ComposeScreen(props: {
           <Text style={styles.itemTitle}>📎 {attached.filename}</Text>
           <Text style={styles.itemMeta}>{formatSize(attached.size)}</Text>
           <Pressable onPress={() => form.detach(attached.path)}>
-            <Text style={styles.link}>Entfernen</Text>
+            <Text style={styles.link}>{t('Entfernen')}</Text>
           </Pressable>
         </View>
       ))}
       {form.notice ? <Text style={styles.error}>{form.notice}</Text> : null}
       <View style={styles.actions}>
-        <Chip label="Datei anhängen" active={false} icon="attachment" onPress={form.pick} />
+        <Chip label={t('Datei anhängen')} active={false} icon="attachment" onPress={form.pick} />
       </View>
-      <Text style={styles.section}>Schutz</Text>
+      <Text style={styles.section}>{t('Schutz')}</Text>
       <View style={styles.group}>
         <SwitchRow
-          label="Verschlüsseln"
-          hint="Nur die Empfänger können den Inhalt lesen. Für jeden braucht es einen Schlüssel."
+          label={t('Verschlüsseln')}
+          hint={t('Nur die Empfänger können den Inhalt lesen. Für jeden braucht es einen Schlüssel.')}
           value={draft.encrypt === true}
           onChange={(encrypt) => form.update({ encrypt })}
         />
         <SwitchRow
-          label="Signieren"
-          hint={draft.encrypt ? 'Beim Verschlüsseln immer dabei.' : 'Die Empfänger können prüfen, dass die Nachricht von dir kommt.'}
+          label={t('Signieren')}
+          hint={draft.encrypt ? t('Beim Verschlüsseln immer dabei.') : t('Die Empfänger können prüfen, dass die Nachricht von dir kommt.')}
           value={draft.encrypt === true || draft.sign === true}
           disabled={draft.encrypt === true}
           onChange={(sign) => form.update({ sign })}
         />
       </View>
       {draft.encrypt || draft.sign ? (
-        <Text style={styles.hint}>Geschützt wird der Inhalt mit den Anhängen. Absender, Empfänger und Betreff bleiben lesbar, weil der Mailserver sie braucht.</Text>
+        <Text style={styles.hint}>{t('Geschützt wird der Inhalt mit den Anhängen. Absender, Empfänger und Betreff bleiben lesbar, weil der Mailserver sie braucht.')}</Text>
       ) : null}
       {form.confirming ? (
         <Text style={styles.error}>
-          Du schreibst von einem Anhang, aber es ist keiner angehängt. Tippe noch einmal, wenn die Nachricht so raus soll.
+          {t('Du schreibst von einem Anhang, aber es ist keiner angehängt. Tippe noch einmal, wenn die Nachricht so raus soll.')}
         </Text>
       ) : null}
       {busy ? <Spinner /> : null}
       <Button
-        label={form.confirming ? 'Trotzdem senden' : 'Senden'}
+        label={form.confirming ? t('Trotzdem senden') : t('Senden')}
         disabled={busy || !hasRecipient(draft)}
         onPress={() => form.mayGo() && props.onSend(draft)}
       />
-      <Button label="Später senden" variant="secondary" disabled={busy || !hasRecipient(draft)} onPress={() => form.mayGo() && setChoosingMoment(true)} />
+      <Button label={t('Später senden')} variant="secondary" disabled={busy || !hasRecipient(draft)} onPress={() => form.mayGo() && setChoosingMoment(true)} />
       <SnoozeSheet
         visible={choosingMoment}
-        title="Später senden"
-        note="Die Nachricht wartet bis dahin in der Warteschlange dieses Telefons. Das Telefon muss dann eine Verbindung haben, und die App geöffnet oder im Hintergrund erlaubt sein."
+        title={t('Später senden')}
+        note={t('Die Nachricht wartet bis dahin in der Warteschlange dieses Telefons. Das Telefon muss dann eine Verbindung haben, und die App geöffnet oder im Hintergrund erlaubt sein.')}
         onChoose={(at) => props.onSend(draft, at)}
         onClose={() => setChoosingMoment(false)}
       />

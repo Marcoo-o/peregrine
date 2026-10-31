@@ -1,4 +1,5 @@
 import { daysUntilExpiry, keyHealth, type KeyFacts } from '@peregrine/core/keyHealth'
+import { t, tn } from '../i18n'
 
 /**
  * What to tell of a key that is not in order, for a tag on its card, or null for a key that is. A key that was withdrawn or
@@ -8,11 +9,11 @@ import { daysUntilExpiry, keyHealth, type KeyFacts } from '@peregrine/core/keyHe
 export function healthTag(facts: KeyFacts, now: Date = new Date()): { text: string; tone: 'warning' | 'danger' } | null {
   const health = keyHealth(facts, now)
   if (health === 'ok') return null
-  if (health === 'revoked') return { text: 'Widerrufen', tone: 'danger' }
-  if (health === 'expired') return { text: 'Abgelaufen', tone: 'danger' }
+  if (health === 'revoked') return { text: t('Widerrufen'), tone: 'danger' }
+  if (health === 'expired') return { text: t('Abgelaufen'), tone: 'danger' }
   const days = daysUntilExpiry(facts.expiresAt, now) ?? 0
-  const when = days <= 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} Tagen`
-  return { text: `Läuft ${when} ab`, tone: 'warning' }
+  const when = days <= 0 ? t('heute') : days === 1 ? t('morgen') : t('in {days} Tagen', { days })
+  return { text: t('Läuft {when} ab', { when }), tone: 'warning' }
 }
 
 /** Whether an attachment is, by its name and its type, a file with keys in it, which can be taken from the message. */

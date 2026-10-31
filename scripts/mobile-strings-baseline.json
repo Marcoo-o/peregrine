@@ -1,0 +1,9 @@
+{
+  "apps/mobile/src/RnTransport.ts": 2,
+  "apps/mobile/src/background/registerBackgroundSync.ts": 1,
+  "apps/mobile/src/i18n.ts": 2,
+  "apps/mobile/src/pgp/readProtected.ts": 1,
+  "apps/mobile/src/pgp/runtime.ts": 1,
+  "apps/mobile/src/ui/KeysScreen.tsx": 1,
+  "apps/mobile/src/unified.ts": 1
+}

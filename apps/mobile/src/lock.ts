@@ -1,4 +1,5 @@
 import type { SqlDb } from '@peregrine/core/sqlDb'
+import { t } from './i18n'
 
 /** The screen lock of the device, which is the lock of the application. The native module is behind it. */
 export interface DeviceLock {
@@ -62,6 +63,6 @@ export function mustLock(settings: LockSettings, leftAt: number | null, now: num
 
 /** The words for a time. */
 export function delayLabel(seconds: number): string {
-  if (seconds === 0) return 'Sofort'
-  return seconds < 60 ? `${seconds} Sekunden` : `${seconds / 60} Minuten`
+  if (seconds === 0) return t('Sofort')
+  return seconds < 60 ? t('{seconds} Sekunden', { seconds }) : t('{n} Minuten', { n: seconds / 60 })
 }

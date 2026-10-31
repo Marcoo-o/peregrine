@@ -2,9 +2,10 @@ import { describeError } from '../errors'
 import { loadLock, mustLock, saveLock } from '../lock'
 import type { Services } from './services'
 import type { AppStore } from './store'
+import { t, msg } from '../i18n'
 
-const TITLE = 'Peregrine entsperren'
-const DESCRIPTION = 'Gib die Bildschirmsperre dieses Telefons ein.'
+const TITLE = msg('Peregrine entsperren')
+const DESCRIPTION = msg('Gib die Bildschirmsperre dieses Telefons ein.')
 
 /**
  * Locking the application with the screen lock of the phone.
@@ -51,7 +52,7 @@ export class LockController {
     if (this.asking) return false
     this.asking = true
     try {
-      const given = await this.services.deviceLock.authenticate(TITLE, DESCRIPTION)
+      const given = await this.services.deviceLock.authenticate(t(TITLE), t(DESCRIPTION))
       if (given) {
         this.store.setLocked(false)
         this.leftAt = null
@@ -71,9 +72,9 @@ export class LockController {
    */
   async setEnabled(enabled: boolean): Promise<string | undefined> {
     if (enabled && !(await this.services.deviceLock.available())) {
-      return 'Dieses Telefon hat keine Bildschirmsperre. Richte in den Systemeinstellungen eine ein, dann lässt sich die App sperren.'
+      return t('Dieses Telefon hat keine Bildschirmsperre. Richte in den Systemeinstellungen eine ein, dann lässt sich die App sperren.')
     }
-    if (!(await this.ask())) return enabled ? 'Die Sperre wurde nicht bestätigt und bleibt aus.' : 'Die Sperre wurde nicht bestätigt und bleibt an.'
+    if (!(await this.ask())) return enabled ? t('Die Sperre wurde nicht bestätigt und bleibt aus.') : t('Die Sperre wurde nicht bestätigt und bleibt an.')
     await saveLock(this.services.db, { enabled })
     await this.secure(enabled)
     return undefined
@@ -87,7 +88,7 @@ export class LockController {
   private async ask(): Promise<boolean> {
     this.asking = true
     try {
-      return await this.services.deviceLock.authenticate(TITLE, DESCRIPTION)
+      return await this.services.deviceLock.authenticate(t(TITLE), t(DESCRIPTION))
     } catch (error) {
       this.services.log.error(`the screen lock could not be asked for: ${describeError(error)}`)
       return false

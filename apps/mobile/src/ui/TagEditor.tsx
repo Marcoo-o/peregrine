@@ -7,6 +7,7 @@ import { Button } from './controls'
 import { TagColors } from './TagColors'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /**
  * A tag to make, or one to change, from the bottom of the screen: its name and its colour. Only what the user sees
@@ -37,11 +38,11 @@ export function TagEditor(props: {
           {/* A tap inside the sheet is not a tap beside it. */}
           <Pressable style={[styles.sheet, { paddingBottom: 24 + bottom }]} onPress={() => undefined}>
             <Text accessibilityRole="header" style={styles.dialogTitle}>
-              {props.tag ? 'Tag ändern' : 'Neuer Tag'}
+              {props.tag ? t('Tag ändern') : t('Neuer Tag')}
             </Text>
             <TextInput
               style={styles.input}
-              placeholder="Name"
+              placeholder={t('Name')}
               placeholderTextColor={colors.muted}
               value={name}
               onChangeText={setName}
@@ -51,22 +52,22 @@ export function TagEditor(props: {
             <TagColors color={color} onChange={setColor} />
             {props.tag ? (
               <Text style={styles.hint}>
-                Das Schlüsselwort {props.tag.keyword} auf dem Server bleibt, wie es ist. Geändert werden Name und Farbe auf diesem Gerät.
+                {t('Das Schlüsselwort {keyword} auf dem Server bleibt, wie es ist. Geändert werden Name und Farbe auf diesem Gerät.', { keyword: props.tag.keyword })}
               </Text>
             ) : null}
-            <Button label="Speichern" disabled={name.trim() === ''} onPress={() => props.onSave(name, color)} />
+            <Button label={t('Speichern')} disabled={name.trim() === ''} onPress={() => props.onSave(name, color)} />
             {props.onMove && props.position ? (
               <>
-                <Button label="Weiter nach oben" variant="secondary" disabled={props.position.index <= 0} onPress={() => props.onMove?.(-1)} />
+                <Button label={t('Weiter nach oben')} variant="secondary" disabled={props.position.index <= 0} onPress={() => props.onMove?.(-1)} />
                 <Button
-                  label="Weiter nach unten"
+                  label={t('Weiter nach unten')}
                   variant="secondary"
                   disabled={props.position.index >= props.position.of - 1}
                   onPress={() => props.onMove?.(1)}
                 />
               </>
             ) : null}
-            {props.onDelete ? <Button label="Löschen" variant="danger" onPress={props.onDelete} /> : null}
+            {props.onDelete ? <Button label={t('Löschen')} variant="danger" onPress={props.onDelete} /> : null}
           </Pressable>
         </Pressable>
       </KeyboardAvoidingView>

@@ -1,5 +1,6 @@
 import { attachPicked, emptyDraft, type Draft, type RefusedFile } from './draft'
 import type { FileAccess, PickedFile } from './files'
+import { t, tn } from './i18n'
 
 /**
  * What another application asked of this one: a link to an address, or something it shared. The platform
@@ -89,14 +90,14 @@ export function refusedText(refused: RefusedFile[]): string | undefined {
   if (refused.length === 0) return undefined
   const names = refused.map((file) => file.name).join(', ')
   return refused.length === 1
-    ? `Die Datei ${names} ist zu groß für eine Nachricht und wurde nicht angehängt.`
-    : `Diese Dateien sind zu groß für eine Nachricht und wurden nicht angehängt: ${names}.`
+    ? t('Die Datei {names} ist zu groß für eine Nachricht und wurde nicht angehängt.', { names })
+    : t('Diese Dateien sind zu groß für eine Nachricht und wurden nicht angehängt: {names}.', { names })
 }
 
 /** The line for files that were shared and could not be read. */
 export function unreadableText(count: number): string | undefined {
   if (count <= 0) return undefined
-  return count === 1 ? 'Eine Datei konnte nicht gelesen werden und fehlt.' : `${count} Dateien konnten nicht gelesen werden und fehlen.`
+  return tn(count, 'Eine Datei konnte nicht gelesen werden und fehlt.', '{count} Dateien konnten nicht gelesen werden und fehlen.')
 }
 
 /**

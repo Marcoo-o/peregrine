@@ -4,6 +4,7 @@ import { refusedFilesText } from '../attachmentText'
 import { attachPicked, detachFile, type Draft } from '../draft'
 import { explainError } from '../errors'
 import type { Files } from '../files'
+import { t } from '../i18n'
 
 /**
  * The state of the screen for writing a message: what was typed, what was attached and what was said
@@ -25,7 +26,7 @@ export function useComposeForm(initial: Draft, files: Files) {
       update({ attachments })
       setNotice(refused.length > 0 ? refusedFilesText(refused) : null)
     } catch (error) {
-      setNotice(`Anhängen ging nicht: ${explainError(error)}`)
+      setNotice(t('Anhängen ging nicht: {n}', { n: explainError(error) }))
     }
   }
 

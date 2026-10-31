@@ -2,6 +2,7 @@ import { parseVCards, serializeVCards } from '@peregrine/core/vcard'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import { newId } from './ids'
 import type { Contact } from './contacts'
+import { t } from './i18n'
 
 /** A person the user keeps: a name and an address, which is what a vCard of the desktop's has. */
 export interface BookContact extends Contact {
@@ -37,7 +38,7 @@ const ADDRESS = /^[^\s@<>,;]+@[^\s@<>,;.]+(\.[^\s@<>,;.]+)+$/
 
 /** Why an address cannot be kept, or null. */
 export function addressProblem(address: string): string | null {
-  return ADDRESS.test(address.trim()) ? null : 'Das ist keine E-Mail-Adresse.'
+  return ADDRESS.test(address.trim()) ? null : t('Das ist keine E-Mail-Adresse.')
 }
 
 export type SaveResult = { saved: BookContact } | { problem: string }
@@ -54,10 +55,10 @@ export async function saveContact(db: SqlDb, input: { name: string; address: str
   if (problem) return { problem }
   const same = await findBookContact(db, address)
   if (id !== undefined) {
-    if (same && same.id !== id) return { problem: 'Diese Adresse gehört schon zu einem anderen Kontakt.' }
+    if (same && same.id !== id) return { problem: t('Diese Adresse gehört schon zu einem anderen Kontakt.') }
     await db.run('UPDATE contacts SET name = ?, email = ? WHERE id = ?', name, address, id)
     const changed = await getBookContact(db, id)
-    return changed ? { saved: changed } : { problem: 'Den Kontakt gibt es nicht mehr.' }
+    return changed ? { saved: changed } : { problem: t('Den Kontakt gibt es nicht mehr.') }
   }
   if (same) {
     if (name !== '' && name !== same.name) await db.run('UPDATE contacts SET name = ? WHERE id = ?', name, same.id)

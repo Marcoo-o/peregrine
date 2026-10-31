@@ -6,8 +6,9 @@ import type { Navigator } from './Navigator'
 import type { FolderToolsState } from './screens'
 import type { Services } from './services'
 import type { AppStore } from './store'
+import { msg, t, tn } from '../i18n'
 
-const NO_CONNECTION = 'Dafür braucht es eine Verbindung zum Server, und die gibt es gerade nicht.'
+const NO_CONNECTION = msg('Dafür braucht es eine Verbindung zum Server, und die gibt es gerade nicht.')
 
 /**
  * What can be done to the folders of an account: make one, give one another name, delete one, mark all of one as read, empty the trash.
@@ -83,7 +84,7 @@ export class FolderController {
     await this.about(state, async () => {
       const unread = await folderUids(this.services.db, folder.id, { unreadOnly: true })
       await this.services.mail.setFlags(folder, unread, ['\\Seen'], [])
-      return unread.length === 0 ? 'Es gibt nichts Ungelesenes in diesem Ordner.' : `${unread.length} Nachrichten sind jetzt gelesen.`
+      return unread.length === 0 ? t('Es gibt nichts Ungelesenes in diesem Ordner.') : tn(unread.length, '{count} Nachricht ist jetzt gelesen.', '{count} Nachrichten sind jetzt gelesen.')
     })
   }
 
@@ -94,7 +95,7 @@ export class FolderController {
     await this.about(state, async () => {
       const all = await folderUids(this.services.db, folder.id)
       await this.services.mail.remove(folder, all, { permanent: true })
-      return all.length === 0 ? 'Der Ordner ist schon leer.' : `${all.length} Nachrichten sind gelöscht.`
+      return all.length === 0 ? t('Der Ordner ist schon leer.') : tn(all.length, '{count} Nachricht ist gelöscht.', '{count} Nachrichten sind gelöscht.')
     })
   }
 
@@ -109,7 +110,7 @@ export class FolderController {
     this.store.showScreen({ ...state, busy: true, error: undefined, notice: undefined })
     const imap = this.services.connections.get(state.account.id)
     if (!imap) {
-      this.store.showScreen({ ...state, busy: false, error: NO_CONNECTION })
+      this.store.showScreen({ ...state, busy: false, error: t(NO_CONNECTION) })
       return
     }
     try {

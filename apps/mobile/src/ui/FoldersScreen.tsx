@@ -12,6 +12,7 @@ import { ListRow } from './ListRow'
 import { TopBar } from './TopBar'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 export function FoldersScreen(props: {
   state: FoldersState
@@ -53,7 +54,7 @@ export function FoldersScreen(props: {
       {offline ? (
         <View>
           <Text style={styles.error}>{offline}</Text>
-          <Button label="Erneut verbinden" onPress={props.onConnect} />
+          <Button label={t('Erneut verbinden')} onPress={props.onConnect} />
         </View>
       ) : null}
       <FlatList
@@ -81,32 +82,32 @@ export function FoldersScreen(props: {
           <>
             <Pressable accessibilityRole="button" style={styles.removeRow} onPress={props.onNewFolder}>
               <Icon name="folder" size={18} color={colors.accent} />
-              <Text style={styles.editText}>Ordner anlegen</Text>
+              <Text style={styles.editText}>{t('Ordner anlegen')}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" style={styles.removeRow} onPress={props.onSenders}>
               <Icon name="signature" size={18} color={colors.accent} />
-              <Text style={styles.editText}>Absender und Signatur</Text>
+              <Text style={styles.editText}>{t('Absender und Signatur')}</Text>
             </Pressable>
             <Pressable accessibilityRole="button" style={styles.removeRow} onPress={props.onEdit}>
               <Icon name="settings" size={18} color={colors.accent} />
-              <Text style={styles.editText}>Konto bearbeiten</Text>
+              <Text style={styles.editText}>{t('Konto bearbeiten')}</Text>
             </Pressable>
           <Pressable accessibilityRole="button" style={styles.removeRow} onPress={() => setConfirmingRemove(true)}>
             <Icon name="trash" size={18} color={colors.danger} />
-            <Text style={styles.removeText}>Konto entfernen</Text>
+            <Text style={styles.removeText}>{t('Konto entfernen')}</Text>
           </Pressable>
           </>
         }
       />
-      <Fab label="Neue Nachricht" onPress={props.onCompose} />
+      <Fab label={t('Neue Nachricht')} onPress={props.onCompose} />
       <ConfirmDialog
         visible={confirmingRemove}
-        title={`${account.displayName} entfernen?`}
-        text="Das Konto, seine gespeicherten Nachrichten und alles, was noch auf eine Verbindung wartet, werden von diesem Gerät gelöscht. Auf dem Mailserver bleibt alles, wie es ist."
+        title={t('{displayName} entfernen?', { displayName: account.displayName })}
+        text={t('Das Konto, seine gespeicherten Nachrichten und alles, was noch auf eine Verbindung wartet, werden von diesem Gerät gelöscht. Auf dem Mailserver bleibt alles, wie es ist.')}
         answers={[
-          { label: 'Abbrechen', onPress: () => setConfirmingRemove(false) },
+          { label: t('Abbrechen'), onPress: () => setConfirmingRemove(false) },
           {
-            label: 'Konto entfernen',
+            label: t('Konto entfernen'),
             variant: 'danger',
             onPress: () => {
               setConfirmingRemove(false)

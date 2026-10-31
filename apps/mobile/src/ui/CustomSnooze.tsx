@@ -5,6 +5,7 @@ import { momentText } from './snoozeText'
 import { CUSTOM_REASONS, customMoment, defaultMoment, snoozeDays } from './snoozeCustom'
 import { useStyles } from './useStyles'
 import { useTheme } from './useTheme'
+import { t } from '../i18n'
 
 /**
  * A moment of one's own to put a message aside until: a day of the next two weeks and a time of day, for what the presets
@@ -29,17 +30,17 @@ export function CustomSnooze(props: { onChoose: (until: number) => void }) {
         ))}
       </ScrollView>
       <TextInput
-        accessibilityLabel="Uhrzeit"
+        accessibilityLabel={t('Uhrzeit')}
         style={styles.input}
-        placeholder="Uhrzeit, zum Beispiel 8:30"
+        placeholder={t('Uhrzeit, zum Beispiel 8:30')}
         placeholderTextColor={colors.muted}
         value={time}
         onChangeText={setTime}
         keyboardType="numbers-and-punctuation"
         maxLength={5}
       />
-      <Text style={styles.hint}>{moment.ok ? `Zurück am ${momentText(moment.until)}` : CUSTOM_REASONS[moment.reason]}</Text>
-      <Button label="Erinnern" disabled={!moment.ok} onPress={() => moment.ok && props.onChoose(moment.until)} />
+      <Text style={styles.hint}>{moment.ok ? t('Zurück am {n}', { n: momentText(moment.until) }) : t(CUSTOM_REASONS[moment.reason])}</Text>
+      <Button label={t('Erinnern')} disabled={!moment.ok} onPress={() => moment.ok && props.onChoose(moment.until)} />
     </>
   )
 }

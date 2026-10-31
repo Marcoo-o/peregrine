@@ -1451,8 +1451,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 11. *The safety switches* (done, see "What sorting and the first tools found").
 12. *Locking the application.* (Done: see "What locking the application found".)
 13. *Appearance:* light, dark or the system's, a text size, an accent, the date format and the density are done; what is left of the desktop's is small.
-14. *Languages.* The desktop has English, German, Spanish, French and Portuguese (`src/renderer/src/i18n`); the phone's texts are German and written into the code. L:
-    every text goes through a function, and the files of the languages can be the desktop's where the texts are the same.
+14. *Languages* (done for German and English, see "What languages found"). The desktop also has Spanish, French and Portuguese; a language is a file and a line.
 15. *Contacts* (done, see "What two panes and contacts found").
 
 **Third**
@@ -1837,3 +1836,16 @@ Not seen on the device (the emulator did not answer fast enough to be driven).
 
 Covered by tests: the widths and when there are two panes, which list is beside a message and when it is not, the store; the contacts (kept, once for an address, changed, taken away, found, matched, vCard in and out with the counts, a file that is not one, too large,
 unreadable, written) and their suggestions. Not seen on the device (the emulator did not answer fast enough to be driven, and is a phone: the layout is for a wider window).
+
+## What languages found
+
+Every text a person reads goes through `t(...)`, `tn(...)` (a text with a number) or `msg(...)` (`src/i18n.ts`).
+
+- *The text of the code is the key.* It is written in German, as it was, with `{name}` where a value is put in, and it is what is shown for German; so German needs no catalog and the code reads as it did. A catalog (`src/locales/<language>.json`) maps each text to its translation, a plural text (`one|other`, the two German forms) to the forms of the language (`one`, `few`, `many`, `other`, as `Intl.PluralRules` names them). A language without a translation for a text falls back to English and then to the German, so a text is never missing, only untranslated.
+- *A text at the top of a module* cannot ask for the language, since it is read before one is chosen. It is written `msg('...')`, which is the same text, and is shown with `t(...)` where it is used (the labels of a choice, the words for a risk, the names of folders).
+- *The language* is what the user chose in the settings ("Sprache": like the phone, Deutsch, English), or the phone's own when nothing was chosen, and English where the phone's is none of ours (most people can read it). It is kept as a setting and read at the start; a change is in force at once, the root of the application draws again. Dates, the sorting of folder names and the language asked of the key server follow it (`language.locale`, `language.code`).
+- *`scripts/mobile-strings.mjs`* is how the texts were moved and how they stay moved: `scan` lists the texts written into the code (found with a parser, not a pattern), `extract --apply` moved 674 of them, `keys` lists what is in the calls, `baseline` and `check` keep the count of what is left per file. What is left (nine, in seven files) is not meant for a person: a name of a task, an event, the frame of a key block, an error name, a language's own name. A test (`i18n.test.ts`) fails when a new fixed text is added, when a catalog lacks a text of the code or has one the code no longer has, when a translation has other values than its text, and when it is empty.
+- *Adding a language* is a catalog file, an import in `i18n.ts` and a line in `LANGUAGES`; the test says what is missing. Spanish, French and Portuguese are not there: they are the desktop's, but the phone's texts are not the desktop's, and a translation that nobody who reads the language has looked at is worse than none.
+- *What it does not do:* the search syntax (`von:`, `betreff:`, `hat:anhang`, `ist:ungelesen`) stays German, since it is the desktop's and is typed, not read; a name the user gave or a server's (a folder, a tag) is not translated; the text of a message that was written in the code (the line that introduces a quote, the header of a forwarded message) follows the language that is in force when it is written.
+
+Covered by tests: the catalogs, the choice and its resolving against the phone's languages, the plural forms, the fallback, the change at once and its being kept and read at the start. All of the earlier tests run in German, unchanged. Not seen on the device.

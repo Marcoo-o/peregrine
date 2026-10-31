@@ -10,9 +10,10 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
 import { useStyles } from './useStyles'
+import { language, t } from '../i18n'
 
 function dayOf(ms: number | Date): string {
-  return new Date(ms).toLocaleDateString('de-DE', { dateStyle: 'medium' })
+  return new Date(ms).toLocaleDateString(language.locale, { dateStyle: 'medium' })
 }
 
 /** The fingerprint of a key in two lines, which is what its owner reads out to anybody who wants to be sure of it. */
@@ -20,7 +21,7 @@ function Fingerprint(props: { value: string }) {
   const styles = useStyles()
   return (
     <>
-      <Text style={styles.fieldLabel}>Fingerabdruck</Text>
+      <Text style={styles.fieldLabel}>{t('Fingerabdruck')}</Text>
       <Text selectable style={styles.fingerprint}>
         {fingerprintLines(props.value)}
       </Text>
@@ -56,15 +57,15 @@ function FoundKey(props: {
   const accounts = matching.length > 0 ? matching : props.accounts
   return (
     <View style={[styles.group, styles.keyCard]}>
-      <Text style={styles.itemTitle}>{key.userIds[0] ?? 'Schlüssel ohne Namen'}</Text>
+      <Text style={styles.itemTitle}>{key.userIds[0] ?? t('Schlüssel ohne Namen')}</Text>
       {key.foundBy ? <Text style={styles.itemMeta}>{key.foundBy}</Text> : null}
       <View style={styles.actions}>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{key.privateKey ? 'Mit privatem Teil' : 'Nur öffentlicher Teil'}</Text>
+          <Text style={styles.tagText}>{key.privateKey ? t('Mit privatem Teil') : t('Nur öffentlicher Teil')}</Text>
         </View>
         {expired ? (
           <View style={styles.tagWarning}>
-            <Text style={styles.tagWarningText}>Abgelaufen am {dayOf(key.expiresAt as Date)}</Text>
+            <Text style={styles.tagWarningText}>{t('Abgelaufen am {day}', { day: dayOf(key.expiresAt as Date) })}</Text>
           </View>
         ) : null}
       </View>
@@ -75,31 +76,31 @@ function FoundKey(props: {
           {key.locked ? (
             <>
               <FormInput
-                placeholder="Passwort des Schlüssels"
+                placeholder={t('Passwort des Schlüssels')}
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
                 value={passphrase}
                 onChangeText={setPassphrase}
               />
-              <Text style={styles.hint}>Das Öffnen eines geschützten Schlüssels dauert einige Sekunden und geschieht nur einmal.</Text>
+              <Text style={styles.hint}>{t('Das Öffnen eines geschützten Schlüssels dauert einige Sekunden und geschieht nur einmal.')}</Text>
             </>
           ) : null}
           {accounts.map((account) => (
             <Button
               key={account.id}
-              label={`Für ${account.emailAddress || account.displayName} verwenden`}
+              label={t('Für {n} verwenden', { n: account.emailAddress || account.displayName })}
               variant={matching.length > 0 ? 'primary' : 'secondary'}
               onPress={() => props.onAdoptOwn(account.id, passphrase)}
             />
           ))}
         </>
       ) : key.addresses.length > 0 ? (
-        key.addresses.map((address) => <Button key={address} label={`Für ${address} merken`} onPress={() => props.onAdoptContact(address)} />)
+        key.addresses.map((address) => <Button key={address} label={t('Für {address} merken', { address })} onPress={() => props.onAdoptContact(address)} />)
       ) : (
-        <Text style={styles.hint}>Der Schlüssel nennt keine Adresse, für die er gemerkt werden könnte.</Text>
+        <Text style={styles.hint}>{t('Der Schlüssel nennt keine Adresse, für die er gemerkt werden könnte.')}</Text>
       )}
-      <Button label="Nicht übernehmen" variant="secondary" onPress={props.onDismiss} />
+      <Button label={t('Nicht übernehmen')} variant="secondary" onPress={props.onDismiss} />
     </View>
   )
 }
@@ -132,23 +133,22 @@ export function KeysScreen(props: {
 
   const askToRemoveOwn = (account: KeysState['accounts'][number], key: OwnKey) =>
     setRemoving({
-      title: 'Schlüssel entfernen?',
-      text: `Nachrichten, die mit diesem Schlüssel für ${account.emailAddress} verschlüsselt wurden, lassen sich auf diesem Handy danach nicht mehr öffnen, wenn du den Schlüssel nicht noch anderswo hast.`,
+      title: t('Schlüssel entfernen?'),
+      text: t('Nachrichten, die mit diesem Schlüssel für {emailAddress} verschlüsselt wurden, lassen sich auf diesem Handy danach nicht mehr öffnen, wenn du den Schlüssel nicht noch anderswo hast.', { emailAddress: account.emailAddress }),
       remove: () => props.onRemoveOwn(account.id, key.fingerprint)
     })
   const askToRemoveContact = (key: ContactKey) =>
     setRemoving({
-      title: `Schlüssel von ${key.address} entfernen?`,
-      text: 'Danach lässt sich für diese Adresse nicht mehr verschlüsseln, und Signaturen von ihr werden nicht mehr geprüft.',
+      title: t('Schlüssel von {address} entfernen?', { address: key.address }),
+      text: t('Danach lässt sich für diese Adresse nicht mehr verschlüsseln, und Signaturen von ihr werden nicht mehr geprüft.'),
       remove: () => props.onRemoveContact(key.fingerprint)
     })
 
   return (
     <FormScroll>
-      <Header title="Schlüssel" back={{ label: 'Einstellungen', onPress: props.onBack }} />
+      <Header title={t('Schlüssel')} back={{ label: t('Einstellungen'), onPress: props.onBack }} />
       <Text style={styles.hint}>
-        Mit OpenPGP verschlüsselst und signierst du Nachrichten. Verschlüsseln kannst du an alle, deren öffentlichen Schlüssel du hast.
-        Lesen können das nur sie, mit ihrem privaten Schlüssel.
+        {t('Mit OpenPGP verschlüsselst und signierst du Nachrichten. Verschlüsseln kannst du an alle, deren öffentlichen Schlüssel du hast. Lesen können das nur sie, mit ihrem privaten Schlüssel.')}
       </Text>
       {working ? (
         <>
@@ -159,76 +159,75 @@ export function KeysScreen(props: {
       {notice ? <Text style={styles.hint}>{notice}</Text> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Text style={styles.section}>Beim Schreiben</Text>
+      <Text style={styles.section}>{t('Beim Schreiben')}</Text>
       <View style={styles.group}>
         <SwitchRow
-          label="Immer signieren"
-          hint="Jede neue Nachricht beginnt signiert. Das gilt für Konten mit einem Schlüssel."
+          label={t('Immer signieren')}
+          hint={t('Jede neue Nachricht beginnt signiert. Das gilt für Konten mit einem Schlüssel.')}
           value={defaults.sign}
           onChange={(on) => props.onDefault('sign', on)}
         />
         <SwitchRow
-          label="Immer verschlüsseln"
-          hint="Jede neue Nachricht beginnt verschlüsselt. Ohne Schlüssel des Empfängers lässt sie sich nicht senden, dann schaltest du es für diese Nachricht aus."
+          label={t('Immer verschlüsseln')}
+          hint={t('Jede neue Nachricht beginnt verschlüsselt. Ohne Schlüssel des Empfängers lässt sie sich nicht senden, dann schaltest du es für diese Nachricht aus.')}
           value={defaults.encrypt}
           onChange={(on) => props.onDefault('encrypt', on)}
         />
       </View>
 
-      <Text style={styles.section}>Deine Schlüssel</Text>
-      {accounts.length === 0 ? <Text style={styles.hint}>Es gibt noch kein Konto.</Text> : null}
+      <Text style={styles.section}>{t('Deine Schlüssel')}</Text>
+      {accounts.length === 0 ? <Text style={styles.hint}>{t('Es gibt noch kein Konto.')}</Text> : null}
       {accounts.map((account) => (
         <View key={account.id}>
           {(own[account.id] ?? []).map((key, index) => (
             <View key={key.fingerprint} style={[styles.group, styles.keyCard]}>
               <Text style={styles.itemTitle}>{account.emailAddress || account.displayName}</Text>
-              <Text style={styles.itemMeta}>Angelegt am {dayOf(key.createdAt)}</Text>
+              <Text style={styles.itemMeta}>{t('Angelegt am {day}', { day: dayOf(key.createdAt) })}</Text>
               <View style={styles.actions}>
                 {index === 0 ? (
                   <View style={styles.tag}>
-                    <Text style={styles.tagText}>Signiert damit</Text>
+                    <Text style={styles.tagText}>{t('Signiert damit')}</Text>
                   </View>
                 ) : null}
                 <HealthTag state={states[key.fingerprint]} />
               </View>
               <Fingerprint value={key.fingerprint} />
               <View style={{ height: 12 }} />
-              <Button label="Öffentlichen Teil speichern" variant="secondary" disabled={!idle} onPress={() => props.onExport(account.id, key.fingerprint)} />
-              <Button label="Auf keys.openpgp.org veröffentlichen" variant="secondary" disabled={!idle || !account.emailAddress} onPress={() => setPublishing({ accountId: account.id, fingerprint: key.fingerprint, address: account.emailAddress })} />
-              <Button label="Entfernen" variant="danger" disabled={!idle} onPress={() => askToRemoveOwn(account, key)} />
+              <Button label={t('Öffentlichen Teil speichern')} variant="secondary" disabled={!idle} onPress={() => props.onExport(account.id, key.fingerprint)} />
+              <Button label={t('Auf keys.openpgp.org veröffentlichen')} variant="secondary" disabled={!idle || !account.emailAddress} onPress={() => setPublishing({ accountId: account.id, fingerprint: key.fingerprint, address: account.emailAddress })} />
+              <Button label={t('Entfernen')} variant="danger" disabled={!idle} onPress={() => askToRemoveOwn(account, key)} />
             </View>
           ))}
           {(own[account.id] ?? []).length === 0 ? (
             <View style={[styles.group, styles.keyCard]}>
               <Text style={styles.itemTitle}>{account.emailAddress || account.displayName}</Text>
-              <Text style={styles.itemMeta}>Für dieses Konto gibt es keinen Schlüssel.</Text>
+              <Text style={styles.itemMeta}>{t('Für dieses Konto gibt es keinen Schlüssel.')}</Text>
               <View style={{ height: 12 }} />
-              <Button label="Schlüssel auf dem Handy erzeugen" disabled={!idle} onPress={() => props.onGenerate(account.id)} />
+              <Button label={t('Schlüssel auf dem Handy erzeugen')} disabled={!idle} onPress={() => props.onGenerate(account.id)} />
             </View>
           ) : null}
         </View>
       ))}
 
-      <Text style={styles.section}>Schlüssel von anderen</Text>
-      {contacts.length === 0 ? <Text style={styles.hint}>Noch keine. Wer dir seinen öffentlichen Schlüssel gibt, dessen Schlüssel kannst du unten einlesen.</Text> : null}
+      <Text style={styles.section}>{t('Schlüssel von anderen')}</Text>
+      {contacts.length === 0 ? <Text style={styles.hint}>{t('Noch keine. Wer dir seinen öffentlichen Schlüssel gibt, dessen Schlüssel kannst du unten einlesen.')}</Text> : null}
       {contacts.map((key) => (
         <View key={key.fingerprint} style={[styles.group, styles.keyCard]}>
           <Text style={styles.itemTitle}>{key.address}</Text>
-          <Text style={styles.itemMeta}>Gemerkt am {dayOf(key.createdAt)}</Text>
+          <Text style={styles.itemMeta}>{t('Gemerkt am {day}', { day: dayOf(key.createdAt) })}</Text>
           <HealthTag state={states[key.fingerprint]} />
           <Fingerprint value={key.fingerprint} />
           <View style={{ height: 12 }} />
-          <Button label="Entfernen" variant="danger" disabled={!idle} onPress={() => askToRemoveContact(key)} />
+          <Button label={t('Entfernen')} variant="danger" disabled={!idle} onPress={() => askToRemoveContact(key)} />
         </View>
       ))}
 
-      <Text style={styles.section}>Schlüssel suchen</Text>
+      <Text style={styles.section}>{t('Schlüssel suchen')}</Text>
       <Text style={styles.hint}>
-        Sucht den öffentlichen Schlüssel einer Adresse im Verzeichnis ihres Mailservers (WKD) und auf keys.openpgp.org. Die Suche
-        verrät beiden, an wen du schreiben willst. Sie läuft nur, wenn du sie startest, und speichert nichts, bevor du es sagst.
+        {t('Sucht den öffentlichen Schlüssel einer Adresse im Verzeichnis ihres Mailservers (WKD) und auf keys.openpgp.org. Die Suche verrät beiden, an wen du schreiben willst. Sie läuft nur, wenn du sie startest, und speichert nichts, bevor du es sagst.')}
       </Text>
       <FormInput
-        placeholder="Adresse, zum Beispiel sam@example.net"
+        placeholder={t('Adresse, zum Beispiel sam@example.net')}
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="email-address"
@@ -236,18 +235,17 @@ export function KeysScreen(props: {
         onChangeText={setSearched}
       />
       <Button
-        label="Schlüssel suchen"
+        label={t('Schlüssel suchen')}
         variant="secondary"
         disabled={!idle || searched.trim() === ''}
         onPress={() => props.onSearch(searched)}
       />
 
-      <Text style={styles.section}>Schlüssel einlesen</Text>
+      <Text style={styles.section}>{t('Schlüssel einlesen')}</Text>
       <Text style={styles.hint}>
-        Aus einer Datei (.asc, .gpg, .pgp oder .key) oder aus Text, den du hier einfügst. Ein privater Schlüssel kommt zu einem deiner
-        Konten, ein öffentlicher zu der Adresse, für die er gilt.
+        {t('Aus einer Datei (.asc, .gpg, .pgp oder .key) oder aus Text, den du hier einfügst. Ein privater Schlüssel kommt zu einem deiner Konten, ein öffentlicher zu der Adresse, für die er gilt.')}
       </Text>
-      <Button label="Datei wählen" variant="secondary" disabled={!idle} onPress={props.onPickFile} />
+      <Button label={t('Datei wählen')} variant="secondary" disabled={!idle} onPress={props.onPickFile} />
       <FormInput
         style={styles.multiline}
         placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----"
@@ -259,7 +257,7 @@ export function KeysScreen(props: {
         onChangeText={setPasted}
       />
       <Button
-        label="Eingefügten Text einlesen"
+        label={t('Eingefügten Text einlesen')}
         variant="secondary"
         disabled={!idle || pasted.trim() === ''}
         onPress={() => {
@@ -270,7 +268,7 @@ export function KeysScreen(props: {
 
       {found && found.length > 0 ? (
         <>
-          <Text style={styles.section}>Gefunden</Text>
+          <Text style={styles.section}>{t('Gefunden')}</Text>
           {found.map((key) => (
             <FoundKey
               key={key.fingerprint}
@@ -286,12 +284,12 @@ export function KeysScreen(props: {
 
       <ConfirmDialog
         visible={publishing !== null}
-        title="Schlüssel veröffentlichen?"
-        text={`Der öffentliche Schlüssel und die Adresse ${publishing?.address ?? ''} werden auf keys.openpgp.org abgelegt. Das lässt sich nicht zurücknehmen: die Adresse kann dort versteckt werden, der Schlüssel bleibt. Gefunden wird er erst, wenn du den Link in der Mail bestätigst, die der Server dir schickt.`}
+        title={t('Schlüssel veröffentlichen?')}
+        text={t('Der öffentliche Schlüssel und die Adresse {n} werden auf keys.openpgp.org abgelegt. Das lässt sich nicht zurücknehmen: die Adresse kann dort versteckt werden, der Schlüssel bleibt. Gefunden wird er erst, wenn du den Link in der Mail bestätigst, die der Server dir schickt.', { n: publishing?.address ?? '' })}
         answers={[
-          { label: 'Abbrechen', onPress: () => setPublishing(null) },
+          { label: t('Abbrechen'), onPress: () => setPublishing(null) },
           {
-            label: 'Veröffentlichen',
+            label: t('Veröffentlichen'),
             variant: 'secondary',
             onPress: () => {
               if (publishing) props.onPublish(publishing.accountId, publishing.fingerprint)
@@ -305,9 +303,9 @@ export function KeysScreen(props: {
         title={removing?.title ?? ''}
         text={removing?.text ?? ''}
         answers={[
-          { label: 'Behalten', onPress: () => setRemoving(null) },
+          { label: t('Behalten'), onPress: () => setRemoving(null) },
           {
-            label: 'Entfernen',
+            label: t('Entfernen'),
             variant: 'danger',
             onPress: () => {
               removing?.remove()

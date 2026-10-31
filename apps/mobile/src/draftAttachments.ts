@@ -1,6 +1,7 @@
 import { attachmentContent, type AttachmentInfo } from './attachments'
 import { attachPicked, type DraftAttachment, type RefusedFile } from './draft'
 import { MAX_ATTACHMENT_BYTES, type Files, type PickedFile } from './files'
+import { t } from './i18n'
 
 /** What of the attachments of a message was taken over, and what was not and why. */
 export interface BroughtAttachments {
@@ -45,8 +46,8 @@ export async function bringAttachments(
 /** A line about what was not taken over, for the screen, or undefined when all of it was. */
 export function notBroughtText(brought: Pick<BroughtAttachments, 'refused' | 'missing'>): string | undefined {
   const parts = [
-    ...brought.refused.map((file) => `${file.name} (zu groß für eine Nachricht)`),
-    ...brought.missing.map((name) => `${name} (nicht lesbar)`)
+    ...brought.refused.map((file) => t('{name} (zu groß für eine Nachricht)', { name: file.name })),
+    ...brought.missing.map((name) => t('{name} (nicht lesbar)', { name }))
   ]
-  return parts.length === 0 ? undefined : `Nicht angehängt: ${parts.join(', ')}.`
+  return parts.length === 0 ? undefined : t('Nicht angehängt: {n}.', { n: parts.join(', ') })
 }

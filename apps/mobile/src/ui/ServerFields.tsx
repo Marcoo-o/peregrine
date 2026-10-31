@@ -3,6 +3,7 @@ import type { FormSecurity } from '../app/accountForm'
 import { Chip } from './controls'
 import { FormInput } from './FormScroll'
 import { useStyles } from './useStyles'
+import { t } from '../i18n'
 
 /** The three fields that name a server: its address, how to connect to it, and the port. */
 export function ServerFields(props: {
@@ -26,8 +27,8 @@ export function ServerFields(props: {
         onChangeText={props.onHost}
       />
       <View style={styles.row}>
-        <Chip label="TLS" active={props.secure === 'tls'} onPress={() => props.onSecure('tls')} />
-        <Chip label="STARTTLS" active={props.secure === 'starttls'} onPress={() => props.onSecure('starttls')} />
+        <Chip label={t('TLS')} active={props.secure === 'tls'} onPress={() => props.onSecure('tls')} />
+        <Chip label={t('STARTTLS')} active={props.secure === 'starttls'} onPress={() => props.onSecure('starttls')} />
       </View>
       <FormInput
         placeholder={props.portPlaceholder}

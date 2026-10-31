@@ -269,6 +269,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSafety={(change) => settings.setSafety(change)}
           onAppearance={(mode) => settings.setAppearance(mode)}
           onFontScale={(scale) => settings.setFontScale(scale)}
+          onLanguage={(choice) => settings.setLanguage(choice)}
           onLook={(change) => settings.setLook(change)}
           onLock={(on) => settings.setLock(on)}
           onContacts={() => contacts.show()}

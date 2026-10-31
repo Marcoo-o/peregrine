@@ -1,4 +1,5 @@
 import { FLAGGED, SEEN } from './flags'
+import { t, tn } from './i18n'
 
 /** The filters of a list, as the desktop has them above its list: what is not read, what is starred, what has a file. */
 export interface ListFilter {
@@ -26,7 +27,6 @@ export function filterMessages<T extends { flags: string[]; hasAttachment: boole
 
 /** How many messages a list has, as a line for its top. `of` is how many there are before a filter took some away. */
 export function countText(count: number, of: number = count): string {
-  const noun = count === 1 ? 'Nachricht' : 'Nachrichten'
-  if (count === 0 && of === 0) return 'Keine Nachrichten'
-  return count === of ? `${count} ${noun}` : `${count} von ${of} Nachrichten`
+  if (count === 0 && of === 0) return t('Keine Nachrichten')
+  return count === of ? tn(count, '{count} Nachricht', '{count} Nachrichten') : t('{count} von {of} Nachrichten', { count, of })
 }

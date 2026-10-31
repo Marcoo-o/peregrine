@@ -2,6 +2,7 @@ import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { Folder } from './folders'
 import { SEEN } from './flags'
 import { isInbox } from './unified'
+import { t } from './i18n'
 
 /** Whether a folder can be renamed or deleted: not the inbox and not one with a job, which every "archive" and "trash" action depends on. */
 export function isChangeable(folder: Folder): boolean {
@@ -24,13 +25,13 @@ const MAX_NAME = 100
  */
 export function folderNameProblem(name: string, delimiter: string, siblings: string[], own?: string): string | null {
   const text = name.trim()
-  if (text === '') return 'Der Ordner braucht einen Namen.'
-  if (text.length > MAX_NAME) return `Der Name darf höchstens ${MAX_NAME} Zeichen haben.`
-  if (text === '.' || text === '..') return 'Dieser Name ist nicht erlaubt.'
-  if (delimiter !== '' && text.includes(delimiter)) return `Der Name darf kein „${delimiter}“ enthalten, das trennt Ordner voneinander.`
-  if (/[*%\\]|[\u0000-\u001f]/.test(text)) return 'Der Name enthält Zeichen, die ein Mailserver nicht annimmt.'
+  if (text === '') return t('Der Ordner braucht einen Namen.')
+  if (text.length > MAX_NAME) return t('Der Name darf höchstens {MAX_NAME} Zeichen haben.', { MAX_NAME })
+  if (text === '.' || text === '..') return t('Dieser Name ist nicht erlaubt.')
+  if (delimiter !== '' && text.includes(delimiter)) return t('Der Name darf kein „{delimiter}“ enthalten, das trennt Ordner voneinander.', { delimiter })
+  if (/[*%\\]|[\u0000-\u001f]/.test(text)) return t('Der Name enthält Zeichen, die ein Mailserver nicht annimmt.')
   const taken = siblings.some((sibling) => sibling.toLowerCase() === text.toLowerCase() && sibling !== own)
-  if (taken) return 'Einen Ordner mit diesem Namen gibt es dort schon.'
+  if (taken) return t('Einen Ordner mit diesem Namen gibt es dort schon.')
   return null
 }
 
