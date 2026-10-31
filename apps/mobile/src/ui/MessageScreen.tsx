@@ -53,6 +53,8 @@ export function MessageScreen(props: {
   onPrint: () => void
   /** Keeps the sender as a contact. */
   onAddContact: () => void
+  /** Puts the message on the list for today. */
+  onAddTask: () => void
   /** Looks for the public key of the sender, on the keyserver and in the directory of the sender's domain. */
   onFindKey: (address: string) => void
   onSaveSource: () => void
@@ -152,6 +154,7 @@ export function MessageScreen(props: {
           { label: t('Als Spam markieren'), onPress: props.onJunk },
           ...(message ? [{ label: t('Drucken oder als PDF speichern'), onPress: props.onPrint }] : []),
           ...(message ? [{ label: t('Zu Kontakten hinzufügen'), onPress: props.onAddContact }] : []),
+          { label: t('Auf die Liste für heute'), onPress: props.onAddTask },
           ...(senderAddress ? [{ label: t('Schlüssel des Absenders suchen'), onPress: () => props.onFindKey(senderAddress) }] : []),
           ...(props.state.raw
             ? [

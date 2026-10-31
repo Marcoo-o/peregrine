@@ -5,6 +5,7 @@ import { ComposeController } from './ComposeController'
 import { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { ContactsController } from './ContactsController'
 import { FilterRulesController } from './FilterRulesController'
+import { TasksController } from './TasksController'
 import { FolderController } from './FolderController'
 import { LockController } from './LockController'
 import { SenderController } from './SenderController'
@@ -37,6 +38,7 @@ export class Application {
   readonly folders: FolderController
   readonly contacts: ContactsController
   readonly filters: FilterRulesController
+  readonly tasks: TasksController
   readonly lock: LockController
   readonly senders: SenderController
   readonly settings: SettingsController
@@ -66,6 +68,7 @@ export class Application {
     this.folders = new FolderController(services, store, this.navigator)
     this.contacts = new ContactsController(services, store)
     this.filters = new FilterRulesController(services, store)
+    this.tasks = new TasksController(services, store, this.messages)
     this.senders = new SenderController(services, store, this.navigator, this.identities)
   }
 

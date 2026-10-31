@@ -1456,7 +1456,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 **Third**
 
 16. *Filter rules* (done, see "What filter rules found").
-17. *The daily list and tasks* (recurring tasks, linked to messages). L, and unclear whether it is wanted on a phone.
+17. *The daily list and tasks* (done, see "What the daily list found"; the tagged mails of the desktop's list are not on the phone).
 18. *Diagnostics:* a log that can be recorded and exported for a bug report (S to M).
 19. *What is left of OpenPGP:* publishing the own key and the search for the key of the sender of a message are done; choosing which of several keys signs (the newest does), one key for each of several recipients with the choice shown, and the search from a recipient that has none are left (S each).
 20. *A wide screen* (done, see "What two panes and contacts found").
@@ -1880,4 +1880,19 @@ Covered by tests: the HTML made of each marker and what it must not make (snake_
 - *Still open:* choosing which key signs when an account has several, a key per recipient with a choice among several, and starting the key search from a recipient while writing. They need a decision about what several keys of one address mean, and are left.
 
 Covered by tests: renaming (the name in the sidebar, empty, long, a search that is not kept). The mark in the list is a style on a row and was not seen on a device.
+
+## What the daily list found
+
+The desktop's daily list, on the phone, with the same rules: `@peregrine/core/recurrence` (once, daily, weekdays, weekly, monthly) decides what is due on a day, and nothing is written for days that have not come.
+
+- *The data* (migration 16, `tasks.ts`): a task is a title, notes, a rule and the day it starts on; the days a task was finished on are rows of their own (so a repeating task is done for one day and open on the next); a checklist whose items are ticked for a day and so are open again the next day by the date alone. A task made from a message keeps where it is and its Message-ID, and finds it again by the Message-ID when it was moved; with the message gone it stands as text and says so.
+- *The screen* ("Aufgaben" in the sidebar): today's tasks with a switch each, the checklist, "Checkliste" to add a point, "Nachricht öffnen" for a task made from a message, "Auf morgen" for one that happens once (a repeating one is not moved, since changing its start would move all the days after), "Entfernen", and a form for a new task with how often it comes. Weekly and monthly are of the weekday and the day of the month of the day it is made on. "Auf die Liste für heute" in the menu of a message makes a task of it.
+- *Tidying.* A task that happens once, was finished and whose day has gone by is taken away when the list is opened; a repeating one keeps its days; one that was not finished is kept.
+- *What it does not do.* The tagged mails of the desktop's list (mail with a chosen keyword shown beside the tasks) are not on the phone: which keyword is a setting of the desktop and the phone has none; there is no choosing of another day (the list is today's), no ordering by hand, no notes field in the form, and no reminders: a task is not a notification. Like on the desktop, a task that happens once and was not finished is on its own day's list only; "Auf morgen" is what carries it on.
+
+## What the empty right pane found
+
+In a wide window the list now keeps its place on the left from the start, and on the right a line says to choose a message. The list is the same view in the same place when a message is opened, so it keeps where it was scrolled to. Only a screen that is a list (folder, all accounts, search, conversation) is placed like this; the rest have the window.
+
+Covered by tests: the rule of a task from its start day, what is due on which day, finishing per day, the checklist's ticks being per day, moving, removing, tidying, finding the message of a task after it moved or when it is gone, and the lines of the screen. The empty pane and the screens were not seen on a device.
 

@@ -5,6 +5,7 @@ import type { PushState } from '../background/devices'
 import type { Draft } from '../draft'
 import type { ListSettings, NotificationSettings, SendSettings } from '../settings'
 import type { Folder } from '../folders'
+import type { DayTask } from '../tasks'
 import type { BookContact } from '../contactBook'
 import type { Identity } from '../identities'
 import type { SavedSearch } from '../savedSearches'
@@ -226,6 +227,16 @@ export interface FilterRulesState {
   error?: string
 }
 
+/** The daily list: what is due on a day. */
+export interface TasksState {
+  name: 'tasks'
+  /** The day the list is for, `YYYY-MM-DD`. */
+  day: string
+  tasks: DayTask[]
+  notice?: string
+  error?: string
+}
+
 /** The messages of one conversation, to open one of them from. */
 export interface ThreadState {
   name: 'thread'
@@ -315,6 +326,7 @@ export type Screen =
   | ThreadState
   | ContactsState
   | FilterRulesState
+  | TasksState
   | FolderToolsState
   | TagsState
 
