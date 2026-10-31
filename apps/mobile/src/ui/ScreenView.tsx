@@ -176,6 +176,9 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onAutosave={(draft) => compose.autosave(screen, draft)}
           onCancel={(draft) => compose.cancel(screen, draft)}
           onDiscard={(draft) => compose.discard(screen, draft)}
+          withoutKey={(addresses) => keys.withoutKey(addresses)}
+          lookupKey={(address) => keys.lookupForCompose(address)}
+          adoptKey={(address, key) => keys.adoptForCompose(address, key)}
         />
       )
     case 'tags':
@@ -258,6 +261,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           state={screen}
           onBack={() => settings.show()}
           onGenerate={(accountId) => void keys.generate(accountId)}
+          onUseForSigning={(accountId, fingerprint) => void keys.useForSigning(accountId, fingerprint)}
+          onUseForRecipient={(address, fingerprint) => void keys.useForRecipient(address, fingerprint)}
           onPickFile={() => void keys.pickFile()}
           onPasted={(text) => void keys.scan(text)}
           onSearch={(address) => void keys.search(address)}

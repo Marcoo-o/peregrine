@@ -3,7 +3,8 @@ import { BackHandler, Pressable, Text, View } from 'react-native'
 import type { ComposeState } from '../app/screens'
 import { formatSize } from '../attachmentText'
 import { withContact, type Contact } from '../contacts'
-import { hasRecipient, isChanged, type Draft } from '../draft'
+import { hasRecipient, isChanged, recipientAddresses, type Draft } from '../draft'
+import type { ScannedKey } from '../pgp/pgpService'
 import { renderHtml, type Selection } from '../richText'
 import { withIdentity } from '../signature'
 import { autosaveText } from './autosaveText'
@@ -12,6 +13,7 @@ import { Button, Chip, Spinner, SwitchRow } from './controls'
 import { ConfirmDialog } from './ConfirmDialog'
 import { FormInput, FormScroll } from './FormScroll'
 import { FormatBar } from './FormatBar'
+import { RecipientKeys } from './RecipientKeys'
 import { Header } from './Header'
 import { MailView } from './MailView'
 import { SnoozeSheet } from './SnoozeSheet'
@@ -34,6 +36,10 @@ export function ComposeScreen(props: {
   onCancel: (draft: Draft) => void
   /** Throws the message away, with the draft that was kept of it. */
   onDiscard: (draft: Draft) => void
+  /** Which of these addresses have no public key, and the look for one and the keeping of what is found: for encrypting to them. */
+  withoutKey: (addresses: string[]) => Promise<string[]>
+  lookupKey: (address: string) => Promise<{ keys: ScannedKey[] } | { error: string }>
+  adoptKey: (address: string, key: ScannedKey) => Promise<void>
 }) {
   const styles = useStyles()
   const { account, busy, error, identities } = props.state
@@ -215,6 +221,7 @@ export function ComposeScreen(props: {
           onChange={(sign) => form.update({ sign })}
         />
       </View>
+      {draft.encrypt ? <RecipientKeys addresses={recipientAddresses(draft)} withoutKey={props.withoutKey} lookupKey={props.lookupKey} adoptKey={props.adoptKey} /> : null}
       {draft.encrypt || draft.sign ? (
         <Text style={styles.hint}>{t('Geschützt wird der Inhalt mit den Anhängen. Absender, Empfänger und Betreff bleiben lesbar, weil der Mailserver sie braucht.')}</Text>
       ) : null}
