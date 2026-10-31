@@ -2,7 +2,8 @@ import type { SqlDb } from '@peregrine/core/sqlDb'
 import { composeMessage, composeProtected, type AddressInput, type Composed, type ComposeInput, type ComposeOptions } from '@peregrine/smtp/compose'
 import { parseAddress } from '@peregrine/smtp/headers'
 import { encryptedBody, signedBody } from '@peregrine/smtp/pgpMime'
-import { contactKeysFor, listOwnKeys, type OwnKey } from './keyStore'
+import { loadKeyChoice, preferFirst } from './keyChoice'
+import { addressKey, contactKeysFor, listOwnKeys, type OwnKey } from './keyStore'
 import { encryptEntity, keyState, signEntity, type KeyState } from './pgpService'
 import { t, msg } from '../i18n'
 
@@ -32,7 +33,7 @@ const faultOf = (state: KeyState): KeyFault =>
  * of the newest says why.
  */
 async function recipientKey(db: SqlDb, address: string): Promise<{ publicKey: string } | { fault: KeyFault | 'missing' }> {
-  const held = await contactKeysFor(db, address)
+  const held = preferFirst(await contactKeysFor(db, address), (await loadKeyChoice(db)).recipient[addressKey(address)])
   if (held.length === 0) return { fault: 'missing' }
   let newest: KeyFault | undefined
   for (const key of held) {
@@ -45,7 +46,7 @@ async function recipientKey(db: SqlDb, address: string): Promise<{ publicKey: st
 
 /** The key of an account that signs: the newest that can still sign, or the fault of the newest when none can. */
 async function usableOwnKey(db: SqlDb, accountId: string): Promise<{ key: OwnKey } | { fault: KeyFault | 'missing' }> {
-  const held = await listOwnKeys(db, accountId)
+  const held = preferFirst(await listOwnKeys(db, accountId), (await loadKeyChoice(db)).signing[accountId])
   if (held.length === 0) return { fault: 'missing' }
   let newest: KeyFault | undefined
   for (const key of held) {

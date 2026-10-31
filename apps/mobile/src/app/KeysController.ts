@@ -3,11 +3,12 @@ import { listAccounts } from '../accounts'
 import { attachmentContent, type AttachmentInfo } from '../attachments'
 import { explainError } from '../errors'
 import type { ProtectionDefaults } from '../pgp/protectionDefaults'
-import { listContactKeys, listOwnKeys, removeContactKey, removeOwnKey, saveContactKey, saveOwnKey } from '../pgp/keyStore'
+import { chooseRecipientKey, chooseSigningKey, loadKeyChoice } from '../pgp/keyChoice'
+import { contactKeysFor, listContactKeys, listOwnKeys, removeContactKey, removeOwnKey, saveContactKey, saveOwnKey } from '../pgp/keyStore'
 import { keyFileName } from '../pgp/keyText'
 import { KeyLookupError, lookupKey, type KeySource } from '../pgp/keyLookup'
 import { PublishError, publishKey, type Poster } from '../pgp/keyPublish'
-import { generateKeyPair, keyState, scanKeys, unlockKey } from '../pgp/pgpService'
+import { generateKeyPair, keyState, scanKeys, unlockKey, type ScannedKey } from '../pgp/pgpService'
 import type { KeysState } from './screens'
 import type { Services } from './services'
 import type { AppStore } from './store'
@@ -23,6 +24,15 @@ const OPENING = msg('Der Schlüssel wird geöffnet. Das dauert einige Sekunden.'
 function foundByText(source: KeySource, address: string): string {
   const domain = address.slice(address.lastIndexOf('@') + 1).trim().toLowerCase()
   return source === 'WKD' ? t('Gefunden im Verzeichnis von {domain} (WKD)', { domain }) : t('Gefunden auf keys.openpgp.org')
+}
+
+/** What went wrong with a look for a key, in the words of the screen. */
+function lookupErrorText(error: unknown, address: string): string {
+  const failure = error instanceof KeyLookupError ? error.failure : undefined
+  if (failure === 'notAnAddress') return t('Das ist keine E-Mail-Adresse.')
+  if (failure === 'notFound') return t('Für {n} ist kein Schlüssel veröffentlicht. Gefragt wurden der Mailserver der Adresse (WKD) und keys.openpgp.org.', { n: address.trim() })
+  if (failure === 'unreachable') return t('Die Server ließen sich nicht erreichen. Gibt es eine Internetverbindung?')
+  return t('Die Suche ging schief: {n}', { n: explainError(error) })
 }
 
 /**
@@ -47,7 +57,7 @@ export class KeysController {
     const contacts = await listContactKeys(db)
     const states: KeysState['states'] = {}
     for (const key of [...Object.values(own).flat(), ...contacts]) states[key.fingerprint] = await keyState(key.publicKey)
-    this.store.showScreen({ name: 'keys', accounts, own, contacts, states, defaults: { ...this.protection.settings }, ...patch })
+    this.store.showScreen({ name: 'keys', accounts, own, contacts, states, choice: await loadKeyChoice(db), defaults: { ...this.protection.settings }, ...patch })
   }
 
   /** The state of the keys screen when it is the screen, or undefined. */
@@ -93,17 +103,31 @@ export class KeysController {
       const foundBy = foundByText(found.source, address)
       await this.show({ found: found.keys.map((key) => ({ ...key, foundBy })) })
     } catch (error) {
-      const failure = error instanceof KeyLookupError ? error.failure : undefined
-      const text =
-        failure === 'notAnAddress'
-          ? t('Das ist keine E-Mail-Adresse.')
-          : failure === 'notFound'
-            ? t('Für {n} ist kein Schlüssel veröffentlicht. Gefragt wurden der Mailserver der Adresse (WKD) und keys.openpgp.org.', { n: address.trim() })
-            : failure === 'unreachable'
-              ? t('Die Server ließen sich nicht erreichen. Gibt es eine Internetverbindung?')
-              : t('Die Suche ging schief: {n}', { n: explainError(error) })
-      await this.show({ error: text, found: this.found() })
+      await this.show({ error: lookupErrorText(error, address), found: this.found() })
     }
+  }
+
+  /** Of these addresses, the ones there is no public key for: where encrypting a message to them would fail. */
+  async withoutKey(addresses: string[]): Promise<string[]> {
+    const missing: string[] = []
+    for (const address of addresses) if ((await contactKeysFor(this.services.db, address)).length === 0) missing.push(address)
+    return missing
+  }
+
+  /** The key of an address, looked up for the screen that writes to it: nothing is stored and no screen changes. Only when the user asks. */
+  async lookupForCompose(address: string): Promise<{ keys: ScannedKey[] } | { error: string }> {
+    try {
+      const found = await this.lookup(address.trim())
+      const foundBy = foundByText(found.source, address)
+      return { keys: found.keys.map((key) => ({ ...key, foundBy })) }
+    } catch (error) {
+      return { error: lookupErrorText(error, address) }
+    }
+  }
+
+  /** Keeps a key that was looked up, for the address it was looked up for. */
+  async adoptForCompose(address: string, key: ScannedKey): Promise<void> {
+    await saveContactKey(this.services.db, { fingerprint: key.fingerprint, address, publicKey: key.publicKey, createdAt: Date.now() })
   }
 
   /** The key of the sender of a message, looked for where it is published, and shown to be placed: from the message it is a tap and not the typing of an address. */
@@ -225,6 +249,18 @@ export class KeysController {
     } catch (error) {
       await this.show({ error: t('Der Schlüssel ließ sich nicht öffnen: {n}', { n: explainError(error) }), found: this.found() })
     }
+  }
+
+  /** Signs with this key from now on, for the account. */
+  async useForSigning(accountId: string, fingerprint: string): Promise<void> {
+    await chooseSigningKey(this.services.db, accountId, fingerprint)
+    await this.show({ notice: t('Dieses Konto signiert jetzt mit diesem Schlüssel.'), found: this.found() })
+  }
+
+  /** Encrypts to this key from now on, for the address it is kept under. */
+  async useForRecipient(address: string, fingerprint: string): Promise<void> {
+    await chooseRecipientKey(this.services.db, address, fingerprint)
+    await this.show({ notice: t('Für {address} wird jetzt dieser Schlüssel verwendet.', { address }), found: this.found() })
   }
 
   /** Takes a public key that was read, for an address. */

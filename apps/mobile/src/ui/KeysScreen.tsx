@@ -11,6 +11,7 @@ import { FormInput, FormScroll } from './FormScroll'
 import { Header } from './Header'
 import { useStyles } from './useStyles'
 import { language, t } from '../i18n'
+import { activeKey } from '../pgp/keyChoice'
 
 function dayOf(ms: number | Date): string {
   return new Date(ms).toLocaleDateString(language.locale, { dateStyle: 'medium' })
@@ -105,6 +106,8 @@ function FoundKey(props: {
   )
 }
 
+const sameAddress = (keys: ContactKey[], key: ContactKey): ContactKey[] => keys.filter((other) => other.address === key.address)
+
 /** The OpenPGP keys: those of the accounts, those of the people written to, and the place to bring keys in. */
 export function KeysScreen(props: {
   state: KeysState
@@ -121,10 +124,15 @@ export function KeysScreen(props: {
   onExport: (accountId: string, fingerprint: string) => void
   /** Publishes the public key on the keyserver. */
   onPublish: (accountId: string, fingerprint: string) => void
+  /** Signs with this key for the account, or encrypts to this key for the address. */
+  onUseForSigning: (accountId: string, fingerprint: string) => void
+  onUseForRecipient: (address: string, fingerprint: string) => void
   onDefault: (which: 'sign' | 'encrypt', on: boolean) => void
 }) {
   const styles = useStyles()
-  const { accounts, own, contacts, states, defaults, found, working, notice, error } = props.state
+  const { accounts, own, contacts, states, choice, defaults, found, working, notice, error } = props.state
+  const canSign = (key: { fingerprint: string }) => states[key.fingerprint]?.canSign === true && states[key.fingerprint]?.canEncrypt === true && !states[key.fingerprint]?.revoked
+  const canEncrypt = (key: { fingerprint: string }) => states[key.fingerprint]?.canEncrypt === true && !states[key.fingerprint]?.revoked
   const [pasted, setPasted] = useState('')
   const [searched, setSearched] = useState('')
   const [removing, setRemoving] = useState<{ title: string; text: string; remove: () => void } | null>(null)
@@ -179,12 +187,12 @@ export function KeysScreen(props: {
       {accounts.length === 0 ? <Text style={styles.hint}>{t('Es gibt noch kein Konto.')}</Text> : null}
       {accounts.map((account) => (
         <View key={account.id}>
-          {(own[account.id] ?? []).map((key, index) => (
+          {(own[account.id] ?? []).map((key) => (
             <View key={key.fingerprint} style={[styles.group, styles.keyCard]}>
               <Text style={styles.itemTitle}>{account.emailAddress || account.displayName}</Text>
               <Text style={styles.itemMeta}>{t('Angelegt am {day}', { day: dayOf(key.createdAt) })}</Text>
               <View style={styles.actions}>
-                {index === 0 ? (
+                {activeKey(own[account.id] ?? [], choice.signing[account.id], canSign)?.fingerprint === key.fingerprint ? (
                   <View style={styles.tag}>
                     <Text style={styles.tagText}>{t('Signiert damit')}</Text>
                   </View>
@@ -193,6 +201,9 @@ export function KeysScreen(props: {
               </View>
               <Fingerprint value={key.fingerprint} />
               <View style={{ height: 12 }} />
+              {(own[account.id] ?? []).length > 1 && activeKey(own[account.id] ?? [], choice.signing[account.id], canSign)?.fingerprint !== key.fingerprint ? (
+                <Button label={t('Damit signieren')} disabled={!idle} onPress={() => props.onUseForSigning(account.id, key.fingerprint)} />
+              ) : null}
               <Button label={t('Öffentlichen Teil speichern')} variant="secondary" disabled={!idle} onPress={() => props.onExport(account.id, key.fingerprint)} />
               <Button label={t('Auf keys.openpgp.org veröffentlichen')} variant="secondary" disabled={!idle || !account.emailAddress} onPress={() => setPublishing({ accountId: account.id, fingerprint: key.fingerprint, address: account.emailAddress })} />
               <Button label={t('Entfernen')} variant="danger" disabled={!idle} onPress={() => askToRemoveOwn(account, key)} />
@@ -216,6 +227,15 @@ export function KeysScreen(props: {
           <Text style={styles.itemTitle}>{key.address}</Text>
           <Text style={styles.itemMeta}>{t('Gemerkt am {day}', { day: dayOf(key.createdAt) })}</Text>
           <HealthTag state={states[key.fingerprint]} />
+          {sameAddress(contacts, key).length > 1 ? (
+            activeKey(sameAddress(contacts, key), choice.recipient[key.address], canEncrypt)?.fingerprint === key.fingerprint ? (
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>{t('Wird verwendet')}</Text>
+              </View>
+            ) : (
+              <Button label={t('Für {address} verwenden', { address: key.address })} disabled={!idle} onPress={() => props.onUseForRecipient(key.address, key.fingerprint)} />
+            )
+          ) : null}
           <Fingerprint value={key.fingerprint} />
           <View style={{ height: 12 }} />
           <Button label={t('Entfernen')} variant="danger" disabled={!idle} onPress={() => askToRemoveContact(key)} />
