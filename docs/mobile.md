@@ -1873,3 +1873,11 @@ There is no good rich-text editor for the platform that does not live in a web v
 
 Covered by tests: the HTML made of each marker and what it must not make (snake_case_name, a sum, a signature's two dashes, scripts, other schemes), what the buttons do to text and selection, the draft in both directions, formatting on and off being a change, and the whole way from a typed draft through a message to a draft that is written on again. Not seen on the device.
 
+## What the small leftovers found
+
+- *Naming a saved search.* A kept search is called by its query until it is given a name: "Umbenennen" under the search that is shown (`renameSavedSearch`), at most 40 characters and white space made single, and an empty name is the search itself again. The sidebar says the name.
+- *The open message in the list.* While two panes are shown, the row of the message that is open is marked as a chosen row is (`OpenMessageContext`, read by `MessageRow` and compared by folder and UID, so the same UID in another folder is not marked). It holds in the folder, all accounts, search and conversation lists.
+- *Still open:* choosing which key signs when an account has several, a key per recipient with a choice among several, and starting the key search from a recipient while writing. They need a decision about what several keys of one address mean, and are left.
+
+Covered by tests: renaming (the name in the sidebar, empty, long, a search that is not kept). The mark in the list is a style on a row and was not seen on a device.
+

@@ -86,6 +86,7 @@ export function UnifiedScreen(props: {
           >
             <MessageRow
               message={item}
+              folderId={item.folderId}
               sender={item.sender}
               showPreview={props.state.showPreview}
               account={item.accountName}

@@ -17,6 +17,7 @@ import { TagsContext } from './src/ui/tags'
 import { useHardwareBack } from './src/ui/useHardwareBack'
 import { LoadingScreen } from './src/ui/LoadingScreen'
 import { LockScreen } from './src/ui/LockScreen'
+import { OpenMessageContext } from './src/ui/openMessage'
 import { ScreenView } from './src/ui/ScreenView'
 import { Sidebar } from './src/ui/Sidebar'
 import { StatusLine } from './src/ui/StatusLine'
@@ -142,7 +143,9 @@ export default function App() {
                   ) : application && split && state.pane ? (
                     <View style={{ flex: 1, flexDirection: 'row' }}>
                       <View style={{ width: paneWidths(width).list, borderRightWidth: 1, borderRightColor: colors.border }}>
-                        <ScreenView application={application} screen={state.pane} />
+                        <OpenMessageContext.Provider value={state.screen.name === 'message' ? { folderId: state.screen.folder.id, uid: state.screen.summary.uid } : null}>
+                          <ScreenView application={application} screen={state.pane} />
+                        </OpenMessageContext.Provider>
                       </View>
                       <View style={{ flex: 1 }}>
                         <ScreenView application={application} screen={state.screen} />

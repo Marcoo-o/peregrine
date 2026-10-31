@@ -30,11 +30,15 @@ export function SearchScreen(props: {
   /** Keeps the search, or takes the kept one away. */
   onSave: () => void
   onRemove: () => void
+  /** Gives the kept search a name. */
+  onRename: (name: string) => void
 }) {
   const styles = useStyles()
   const { colors } = useTheme()
   const { query, messages, unsupported, saved, notice } = props.state
   const [typed, setTyped] = useState(query)
+  const [naming, setNaming] = useState(false)
+  const [called, setCalled] = useState('')
 
   // What is typed is searched for after a pause. It is not searched for again when it is what is shown already,
   // which it is when the screen has come back from a message.
@@ -60,7 +64,42 @@ export function SearchScreen(props: {
       />
       {query.trim() !== '' ? (
         saved ? (
-          <Button label={t('Aus der Seitenleiste entfernen')} variant="secondary" onPress={props.onRemove} />
+          <>
+            <Button label={t('Aus der Seitenleiste entfernen')} variant="secondary" onPress={props.onRemove} />
+            {naming ? (
+              <>
+                <TextInput
+                  autoFocus
+                  placeholder={t('Name in der Seitenleiste')}
+                  placeholderTextColor={colors.muted}
+                  style={styles.input}
+                  value={called}
+                  onChangeText={setCalled}
+                  onSubmitEditing={() => {
+                    props.onRename(called)
+                    setNaming(false)
+                  }}
+                />
+                <Button
+                  label={t('Name speichern')}
+                  variant="secondary"
+                  onPress={() => {
+                    props.onRename(called)
+                    setNaming(false)
+                  }}
+                />
+              </>
+            ) : (
+              <Button
+                label={t('Umbenennen')}
+                variant="secondary"
+                onPress={() => {
+                  setCalled(saved.name)
+                  setNaming(true)
+                }}
+              />
+            )}
+          </>
         ) : (
           <Button label={t('Suche in der Seitenleiste behalten')} variant="secondary" onPress={props.onSave} />
         )
@@ -81,6 +120,7 @@ export function SearchScreen(props: {
         renderItem={({ item }) => (
           <MessageRow
             message={item}
+            folderId={item.folderId}
             sender={item.sender}
             showPreview={props.state.showPreview}
             account={`${item.accountName}, ${folderLabel(item.folder)}`}

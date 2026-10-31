@@ -20,6 +20,7 @@ export function ThreadScreen(props: { state: ThreadState; onOpen: (item: ThreadS
         renderItem={({ item }) => (
           <MessageRow
             message={item.message}
+            folderId={item.folderId}
             sender={item.message.sender}
             showPreview
             account={item.accountName}

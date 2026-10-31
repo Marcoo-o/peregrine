@@ -84,6 +84,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onBack={() => navigator.showAccounts()}
           onSave={() => navigator.saveCurrentSearch()}
           onRemove={() => navigator.removeCurrentSearch()}
+          onRename={(name) => navigator.renameCurrentSearch(name)}
         />
       )
     case 'folders':

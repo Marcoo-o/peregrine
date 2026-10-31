@@ -70,6 +70,16 @@ export async function removeSavedSearch(db: SqlDb, id: string): Promise<boolean>
   return true
 }
 
+/** Gives a saved search another name; an empty name is the search itself again. Whether there was such a search. */
+export async function renameSavedSearch(db: SqlDb, id: string, name: string): Promise<SavedSearch | undefined> {
+  const all = await listSavedSearches(db)
+  const found = all.find((search) => search.id === id)
+  if (!found) return undefined
+  const renamed = { ...found, name: name.trim() === '' ? nameOf(found.query) : name.replace(/\s+/g, ' ').trim().slice(0, 40) }
+  await write(db, all.map((search) => (search.id === id ? renamed : search)))
+  return renamed
+}
+
 /** The saved search that is this query, whatever the case or the spaces, or undefined. */
 export async function savedSearchFor(db: SqlDb, query: string): Promise<SavedSearch | undefined> {
   const text = query.replace(/\s+/g, ' ').trim().toLowerCase()

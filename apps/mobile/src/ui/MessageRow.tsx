@@ -8,6 +8,7 @@ import { shortDate } from './shortDate'
 import { useStyles } from './useStyles'
 import { useLook, useTheme } from './useTheme'
 import { t } from '../i18n'
+import { useOpenMessage } from './openMessage'
 
 /**
  * One message in a list, as the desktop shows one: who it is from and when, its subject, both bold while it
@@ -32,6 +33,8 @@ export function MessageRow(props: {
   /** Whether the list is one that messages are being chosen in, and whether this one is. */
   choosing?: boolean
   chosen?: boolean
+  /** The folder it is in, to tell whether it is the message that is open beside the list. */
+  folderId?: string
   onPress: () => void
   /** What a long press does, which is to choose this message and begin choosing. */
   onLongPress?: () => void
@@ -42,11 +45,13 @@ export function MessageRow(props: {
   const { message } = props
   const unread = !message.flags.includes(SEEN) || props.conversationUnread === true
   const starred = message.flags.includes(FLAGGED)
+  const open = useOpenMessage()
+  const isOpen = open !== null && props.folderId === open.folderId && message.uid === open.uid
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected: props.chosen }}
-      style={[styles.item, styles.messageRow, props.chosen && styles.messageRowChosen]}
+      accessibilityState={{ selected: props.chosen || isOpen }}
+      style={[styles.item, styles.messageRow, (props.chosen || isOpen) && styles.messageRowChosen]}
       onPress={props.onPress}
       onLongPress={props.onLongPress}
     >

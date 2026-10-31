@@ -5,7 +5,7 @@ import { explainError } from '../errors'
 import { listFolders, syncFolders, type Folder } from '../folders'
 import { listMessages, unreadCounts } from '../messages'
 import { searchMessages } from '../search'
-import { MAX_SAVED, removeSavedSearch, saveSearch, savedSearchFor } from '../savedSearches'
+import { MAX_SAVED, removeSavedSearch, renameSavedSearch, saveSearch, savedSearchFor } from '../savedSearches'
 import { loadListSettings } from '../settings'
 import { loadSidebar, type SidebarData } from '../sidebar'
 import { loadOlder, syncFolder } from '../sync'
@@ -242,6 +242,14 @@ export class Navigator {
     const { saved, reason } = await saveSearch(this.services.db, shown.query)
     const notice = saved ? t('Die Suche steht jetzt in der Seitenleiste.') : reason === 'full' ? t('Es lassen sich höchstens {MAX_SAVED} Suchen behalten.', { MAX_SAVED }) : t('Es gibt nichts zu behalten.')
     if (this.store.screen === shown) this.store.showScreen({ ...shown, saved: saved ?? undefined, notice })
+  }
+
+  /** Gives the saved search that is shown another name, which is what the sidebar says. */
+  async renameCurrentSearch(name: string): Promise<void> {
+    const shown = this.store.screen
+    if (shown.name !== 'search' || !shown.saved) return
+    const renamed = await renameSavedSearch(this.services.db, shown.saved.id, name)
+    if (renamed && this.store.screen === shown) this.store.showScreen({ ...shown, saved: renamed, notice: t('Die Suche heißt jetzt „{name}“.', { name: renamed.name }) })
   }
 
   /** Takes the saved search that is shown away. */
