@@ -24,6 +24,8 @@ export function backAction(
       return () => void messages.cancelMove(screen)
     case 'settings':
       return () => void settings.back()
+    case 'contacts':
+      return () => void settings.show()
     case 'thread':
       return () => messages.closeThread(screen)
     case 'source':

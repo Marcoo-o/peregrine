@@ -1,4 +1,5 @@
 import type { PgpStatus } from '@peregrine/core/types'
+import { saveContact } from '../contactBook'
 import { printDocumentOf } from '../printing'
 import { decodeUtf8 } from '@peregrine/imap/utf8'
 import { safeFilename } from '@peregrine/core/safeFilename'
@@ -258,6 +259,14 @@ export class MessageController {
     const account = await getAccount(db, item.accountId)
     const folder = await getFolder(db, item.folderId)
     if (account && folder) await this.open(account, folder, item.message, state.origin)
+  }
+
+  /** Keeps the sender of the open message as a contact, and says so on the message. */
+  async addSenderToContacts(state: MessageState): Promise<void> {
+    if (!state.message) return
+    const { name, address } = parseAddress(state.message.from)
+    const result = await saveContact(this.services.db, { name: name ?? '', address })
+    this.showNotice(state, 'problem' in result ? result.problem : `${result.saved.name || result.saved.address} ist bei den Kontakten.`)
   }
 
   /** Hands the message, as it is read, to the print service, which prints it or saves it as a PDF as the user chooses there. */

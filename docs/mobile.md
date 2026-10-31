@@ -1453,7 +1453,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 13. *Appearance:* light, dark or the system's, a text size, an accent, the date format and the density are done; what is left of the desktop's is small.
 14. *Languages.* The desktop has English, German, Spanish, French and Portuguese (`src/renderer/src/i18n`); the phone's texts are German and written into the code. L:
     every text goes through a function, and the files of the languages can be the desktop's where the texts are the same.
-15. *Contacts:* a list, adding and changing, vCard in and out (M). On a phone the contacts of the system are the better place to look; see 2.
+15. *Contacts* (done, see "What two panes and contacts found").
 
 **Third**
 
@@ -1461,7 +1461,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 17. *The daily list and tasks* (recurring tasks, linked to messages). L, and unclear whether it is wanted on a phone.
 18. *Diagnostics:* a log that can be recorded and exported for a bug report (S to M).
 19. *What is left of OpenPGP:* publishing the own key and the search for the key of the sender of a message are done; choosing which of several keys signs (the newest does), one key for each of several recipients with the choice shown, and the search from a recipient that has none are left (S each).
-20. *A wide screen:* two panes for a tablet or a folding phone (M to L).
+20. *A wide screen* (done, see "What two panes and contacts found").
 
 **Neither has it**
 
@@ -1821,3 +1821,19 @@ upload and the mail that confirms it (confirmed already, refused, a token that i
 
 Covered by tests: the name of the job, the page (the lines, a message without one, text escaped, HTML without script and with its inline images, the policy against fetching, the subject), the service through the native module, and the controller (a print, a failure, nothing before the message has arrived). The Kotlin module is compiled by the build.
 Not seen on the device (the emulator did not answer fast enough to be driven).
+
+## What two panes and contacts found
+
+- *Two panes* (`app/panes.ts`, `App.tsx`). From 600 points of width (a tablet, a folding phone opened, a phone on its side) the list and the open message are shown side by side: the list, as a share of the window between 320 and 440 points,
+  on the left, and the message on the right. The list is the one that was shown when the message was opened (a folder, the list of all accounts, a search, a conversation), remembered by the store (`pane`) and drawn by the screens it always
+  was, so a tap on another message of it opens that message on the right and the list stays. It stays through what is done from a message and comes back to it (writing an answer, choosing a folder to move it to, the source); any other screen
+  has the whole window, and the back key of a message leaves it for the list as before. A narrow window is what it was.
+- *What it does not do:* the message that is open is not marked in the list, there is no empty right pane while no message is open (the list has the window until one is), and the window is measured when it changes, which is when a phone is turned or a
+  folding phone opened.
+- *Contacts* (migration 14, `contactBook.ts`). The people the user keeps: a name and an address, which is what the desktop's vCard handling has (`@peregrine/core/vcard`). "Kontakte verwalten" under the addresses in the settings has a list that can be looked
+  through, a form to add or change one, and a vCard file in and out: all of them or one are written where the user chooses, and a file is read from the one the user picks (not larger than 5 MB), saying how many were new, how many were there already and how many
+  were left out for having no address. An address is one contact whatever its case; the name of a contact that had none is filled in from a card or from the sender, and a name the user gave is never replaced. "Zu Kontakten hinzufügen" in the menu of a message keeps its sender.
+- *They are suggested* when an address is typed, after the people the phone has mail from and with the address book of the device when that is on; the name the user gave is the one shown.
+
+Covered by tests: the widths and when there are two panes, which list is beside a message and when it is not, the store; the contacts (kept, once for an address, changed, taken away, found, matched, vCard in and out with the counts, a file that is not one, too large,
+unreadable, written) and their suggestions. Not seen on the device (the emulator did not answer fast enough to be driven, and is a phone: the layout is for a wider window).

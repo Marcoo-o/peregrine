@@ -176,7 +176,17 @@ const MIGRATIONS: string[][] = [
   ],
   // 13. The Message-ID of a message and the one it answers, which is what a conversation is made of. Null for the messages that were stored before this: they
   // are grouped by their subject until a sync fetches them again.
-  ['ALTER TABLE messages ADD COLUMN message_id TEXT', 'ALTER TABLE messages ADD COLUMN in_reply_to TEXT']
+  ['ALTER TABLE messages ADD COLUMN message_id TEXT', 'ALTER TABLE messages ADD COLUMN in_reply_to TEXT'],
+  // 14. The contacts the user keeps: a name and an address, which is what a vCard of the desktop's has. An address is one contact, whatever its case.
+  [
+    `CREATE TABLE contacts (
+       id TEXT PRIMARY KEY,
+       name TEXT NOT NULL DEFAULT '',
+       email TEXT NOT NULL,
+       created_at INTEGER NOT NULL
+     )`,
+    'CREATE UNIQUE INDEX idx_contacts_email ON contacts(lower(email))'
+  ]
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */

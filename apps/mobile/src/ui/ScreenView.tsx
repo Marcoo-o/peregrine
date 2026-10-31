@@ -10,6 +10,7 @@ import { IdentitiesScreen } from './IdentitiesScreen'
 import { ScheduledScreen } from './ScheduledScreen'
 import { SourceScreen } from './SourceScreen'
 import { ThreadScreen } from './ThreadScreen'
+import { ContactsScreen } from './ContactsScreen'
 import { LoadingScreen } from './LoadingScreen'
 import { LoginScreen } from './LoginScreen'
 import { MessageScreen } from './MessageScreen'
@@ -23,7 +24,7 @@ import { UnifiedScreen } from './UnifiedScreen'
 
 /** The screen for what the application is showing, with what each of its buttons does handed to it. */
 export function ScreenView(props: { application: Application; screen: Screen }): ReactElement {
-  const { navigator, messages, compose, accounts, settings, selection, tags, keys, folders, senders, services } = props.application
+  const { navigator, messages, compose, accounts, settings, selection, tags, keys, folders, senders, contacts, services } = props.application
   const { screen } = props
 
   switch (screen.name) {
@@ -145,6 +146,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onJunk={() => messages.markAsJunk(screen)}
           onSource={() => messages.showSource(screen)}
           onPrint={() => messages.print(screen)}
+          onAddContact={() => messages.addSenderToContacts(screen)}
           onSaveSource={() => messages.saveSource(screen)}
           onFindKey={(address) => keys.findFor(address)}
           onDelete={() => messages.delete(screen)}
@@ -182,6 +184,17 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onMove={(tag, by) => void tags.move(tag.id, by)}
           onSave={(tag, name, color) => void (tag ? tags.update(tag.id, name, color) : tags.create(name, color))}
           onDelete={(tag) => void tags.remove(tag.id)}
+        />
+      )
+    case 'contacts':
+      return (
+        <ContactsScreen
+          state={screen}
+          onSave={(id, fields) => contacts.save(id, fields)}
+          onRemove={(id) => contacts.remove(id)}
+          onImport={() => contacts.importFile()}
+          onExport={(id) => contacts.exportFile(id)}
+          onBack={() => settings.show()}
         />
       )
     case 'thread':
@@ -258,6 +271,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onFontScale={(scale) => settings.setFontScale(scale)}
           onLook={(change) => settings.setLook(change)}
           onLock={(on) => settings.setLock(on)}
+          onContacts={() => contacts.show()}
           onConversations={(on) => settings.setConversations(on)}
           onLockDelay={(seconds) => settings.setLockDelay(seconds)}
           onTags={() => void tags.show()}

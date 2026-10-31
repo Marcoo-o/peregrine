@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { AppState, DrawerLayoutAndroid, StatusBar } from 'react-native'
+import { AppState, DrawerLayoutAndroid, StatusBar, useWindowDimensions, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { Application, createApplication } from './src/app/Application'
+import { isWide, paneWidths } from './src/app/panes'
 import { isOnline } from './src/app/queueStatus'
 import { showsQueueStatus } from './src/app/screens'
 import { AppStore } from './src/app/store'
@@ -42,6 +43,9 @@ export default function App() {
     () => ({ sort: state.sort, setSort: (sort: typeof state.sort) => void application?.settings.setSort(sort), conversations: state.conversations }),
     [state.sort, state.conversations, application]
   )
+  const { width } = useWindowDimensions()
+  // A wide window shows the list and the message that is open side by side.
+  const split = !state.locked && isWide(width) && state.screen.name === 'message' && state.pane !== null
   const drawerControl = useMemo(() => ({ open: () => drawer.current?.openDrawer() }), [])
   const drawerOpen = useRef(false)
   const sidebarControl = useMemo(() => ({ isOpen: () => drawerOpen.current, close: () => drawer.current?.closeDrawer() }), [])
@@ -133,6 +137,15 @@ export default function App() {
                 <SortContext.Provider value={sortControl}>
                   {application && state.locked ? (
                     <LockScreen onUnlock={() => void application.lock.unlock()} />
+                  ) : application && split && state.pane ? (
+                    <View style={{ flex: 1, flexDirection: 'row' }}>
+                      <View style={{ width: paneWidths(width).list, borderRightWidth: 1, borderRightColor: colors.border }}>
+                        <ScreenView application={application} screen={state.pane} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <ScreenView application={application} screen={state.screen} />
+                      </View>
+                    </View>
                   ) : application ? (
                     <ScreenView application={application} screen={state.screen} />
                   ) : (

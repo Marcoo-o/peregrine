@@ -5,6 +5,7 @@ import type { PushState } from '../background/devices'
 import type { Draft } from '../draft'
 import type { ListSettings, NotificationSettings, SendSettings } from '../settings'
 import type { Folder } from '../folders'
+import type { BookContact } from '../contactBook'
 import type { Identity } from '../identities'
 import type { SavedSearch } from '../savedSearches'
 import type { LockSettings } from '../lock'
@@ -202,6 +203,15 @@ export interface KeysState {
   error?: string
 }
 
+/** The contacts the user keeps. */
+export interface ContactsState {
+  name: 'contacts'
+  contacts: BookContact[]
+  /** What was done last, in a line. */
+  notice?: string
+  error?: string
+}
+
 /** The messages of one conversation, to open one of them from. */
 export interface ThreadState {
   name: 'thread'
@@ -289,6 +299,7 @@ export type Screen =
   | ScheduledState
   | SourceState
   | ThreadState
+  | ContactsState
   | FolderToolsState
   | TagsState
 
