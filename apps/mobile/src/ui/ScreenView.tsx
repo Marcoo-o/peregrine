@@ -11,6 +11,7 @@ import { ScheduledScreen } from './ScheduledScreen'
 import { SourceScreen } from './SourceScreen'
 import { ThreadScreen } from './ThreadScreen'
 import { ContactsScreen } from './ContactsScreen'
+import { FilterRulesScreen } from './FilterRulesScreen'
 import { LoadingScreen } from './LoadingScreen'
 import { LoginScreen } from './LoginScreen'
 import { MessageScreen } from './MessageScreen'
@@ -24,7 +25,7 @@ import { UnifiedScreen } from './UnifiedScreen'
 
 /** The screen for what the application is showing, with what each of its buttons does handed to it. */
 export function ScreenView(props: { application: Application; screen: Screen }): ReactElement {
-  const { navigator, messages, compose, accounts, settings, selection, tags, keys, folders, senders, contacts, services } = props.application
+  const { navigator, messages, compose, accounts, settings, selection, tags, keys, folders, senders, contacts, filters, services } = props.application
   const { screen } = props
 
   switch (screen.name) {
@@ -186,6 +187,19 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onDelete={(tag) => void tags.remove(tag.id)}
         />
       )
+    case 'filterRules':
+      return (
+        <FilterRulesScreen
+          state={screen}
+          onAccount={(accountId) => filters.show(accountId)}
+          onSave={(input, id) => filters.save(screen.account.id, input, id)}
+          onRemove={(id) => filters.remove(screen.account.id, id)}
+          onEnabled={(id, enabled) => filters.setEnabled(screen.account.id, id, enabled)}
+          onMove={(id, direction) => filters.move(screen.account.id, id, direction)}
+          onApply={(id) => filters.applyNow(screen.account.id, id)}
+          onBack={() => settings.show()}
+        />
+      )
     case 'contacts':
       return (
         <ContactsScreen
@@ -273,6 +287,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onLook={(change) => settings.setLook(change)}
           onLock={(on) => settings.setLock(on)}
           onContacts={() => contacts.show()}
+          onFilters={() => filters.show()}
           onConversations={(on) => settings.setConversations(on)}
           onLockDelay={(seconds) => settings.setLockDelay(seconds)}
           onTags={() => void tags.show()}
