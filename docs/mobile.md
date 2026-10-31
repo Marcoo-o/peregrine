@@ -1647,7 +1647,7 @@ on the device. The copy is the one a picked file goes through).
 
 The phone listed folders and opened them. The desktop makes, renames and deletes them, marks a whole folder as read and empties the trash, and `ImapSession` had the commands.
 
-- *A screen for a folder*, from the gear next to the count in its list, and one for a new folder, from "Ordner anlegen" at the foot of the folders. A new one sits at
+- *A screen for a folder*, from a long press on it in the list of folders, and one for a new folder, from "Ordner anlegen" in the menu ("...") at the top of the folders, where the other things that are done to an account are too (sender and signature, edit, remove). A new one sits at
   the top or under any of the others.
 - *Changing the folders themselves is not queued.* A new name or a folder that is gone changes what every other action names, and a rename that waited for a
   connection would let the actions behind it run against a folder that is not there under that name. It needs a connection and says so when there is none. The folders
@@ -1906,4 +1906,14 @@ An account can hold several keys (a new one is made, an old one stays to open ol
 - *What it does not do.* The choice is not per message, only per account and per address; a key that is chosen for signing is also the one a message is encrypted to for its sender; and a key found while writing has no check beyond what the lookup does (the address is among its user IDs).
 
 Covered by tests: keeping the choice, putting the chosen key first, passing over one that cannot be used, a message that is signed with the newest and then with the chosen key (checked against both public keys), one that is encrypted to the newest key of an address and then to the chosen (opened with both private keys), the keys screen's lines, and the recipients without key, the look, its failure and the keeping. The screens were not seen on a device.
+
+## What looking at it on a device found
+
+The first look at the new screens on the emulator (a phone, against a Dovecot with two demo accounts) found that they worked and looked wrong, which tests cannot say:
+
+- *Filter rules and the folder's screen* were walls of buttons: every field, comparison and action a chip, so that a rule's form was several screens long. They are dropdowns now (`Dropdown.tsx`, which opens as the same sheet from the bottom that the other choices use), a condition is a small card with field and comparison side by side, the list of rules is one card with a switch in each row and the rest (apply now, up, down) in a menu, and the folder's screen is two small cards of rows.
+- *The foot of the folders* had four full-width actions (new folder, sender and signature, edit, remove account) that took the screen below the folders. They are a menu at the title now, and the gear that stood next to the count in a folder's list is gone: what can be done to a folder is a long press on it.
+- *The daily list* showed a switch, two chips and a form of chips under every task. It is a card of rows now: a round tick, the title and its rule, a menu for the rest, the points of the checklist under it, and a quick entry above that takes a rule from a dropdown only once a title is typed.
+- *Spacing of the sections* of the settings was reduced a little (24 to 18 above a heading).
+- *What worked on the first try:* the language following the phone and the choice taking effect at once, conversations in the list, rules acting on the real server (flagging, the plural line "1 message was sorted."), the tasks, and the account setup with the form scrolling to the field being typed in.
 

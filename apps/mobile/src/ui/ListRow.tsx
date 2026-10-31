@@ -21,6 +21,8 @@ export function ListRow(props: {
   expanded?: boolean | null
   onToggle?: () => void
   onPress: () => void
+  /** What a long press does, where there is something: a folder opens what can be done to it. */
+  onLongPress?: () => void
 }) {
   const styles = useStyles()
   const { colors } = useTheme()
@@ -29,6 +31,7 @@ export function ListRow(props: {
       accessibilityRole="button"
       style={[styles.item, styles.listRow, { paddingLeft: (props.depth ?? 0) * 20 }]}
       onPress={props.onPress}
+      onLongPress={props.onLongPress}
     >
       {props.expanded !== undefined ? (
         <Pressable

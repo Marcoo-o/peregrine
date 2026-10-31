@@ -97,6 +97,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSettings={() => settings.show()}
           onRemove={() => accounts.remove(screen.account)}
           onEdit={() => accounts.startEdit(screen.account)}
+          onFolderTools={(folder) => folders.startTools(screen.account, folder)}
           onNewFolder={() => folders.startCreate(screen.account)}
           onSenders={() => senders.show(screen.account)}
           onConnect={() => navigator.openAccount(screen.account)}
@@ -116,7 +117,6 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onCreateTag={(name, color) => tags.create(name, color)}
           onOpen={(message) => messages.open(screen.account, screen.folder, message, 'folder')}
           onOlder={() => navigator.loadOlderMessages(screen.account, screen.folder)}
-          onTools={() => folders.startTools(screen.account, screen.folder)}
           onThread={(thread) =>
             messages.showThread({
               subject: thread[0].subject,

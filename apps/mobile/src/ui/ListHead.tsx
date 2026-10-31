@@ -1,14 +1,12 @@
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { ScrollView, Text, View } from 'react-native'
 import { useState } from 'react'
 import { countText, type ListFilter } from '../listFilter'
 import { SORT_CHOICES, sortLabel } from '../listSort'
 import { ActionSheet } from './ActionSheet'
 import { Chip } from './controls'
-import { Icon } from './Icon'
 import { useTags } from './tags'
 import { useSort } from './sort'
 import { useStyles } from './useStyles'
-import { useTheme } from './useTheme'
 import { t } from '../i18n'
 
 /**
@@ -24,11 +22,8 @@ export function ListHead(props: {
   shown: number
   filter: ListFilter
   onFilter: (filter: ListFilter) => void
-  /** What can be done to the folder the list is of, when it is one: a button next to the count. */
-  onTools?: () => void
 }) {
   const styles = useStyles()
-  const { colors } = useTheme()
   const { filter } = props
   const tags = useTags()
   const { sort, setSort } = useSort()
@@ -41,11 +36,6 @@ export function ListHead(props: {
           {props.title}
         </Text>
         <Text style={styles.listCount}>{countText(props.shown, props.total)}</Text>
-        {props.onTools ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={t('Ordner verwalten')} hitSlop={8} style={styles.toolsButton} onPress={props.onTools}>
-            <Icon name="settings" size={20} color={colors.accent} />
-          </Pressable>
-        ) : null}
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         <Chip label={sortLabel(sort)} active={false} onPress={() => setChoosing(true)} />
