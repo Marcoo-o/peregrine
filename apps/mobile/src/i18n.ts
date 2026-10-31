@@ -135,11 +135,22 @@ export function resolveLanguage(choice: string, systemLocales: readonly string[]
 
 /** The languages the telephone is set to, the first being the one it prefers. */
 export function systemLanguages(): string[] {
+  return systemSource()
+}
+
+const platformLanguages = (): string[] => {
   try {
     return [Intl.DateTimeFormat().resolvedOptions().locale]
   } catch {
     return []
   }
+}
+
+let systemSource: () => string[] = platformLanguages
+
+/** Where the telephone's languages are read from, which a test replaces so that its outcome does not depend on the machine it runs on. */
+export function useSystemLanguages(source: () => string[] = platformLanguages): void {
+  systemSource = source
 }
 
 const NAME = 'language'
