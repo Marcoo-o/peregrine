@@ -7,6 +7,7 @@ import { RnPrinter } from './RnPrinter'
 import { RnFiles } from './RnFiles'
 import { RnPgp } from './RnPgp'
 import { RnTransport } from './RnTransport'
+import { RnBackupCipher } from './RnBackupCipher'
 
 /**
  * Where the application meets the two native modules in `android/app/.../com/peregrinemobile`.
@@ -20,6 +21,11 @@ export function createTransport(): RnTransport {
 /** The files of the device: picking, reading what was picked, saving, handing a file to another application. */
 export function createFiles(): RnFiles {
   return new RnFiles(NativeModules.PeregrineFiles)
+}
+
+/** The sealing of a backup with a password. */
+export function createBackupCipher(): RnBackupCipher {
+  return new RnBackupCipher(NativeModules.PeregrineBackup)
 }
 
 /** The print service of the device, which also makes a PDF. */

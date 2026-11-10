@@ -24,6 +24,7 @@
     "src/preload/**/*",
     "src/shared/**/*",
     "packages/core/src/**/*",
+    "packages/core/test-support/**/*",
     "packages/imap/src/**/*",
     "packages/imap/test-support/**/*",
     "packages/smtp/src/**/*",

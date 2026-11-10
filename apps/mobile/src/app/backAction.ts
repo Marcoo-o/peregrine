@@ -24,6 +24,8 @@ export function backAction(
       return () => void messages.cancelMove(screen)
     case 'settings':
       return () => void settings.back()
+    case 'backup':
+      return () => void settings.show()
     case 'tasks':
       return () => void navigator.showAccounts()
     case 'filterRules':

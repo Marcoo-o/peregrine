@@ -98,12 +98,15 @@
   "Das Konto, für das die Nachricht geschrieben wurde, gibt es nicht mehr.": "The account the message was written for no longer exists.",
   "Das Konto, seine gespeicherten Nachrichten und alles, was noch auf eine Verbindung wartet, werden von diesem Gerät gelöscht. Auf dem Mailserver bleibt alles, wie es ist.": "The account, its saved messages and everything still waiting for a connection are deleted from this device. Everything on the mail server stays as it is.",
   "Das Muster „{pattern}“ ist keins.": "“{pattern}” is not a valid pattern.",
+  "Das Passwort braucht mindestens {n} Zeichen.": "The password needs at least {n} characters.",
+  "Das Passwort stimmt nicht, oder die Datei ist keine Sicherung von Peregrine.": "The password is wrong, or the file is not a backup of Peregrine.",
   "Das Passwort stimmt nicht.": "The password is wrong.",
   "Das Schlüsselwort {keyword} auf dem Server bleibt, wie es ist. Geändert werden Name und Farbe auf diesem Gerät.": "The keyword {keyword} stays as it is on the server. Only the name and colour are changed on this device.",
   "Das System lässt das Lesen der Kontakte nicht zu. Das lässt sich in den Systemeinstellungen ändern.": "The system does not allow reading the contacts. You can change that in the system settings.",
   "Das System lässt keine Benachrichtigungen von Peregrine zu. Das lässt sich in den Systemeinstellungen ändern.": "The system does not allow notifications from Peregrine. You can change that in the system settings.",
   "Das System ruft frühestens alle 15 Minuten ab und später, wenn das Telefon ruhig liegt oder der Akku schwach ist.": "The system checks every 15 minutes at the earliest, and later when the phone is idle or the battery is low.",
   "Das Veröffentlichen ging schief: {n}": "Publishing went wrong: {n}",
+  "Das Zurückspielen ging schief: {n}": "Restoring went wrong: {n}",
   "Das ist der einzige Absender des Kontos. Ohne einen lässt sich nicht senden.": "This is the only sender of the account. Without one, nothing can be sent.",
   "Das ist kein PGP-Schlüssel.": "That is not a PGP key.",
   "Das ist kein Schlüssel, den das Handy lesen kann. ({n})": "That is not a key the phone can read. ({n})",
@@ -170,7 +173,9 @@
   "Die Aufgabe braucht einen Titel.": "The task needs a title.",
   "Die Aufgabe ist auf morgen verschoben.": "The task is moved to tomorrow.",
   "Die Aufgabe ist entfernt.": "The task is removed.",
+  "Die Datei ist keine Sicherung von Peregrine.": "The file is not a backup of Peregrine.",
   "Die Datei ist zu groß für eine Kontaktdatei.": "The file is too large for a contacts file.",
+  "Die Datei ist zu groß für eine Sicherung.": "The file is too large for a backup.",
   "Die Datei ließ sich nicht lesen: {n}": "The file could not be read: {n}",
   "Die Datei {names} ist zu groß für eine Nachricht und wurde nicht angehängt.": "The file {names} is too large for a message and was not attached.",
   "Die Empfänger können prüfen, dass die Nachricht von dir kommt.": "The recipients can check that the message comes from you.",
@@ -190,6 +195,9 @@
   "Die Regel ist entfernt.": "The rule is removed.",
   "Die Regel wird von diesem Telefon entfernt. Was sie schon sortiert hat, bleibt, wo es ist.": "The rule is removed from this phone. What it has already sorted stays where it is.",
   "Die Server ließen sich nicht erreichen. Gibt es eine Internetverbindung?": "The servers could not be reached. Is there an internet connection?",
+  "Die Sicherung ging schief: {n}": "The backup went wrong: {n}",
+  "Die Sicherung wird geöffnet. Das dauert einen Moment.": "The backup is being opened. This takes a moment.",
+  "Die Sicherung wird verschlüsselt. Das dauert einen Moment.": "The backup is being encrypted. This takes a moment.",
   "Die Signatur der Absenderdomain fehlt oder passt nicht zum Inhalt.": "The signature of the sender domain is missing or does not match the content.",
   "Die Signatur dieser Nachricht stimmt nicht": "The signature of this message is not correct",
   "Die Sperre wurde nicht bestätigt und bleibt an.": "The lock was not confirmed and stays on.",
@@ -202,11 +210,13 @@
   "Die Uhrzeit versteht das Handy so nicht. Zum Beispiel 8:30 oder 14.15.": "The phone does not understand the time like that. For example 8:30 or 14.15.",
   "Die Verbindung wird geprüft, bevor etwas gespeichert wird.": "The connection is checked before anything is saved.",
   "Die Verbindung zum Server wurde getrennt.": "The connection to the server was lost.",
+  "Die beiden Passwörter sind nicht gleich.": "The two passwords are not the same.",
   "Die verschlüsselte Verbindung konnte nicht aufgebaut werden.": "The encrypted connection could not be set up.",
   "Diese Adresse gehört schon zu einem anderen Kontakt.": "This address already belongs to another contact.",
   "Diese Dateien sind zu groß für eine Nachricht und wurden nicht angehängt: {names}.": "These files are too large for a message and were not attached: {names}.",
   "Diese Nachricht enthält ein Zählpixel": "This message contains a tracking pixel",
   "Diese Nachricht enthält {count} Zählpixel": "This message contains {count} tracking pixels",
+  "Diese Sicherung ist von einer neueren Version von Peregrine.": "This backup is from a newer version of Peregrine.",
   "Dieser Anbieter verlangt eine Anmeldung über OAuth2, die diese App noch nicht kann. Geht es mit einem App-Passwort, gib es als Passwort ein.": "This provider requires signing in with OAuth2, which this app cannot do yet. If an app password works, enter it as the password.",
   "Dieser Anbieter verlangt meist ein App-Passwort statt des Passworts des Kontos.": "This provider usually requires an app password instead of the password of the account.",
   "Dieser Entwurf hat Anhänge, die sich nicht alle übernehmen lassen. {left}": "This draft has attachments that cannot all be taken over. {left}",
@@ -244,6 +254,7 @@
     "one": "A file could not be read and is missing.",
     "other": "{count} files could not be read and are missing."
   },
+  "Eine Datei mit dem, was du gemacht hast und vom Server nicht zurückbekommst: Konten, Absender, Schlüssel, Kontakte, Tags, Regeln, Aufgaben und Einstellungen. Die Nachrichten sind nicht darin, die hat der Server.": "A file with what you made and cannot get back from the server: accounts, senders, keys, contacts, tags, rules, tasks and settings. The messages are not in it; the server has them.",
   "Eine Zeile für alles, was zusammengehört, mit der neuesten Nachricht und der Zahl der Nachrichten.": "One line for everything that belongs together, with the newest message and the number of messages.",
   "Eine gesendete Nachricht wartet so lange, und bis dahin lässt sie sich zurücknehmen und weiterschreiben. Ist die Zeit um, geht sie ab.": "A sent message waits this long, and until then it can be taken back and written on. When the time is up, it goes out.",
   "Einen Ordner mit diesem Namen gibt es dort schon.": "A folder with this name already exists there.",
@@ -282,6 +293,7 @@
   "Formatierung": "Formatting",
   "Fragt den Anbieter der Adresse nach seinen Servern und, wenn er nichts veröffentlicht hat, die Datenbank von Mozilla. Dorthin geht nur die Domain. Nur wenn du auf den Knopf tippst.": "Asks the provider of the address for its servers and, if it has published none, the database of Mozilla. Only the domain goes there. Only when you tap the button.",
   "Fwd: {n}": "Fwd: {n}",
+  "Fügt hinzu, was fehlt, und lässt alles, was schon da ist, wie es ist. Du kannst eine Sicherung also auch auf ein Telefon spielen, das schon benutzt wird.": "Adds what is missing and leaves everything that is there as it is. So you can restore a backup onto a phone that is already in use.",
   "Für den Absender ist kein Schlüssel hinterlegt, mit dem sich die Signatur prüfen ließe.": "No key is stored for the sender with which the signature could be checked.",
   "Für diese Adresse sind keine Einstellungen veröffentlicht. Trage die Server selbst ein.": "No settings are published for this address. Enter the servers yourself.",
   "Für diesen Tag steht nichts auf der Liste.": "There is nothing on the list for this day.",
@@ -315,7 +327,9 @@
   "Gespeichert.": "Saved.",
   "Gespeichert: {filename}": "Saved: {filename}",
   "Gespeichert: {name}": "Saved: {name}",
+  "Gespeichert: {name}. Darin: {counts}.": "Saved: {name}. In it: {counts}.",
   "Gewählt": "Selected",
+  "Gib das Passwort der Sicherung ein.": "Enter the password of the backup.",
   "Gib die Bildschirmsperre dieses Telefons ein, um deine Nachrichten zu sehen.": "Enter the screen lock of this phone to see your messages.",
   "Gib die Bildschirmsperre dieses Telefons ein.": "Enter the screen lock of this phone.",
   "Gilt nur hier: auf anderen Geräten bleibt die Nachricht im Posteingang.": "Applies here only: on other devices the message stays in the inbox.",
@@ -358,6 +372,7 @@
   "Kontakte des Geräts vorschlagen": "Suggest contacts of the device",
   "Kontakte verwalten": "Manage contacts",
   "Konten": "Accounts",
+  "Konten, Schlüssel, Regeln, Aufgaben und Einstellungen in einer verschlüsselten Datei, für den Fall, dass das Telefon verloren geht, und für ein neues.": "Accounts, keys, rules, tasks and settings in an encrypted file, in case the phone is lost, and for a new one.",
   "Konten, die melden": "Accounts that report",
   "Konto": "Account",
   "Konto bearbeiten": "Edit account",
@@ -381,6 +396,7 @@
   "Markierung entfernen": "Remove mark",
   "Mehr": "More",
   "Menü": "Menu",
+  "Mindestens {n} Zeichen. Ohne dieses Passwort lässt sich die Datei nicht öffnen, und es gibt keinen Weg um es herum.": "At least {n} characters. Without this password the file cannot be opened, and there is no way around it.",
   "Mit OpenPGP verschlüsselst und signierst du Nachrichten. Verschlüsseln kannst du an alle, deren öffentlichen Schlüssel du hast. Lesen können das nur sie, mit ihrem privaten Schlüssel.": "With OpenPGP you encrypt and sign messages. You can encrypt to everyone whose public key you have. Only they can read it, with their private key.",
   "Mit der Bildschirmsperre sperren": "Lock with the screen lock",
   "Mit privatem Teil": "With private part",
@@ -440,6 +456,7 @@
   "Nächste Woche": "Next week",
   "Oben": "Top",
   "Ohne Server lässt sich mit diesem Konto nur lesen. Benutzername und Passwort zum Senden bleiben leer, wenn sie die gleichen sind wie zum Lesen.": "Without a server you can only read with this account. Leave the username and password for sending empty if they are the same as for reading.",
+  "Ohne sie lässt sich verschlüsselte Post auf einem neuen Telefon nicht lesen.": "Without them encrypted mail cannot be read on a new phone.",
   "Ordner": "Folder",
   "Ordner anlegen": "Create folder",
   "Ordner leeren": "Empty folder",
@@ -447,8 +464,12 @@
   "Papierkorb": "Trash",
   "Passwort": "Password",
   "Passwort (leer lassen, wenn es bleibt)": "Password (leave empty to keep it)",
+  "Passwort der Sicherung": "Password of the backup",
   "Passwort des Schlüssels": "Password of the key",
+  "Passwort für die Datei": "Password for the file",
+  "Passwort noch einmal": "Password again",
   "Passwort zum Senden (leer lassen, wenn es bleibt)": "Password for sending (leave empty to keep it)",
+  "Passwörter der Konten einschließen": "Include the passwords of the accounts",
   "Peregrine": "Peregrine",
   "Peregrine darf die Kontakte nicht lesen. Das lässt sich in den Systemeinstellungen für die App ändern.": "Peregrine may not read the contacts. You can change that in the system settings for the app.",
   "Peregrine darf keine Benachrichtigungen zeigen. Das lässt sich in den Systemeinstellungen für die App ändern.": "Peregrine may not show notifications. You can change that in the system settings for the app.",
@@ -459,6 +480,7 @@
   "Port": "Port",
   "Posteingang": "Inbox",
   "Postfächer durchsuchen": "Search mailboxes",
+  "Private Schlüssel einschließen": "Include private keys",
   "Prüfen und speichern": "Check and save",
   "Punkt entfernen": "Remove item",
   "Punkt hinzufügen": "Add item",
@@ -497,6 +519,11 @@
   "Senden (SMTP)": "Sending (SMTP)",
   "Senden, Rückgängig möglich für": "Sending, undo possible for",
   "Sicherheit beim Lesen": "Safety when reading",
+  "Sichern": "Back up",
+  "Sichern und zurückspielen": "Back up and restore",
+  "Sicherung": "Backup",
+  "Sicherung speichern": "Save backup",
+  "Sicherung wählen": "Choose backup",
   "Sie steht unter dem Text, nach einer Zeile mit zwei Strichen, und wechselt mit dem Absender.": "It sits below the text, after a line with two dashes, and changes with the sender.",
   "Signatur": "Signature",
   "Signieren": "Sign",
@@ -505,6 +532,7 @@
   "Signiert, die Signatur stimmt": "Signed, the signature is correct",
   "Sofort": "Immediately",
   "Sofort benachrichtigen": "Notify immediately",
+  "Sonst musst du sie nach dem Zurückspielen neu eingeben.": "Otherwise you have to enter them again after restoring.",
   "Sortieren, was im Posteingang ankommt: verschieben, als gelesen markieren, markieren oder löschen.": "Sort what arrives in the inbox: move, mark as read, mark or delete.",
   "Spam": "Spam",
   "Spam-Ordner": "Spam folder",
@@ -600,8 +628,10 @@
   "Zurück": "Back",
   "Zurück am {n}": "Back on {n}",
   "Zurück: {label}": "Back: {label}",
+  "Zurückgespielt: {added}. Schon da: {known}.": "Restored: {added}. Already there: {known}.",
   "Zurückholen": "Take back",
   "Zurücknehmen und weiterschreiben": "Take back and keep writing",
+  "Zurückspielen": "Restore",
   "abgelaufen": "expired",
   "anderer Ordner": "another folder",
   "beginnt mit": "starts with",
@@ -620,6 +650,7 @@
   "kleiner als": "smaller than",
   "morgen": "tomorrow",
   "nicht zu gebrauchen": "unusable",
+  "nichts": "nothing",
   "ohne Grund": "no reason given",
   "passt auf Muster": "matches pattern",
   "teils": "in part",
@@ -631,6 +662,10 @@
     "one": "{base}, of which {count} draft",
     "other": "{base}, of which {count} drafts"
   },
+  "{count} Absender|{count} Absender": {
+    "one": "{count} sender",
+    "other": "{count} senders"
+  },
   "{count} Aktion ist fehlgeschlagen.|{count} Aktionen sind fehlgeschlagen.": {
     "one": "{count} action failed.",
     "other": "{count} actions failed."
@@ -640,9 +675,29 @@
     "other": "{count} actions are waiting"
   },
   "{count} Aktionen gingen nicht: {problem}": "{count} actions failed: {problem}",
+  "{count} Aufgabe|{count} Aufgaben": {
+    "one": "{count} task",
+    "other": "{count} tasks"
+  },
+  "{count} Einstellung|{count} Einstellungen": {
+    "one": "{count} setting",
+    "other": "{count} settings"
+  },
   "{count} Entwurf wartet|{count} Entwürfe warten": {
     "one": "{count} draft is waiting",
     "other": "{count} drafts are waiting"
+  },
+  "{count} Kontakt|{count} Kontakte": {
+    "one": "{count} contact",
+    "other": "{count} contacts"
+  },
+  "{count} Konto braucht noch sein Passwort: unter „Konto bearbeiten“.|{count} Konten brauchen noch ihr Passwort: unter „Konto bearbeiten“.": {
+    "one": "{count} account still needs its password: under “Edit account”.",
+    "other": "{count} accounts still need their password: under “Edit account”."
+  },
+  "{count} Konto|{count} Konten": {
+    "one": "{count} account",
+    "other": "{count} accounts"
   },
   "{count} Nachricht ist gelöscht.|{count} Nachrichten sind gelöscht.": {
     "one": "{count} message is deleted.",
@@ -663,6 +718,22 @@
   "{count} Nachricht|{count} Nachrichten": {
     "one": "{count} message",
     "other": "{count} messages"
+  },
+  "{count} Regel wartet auf ihren Ordner: spiel die Sicherung noch einmal zurück, wenn das Konto verbunden ist.|{count} Regeln warten auf ihren Ordner: spiel die Sicherung noch einmal zurück, wenn das Konto verbunden ist.": {
+    "one": "{count} rule is waiting for its folder: restore the backup again once the account is connected.",
+    "other": "{count} rules are waiting for their folder: restore the backup again once the account is connected."
+  },
+  "{count} Regel|{count} Regeln": {
+    "one": "{count} rule",
+    "other": "{count} rules"
+  },
+  "{count} Schlüssel|{count} Schlüssel": {
+    "one": "{count} key",
+    "other": "{count} keys"
+  },
+  "{count} Tag|{count} Tags": {
+    "one": "{count} tag",
+    "other": "{count} tags"
   },
   "{count} ausgewählt": "{count} selected",
   "{count} neue Nachricht|{count} neue Nachrichten": {

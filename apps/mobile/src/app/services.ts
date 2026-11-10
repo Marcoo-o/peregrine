@@ -7,6 +7,7 @@ import type { Notifications, PushDevice, SyncSchedule } from '../background/devi
 import { Connections } from '../connections'
 import type { DeviceContacts } from '../contacts'
 import type { DeviceLock } from '../lock'
+import type { BackupCipher } from '@peregrine/core/backupFormat'
 import type { Printer } from '../printing'
 import { describeError } from '../errors'
 import type { Files } from '../files'
@@ -33,6 +34,8 @@ export interface Platform {
   deviceLock: DeviceLock
   /** The print service of the device, which also makes a PDF. */
   printer: Printer
+  /** Seals and opens a backup with a password. */
+  backupCipher: BackupCipher
   notifications: Notifications
   /** When the platform looks for new mail while the application is closed. */
   syncSchedule: SyncSchedule
@@ -51,6 +54,7 @@ export interface Services {
   deviceContacts: DeviceContacts
   deviceLock: DeviceLock
   printer: Printer
+  backupCipher: BackupCipher
   notifications: Notifications
   syncSchedule: SyncSchedule
   push: PushDevice
@@ -78,7 +82,7 @@ export interface ServiceListeners {
  * and sends what was written, and the actions the screens ask for, which go through the queue.
  */
 export function createServices(db: SqlDb, platform: Platform, listeners: ServiceListeners): Services {
-  const { log, files, deviceContacts, deviceLock, printer, notifications, syncSchedule, push } = platform
+  const { log, files, deviceContacts, deviceLock, printer, backupCipher, notifications, syncSchedule, push } = platform
   const connections = new Connections(
     (account) => platform.connectImap(imapLoginOf(account)),
     listeners.connectionsChanged
@@ -98,6 +102,7 @@ export function createServices(db: SqlDb, platform: Platform, listeners: Service
     deviceContacts,
     deviceLock,
     printer,
+    backupCipher,
     notifications,
     syncSchedule,
     push,

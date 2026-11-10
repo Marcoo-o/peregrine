@@ -5,6 +5,7 @@ import { ComposeController } from './ComposeController'
 import { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { ContactsController } from './ContactsController'
 import { FilterRulesController } from './FilterRulesController'
+import { BackupController } from './BackupController'
 import { TasksController } from './TasksController'
 import { FolderController } from './FolderController'
 import { LockController } from './LockController'
@@ -39,6 +40,7 @@ export class Application {
   readonly contacts: ContactsController
   readonly filters: FilterRulesController
   readonly tasks: TasksController
+  readonly backup: BackupController
   readonly lock: LockController
   readonly senders: SenderController
   readonly settings: SettingsController
@@ -69,7 +71,22 @@ export class Application {
     this.contacts = new ContactsController(services, store)
     this.filters = new FilterRulesController(services, store)
     this.tasks = new TasksController(services, store, this.messages)
+    this.backup = new BackupController(services, store, () => this.reloadSettings())
     this.senders = new SenderController(services, store, this.navigator, this.identities)
+  }
+
+  /** Reads again what is held in memory of what the database has: the tags, the identities, how it looks and how lists are shown. After a backup was put back. */
+  async reloadSettings(): Promise<void> {
+    await this.tags.load()
+    await this.protection.load()
+    await this.identities.load()
+    this.store.setSort(await loadSort(this.services.db))
+    this.store.setSafety(await loadSafety(this.services.db))
+    this.store.setConversations(await loadConversations(this.services.db))
+    appearance.set(await loadAppearance(this.services.db))
+    fontScale.set(await loadFontScale(this.services.db))
+    look.set(await loadLook(this.services.db))
+    language.apply(await loadLanguageChoice(this.services.db))
   }
 
   /**
@@ -83,16 +100,7 @@ export class Application {
     await this.services.sweepCopies()
     await this.settings.applySchedule()
     await this.settings.applyPush()
-    await this.tags.load()
-    await this.protection.load()
-    await this.identities.load()
-    this.store.setSort(await loadSort(this.services.db))
-    this.store.setSafety(await loadSafety(this.services.db))
-    this.store.setConversations(await loadConversations(this.services.db))
-    appearance.set(await loadAppearance(this.services.db))
-    fontScale.set(await loadFontScale(this.services.db))
-    look.set(await loadLook(this.services.db))
-    language.apply(await loadLanguageChoice(this.services.db))
+    await this.reloadSettings()
     await this.navigator.start()
     await this.openLaunchTarget()
     await this.openIncoming()
