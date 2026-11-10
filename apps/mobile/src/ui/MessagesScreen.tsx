@@ -37,7 +37,6 @@ export function MessagesScreen(props: {
   /** Loads a page of older messages of the folder. */
   onOlder: () => void
   /** What can be done to the folder. */
-  onTools: () => void
   /** Shows the messages of a conversation of the list. */
   onThread: (messages: StoredMessage[]) => void
 }) {
@@ -64,7 +63,6 @@ export function MessagesScreen(props: {
             total={messages.length}
             shown={rows.length}
             filter={filter}
-            onTools={props.onTools}
             onFilter={setFilter}
           />
         </>

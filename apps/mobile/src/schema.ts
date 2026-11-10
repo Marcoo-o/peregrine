@@ -201,6 +201,35 @@ const MIGRATIONS: string[][] = [
        sort_order INTEGER NOT NULL DEFAULT 0
      )`,
     'CREATE INDEX idx_filter_rules_account ON filter_rules(account_id, sort_order)'
+  ],
+  // 16. The daily list: a task is a rule for when it is due (`recurrence`, from the day `start_day`), the days a task was finished on, and a checklist whose
+  // items are ticked for a day. A task made from a message keeps where it is and its Message-ID, loosely: it stands as text when the message is gone.
+  [
+    `CREATE TABLE tasks (
+       id TEXT PRIMARY KEY,
+       title TEXT NOT NULL,
+       notes TEXT NOT NULL DEFAULT '',
+       recurrence TEXT NOT NULL DEFAULT 'once',
+       start_day TEXT NOT NULL,
+       sort_order INTEGER NOT NULL DEFAULT 0,
+       account_id TEXT,
+       folder_id TEXT,
+       uid INTEGER,
+       message_id TEXT
+     )`,
+    `CREATE TABLE task_items (
+       id TEXT PRIMARY KEY,
+       task_id TEXT NOT NULL,
+       title TEXT NOT NULL,
+       done_on TEXT,
+       sort_order INTEGER NOT NULL DEFAULT 0
+     )`,
+    `CREATE TABLE task_completions (
+       task_id TEXT NOT NULL,
+       occurred_on TEXT NOT NULL,
+       PRIMARY KEY (task_id, occurred_on)
+     )`,
+    'CREATE INDEX idx_task_items_task ON task_items(task_id, sort_order)'
   ]
 ]
 

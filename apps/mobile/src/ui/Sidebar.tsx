@@ -74,6 +74,7 @@ export function Sidebar(props: {
   onAccounts: () => void
   onAddAccount: () => void
   onSettings: () => void
+  onTasks: () => void
 }) {
   const styles = useStyles()
   const { colors } = useTheme()
@@ -163,6 +164,7 @@ export function Sidebar(props: {
         })}
 
         <View style={styles.sidebarDivider} />
+        <Row label={t('Aufgaben')} icon="today" depth={0} chosen={false} count={0} onPress={props.onTasks} />
         <Row label={t('Konten')} icon="folder" depth={0} chosen={false} count={0} onPress={props.onAccounts} />
         <Row label={t('Konto hinzufügen')} icon="plus" depth={0} chosen={false} count={0} onPress={props.onAddAccount} />
         <Row label={t('Einstellungen')} icon="settings" depth={0} chosen={false} count={0} onPress={props.onSettings} />

@@ -3,7 +3,8 @@ import { FlatList, Pressable, Text, View } from 'react-native'
 import type { FoldersState } from '../app/screens'
 import { buildFolderTree, visibleRows } from '../folderTree'
 import type { Folder } from '../folders'
-import { Button, Fab } from './controls'
+import { ActionSheet } from './ActionSheet'
+import { Button, Fab, IconButton } from './controls'
 import { ConfirmDialog } from './ConfirmDialog'
 import { folderIconName } from './folderIcon'
 import { folderLabel } from './folderLabel'
@@ -22,6 +23,8 @@ export function FoldersScreen(props: {
   onRemove: () => void
   onEdit: () => void
   onNewFolder: () => void
+  /** What can be done to one folder: a long press on it. */
+  onFolderTools: (folder: Folder) => void
   onSenders: () => void
   onConnect: () => void
   onCompose: () => void
@@ -32,6 +35,7 @@ export function FoldersScreen(props: {
   // The paths of the folders that are closed. Folders start open, so that nothing is hidden that has not been closed.
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set())
   const [confirmingRemove, setConfirmingRemove] = useState(false)
+  const [menu, setMenu] = useState(false)
   const rows = useMemo(() => visibleRows(buildFolderTree(folders), closed, unread), [folders, closed, unread])
   const nested = rows.some((row) => row.expanded !== null)
 
@@ -47,9 +51,10 @@ export function FoldersScreen(props: {
       <TopBar onSearch={props.onSearch} onSettings={props.onSettings} />
       <View style={styles.accountTitleRow}>
         <View style={[styles.accountSquare, { backgroundColor: account.color }]} />
-        <Text accessibilityRole="header" style={styles.listTitle} numberOfLines={1}>
+        <Text accessibilityRole="header" style={[styles.listTitle, { flex: 1 }]} numberOfLines={1}>
           {account.displayName}
         </Text>
+        <IconButton name="more" label={t('Konto')} onPress={() => setMenu(true)} />
       </View>
       {offline ? (
         <View>
@@ -74,32 +79,22 @@ export function FoldersScreen(props: {
               onToggle={() => toggle(node.path)}
               // A name that only holds others has nothing to open: it opens and closes.
               onPress={() => (node.folder ? props.onOpen(node.folder) : toggle(node.path))}
+              onLongPress={node.folder ? () => props.onFolderTools(node.folder as Folder) : undefined}
             />
           )
         }}
-        // What cannot be taken back is at the end of the list, away from what is opened and written every day.
-        ListFooterComponent={
-          <>
-            <Pressable accessibilityRole="button" style={styles.removeRow} onPress={props.onNewFolder}>
-              <Icon name="folder" size={18} color={colors.accent} />
-              <Text style={styles.editText}>{t('Ordner anlegen')}</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" style={styles.removeRow} onPress={props.onSenders}>
-              <Icon name="signature" size={18} color={colors.accent} />
-              <Text style={styles.editText}>{t('Absender und Signatur')}</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" style={styles.removeRow} onPress={props.onEdit}>
-              <Icon name="settings" size={18} color={colors.accent} />
-              <Text style={styles.editText}>{t('Konto bearbeiten')}</Text>
-            </Pressable>
-          <Pressable accessibilityRole="button" style={styles.removeRow} onPress={() => setConfirmingRemove(true)}>
-            <Icon name="trash" size={18} color={colors.danger} />
-            <Text style={styles.removeText}>{t('Konto entfernen')}</Text>
-          </Pressable>
-          </>
-        }
       />
       <Fab label={t('Neue Nachricht')} onPress={props.onCompose} />
+      <ActionSheet
+        visible={menu}
+        actions={[
+          { label: t('Ordner anlegen'), onPress: props.onNewFolder },
+          { label: t('Absender und Signatur'), onPress: props.onSenders },
+          { label: t('Konto bearbeiten'), onPress: props.onEdit },
+          { label: t('Konto entfernen'), danger: true, onPress: () => setConfirmingRemove(true) }
+        ]}
+        onClose={() => setMenu(false)}
+      />
       <ConfirmDialog
         visible={confirmingRemove}
         title={t('{displayName} entfernen?', { displayName: account.displayName })}

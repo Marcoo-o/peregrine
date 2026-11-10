@@ -52,8 +52,8 @@ describe('a new installation', () => {
   it('gets the newest schema and nothing of the old one', async () => {
     const made = fakeConnection()
     await migrate(new OpSqliteDb(made.connection))
-    expect(tables(made.raw)).toEqual(['accounts', 'contact_keys', 'contacts', 'filter_rules', 'folders', 'identities', 'messages', 'own_keys', 'pending_actions', 'settings', 'tags'])
-    expect(version(made.raw)).toBe(15)
+    expect(tables(made.raw)).toEqual(['accounts', 'contact_keys', 'contacts', 'filter_rules', 'folders', 'identities', 'messages', 'own_keys', 'pending_actions', 'settings', 'tags', 'task_completions', 'task_items', 'tasks'])
+    expect(version(made.raw)).toBe(16)
   })
 
   it('can be migrated again without harm, as it is at every start', async () => {
@@ -62,7 +62,7 @@ describe('a new installation', () => {
     await migrate(db)
     made.raw.prepare("INSERT INTO accounts (id, display_name, email_address, imap_host, imap_port, imap_secure, imap_username, password, created_at) VALUES ('a','a','','h',1,'tls','u','p',0)").run()
     await migrate(db)
-    expect(version(made.raw)).toBe(15)
+    expect(version(made.raw)).toBe(16)
     expect((made.raw.prepare('SELECT COUNT(*) AS n FROM accounts').get() as { n: number }).n).toBe(1)
   })
 })
@@ -84,6 +84,9 @@ describe('the colours of accounts', () => {
     made.raw.exec('ALTER TABLE folders DROP COLUMN uid_validity')
     made.raw.exec('ALTER TABLE folders DROP COLUMN server_messages')
     made.raw.exec('DROP TABLE identities')
+    made.raw.exec('DROP TABLE tasks')
+    made.raw.exec('DROP TABLE task_items')
+    made.raw.exec('DROP TABLE task_completions')
     made.raw.exec('DROP TABLE filter_rules')
     made.raw.exec('DROP TABLE contacts')
     made.raw.exec('ALTER TABLE messages DROP COLUMN message_id')
@@ -118,6 +121,9 @@ describe('where folders sit', () => {
     made.raw.exec('ALTER TABLE folders DROP COLUMN uid_validity')
     made.raw.exec('ALTER TABLE folders DROP COLUMN server_messages')
     made.raw.exec('DROP TABLE identities')
+    made.raw.exec('DROP TABLE tasks')
+    made.raw.exec('DROP TABLE task_items')
+    made.raw.exec('DROP TABLE task_completions')
     made.raw.exec('DROP TABLE filter_rules')
     made.raw.exec('DROP TABLE contacts')
     made.raw.exec('ALTER TABLE messages DROP COLUMN message_id')
@@ -128,7 +134,7 @@ describe('where folders sit', () => {
     await migrate(db)
 
     expect(made.raw.prepare('SELECT parent_path FROM folders').get()).toEqual({ parent_path: null })
-    expect(version(made.raw)).toBe(15)
+    expect(version(made.raw)).toBe(16)
   })
 })
 
@@ -143,6 +149,9 @@ describe('messages put aside', () => {
     made.raw.exec('ALTER TABLE folders DROP COLUMN uid_validity')
     made.raw.exec('ALTER TABLE folders DROP COLUMN server_messages')
     made.raw.exec('DROP TABLE identities')
+    made.raw.exec('DROP TABLE tasks')
+    made.raw.exec('DROP TABLE task_items')
+    made.raw.exec('DROP TABLE task_completions')
     made.raw.exec('DROP TABLE filter_rules')
     made.raw.exec('DROP TABLE contacts')
     made.raw.exec('ALTER TABLE messages DROP COLUMN message_id')
@@ -154,7 +163,7 @@ describe('messages put aside', () => {
 
     await expect(migrate(db)).resolves.toBeUndefined()
     expect(made.raw.prepare('SELECT snoozed_until FROM messages').get()).toEqual({ snoozed_until: null })
-    expect(version(made.raw)).toBe(15)
+    expect(version(made.raw)).toBe(16)
   })
 })
 
@@ -172,6 +181,9 @@ describe('the text of messages', () => {
     made.raw.exec('ALTER TABLE folders DROP COLUMN uid_validity')
     made.raw.exec('ALTER TABLE folders DROP COLUMN server_messages')
     made.raw.exec('DROP TABLE identities')
+    made.raw.exec('DROP TABLE tasks')
+    made.raw.exec('DROP TABLE task_items')
+    made.raw.exec('DROP TABLE task_completions')
     made.raw.exec('DROP TABLE filter_rules')
     made.raw.exec('DROP TABLE contacts')
     made.raw.exec('ALTER TABLE messages DROP COLUMN message_id')
@@ -188,7 +200,7 @@ describe('the text of messages', () => {
       body_text: null,
       preview_text: null
     })
-    expect(version(made.raw)).toBe(15)
+    expect(version(made.raw)).toBe(16)
   })
 })
 
@@ -223,9 +235,9 @@ describe('the migration from the prototype', () => {
   it('drops the cache of message headers and the old tables, and has the new ones', async () => {
     const { db, raw } = installedPrototype()
     await migrate(db)
-    expect(tables(raw)).toEqual(['accounts', 'contact_keys', 'contacts', 'filter_rules', 'folders', 'identities', 'messages', 'own_keys', 'pending_actions', 'settings', 'tags'])
+    expect(tables(raw)).toEqual(['accounts', 'contact_keys', 'contacts', 'filter_rules', 'folders', 'identities', 'messages', 'own_keys', 'pending_actions', 'settings', 'tags', 'task_completions', 'task_items', 'tasks'])
     expect((raw.prepare('SELECT COUNT(*) AS n FROM messages').get() as { n: number }).n).toBe(0)
-    expect(version(raw)).toBe(15)
+    expect(version(raw)).toBe(16)
   })
 
   it('is whole or nothing: a failure part way leaves the prototype as it was', async () => {
@@ -248,6 +260,9 @@ describe('the identities of the accounts that were there', () => {
     const db = new OpSqliteDb(made.connection)
     await migrate(db)
     made.raw.exec('DROP TABLE identities')
+    made.raw.exec('DROP TABLE tasks')
+    made.raw.exec('DROP TABLE task_items')
+    made.raw.exec('DROP TABLE task_completions')
     made.raw.exec('DROP TABLE filter_rules')
     made.raw.exec('DROP TABLE contacts')
     made.raw.exec('ALTER TABLE messages DROP COLUMN message_id')
@@ -261,6 +276,6 @@ describe('the identities of the accounts that were there', () => {
     expect(made.raw.prepare('SELECT id, account_id, display_name, email_address, signature, is_default FROM identities').all()).toEqual([
       { id: 'a1-default', account_id: 'a1', display_name: 'Work', email_address: 'work@example.org', signature: '', is_default: 1 }
     ])
-    expect(version(made.raw)).toBe(15)
+    expect(version(made.raw)).toBe(16)
   })
 })

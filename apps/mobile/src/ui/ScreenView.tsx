@@ -12,6 +12,7 @@ import { SourceScreen } from './SourceScreen'
 import { ThreadScreen } from './ThreadScreen'
 import { ContactsScreen } from './ContactsScreen'
 import { FilterRulesScreen } from './FilterRulesScreen'
+import { TasksScreen } from './TasksScreen'
 import { LoadingScreen } from './LoadingScreen'
 import { LoginScreen } from './LoginScreen'
 import { MessageScreen } from './MessageScreen'
@@ -25,7 +26,7 @@ import { UnifiedScreen } from './UnifiedScreen'
 
 /** The screen for what the application is showing, with what each of its buttons does handed to it. */
 export function ScreenView(props: { application: Application; screen: Screen }): ReactElement {
-  const { navigator, messages, compose, accounts, settings, selection, tags, keys, folders, senders, contacts, filters, services } = props.application
+  const { navigator, messages, compose, accounts, settings, selection, tags, keys, folders, senders, contacts, filters, tasks, services } = props.application
   const { screen } = props
 
   switch (screen.name) {
@@ -96,6 +97,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSettings={() => settings.show()}
           onRemove={() => accounts.remove(screen.account)}
           onEdit={() => accounts.startEdit(screen.account)}
+          onFolderTools={(folder) => folders.startTools(screen.account, folder)}
           onNewFolder={() => folders.startCreate(screen.account)}
           onSenders={() => senders.show(screen.account)}
           onConnect={() => navigator.openAccount(screen.account)}
@@ -115,7 +117,6 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onCreateTag={(name, color) => tags.create(name, color)}
           onOpen={(message) => messages.open(screen.account, screen.folder, message, 'folder')}
           onOlder={() => navigator.loadOlderMessages(screen.account, screen.folder)}
-          onTools={() => folders.startTools(screen.account, screen.folder)}
           onThread={(thread) =>
             messages.showThread({
               subject: thread[0].subject,
@@ -149,6 +150,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onSource={() => messages.showSource(screen)}
           onPrint={() => messages.print(screen)}
           onAddContact={() => messages.addSenderToContacts(screen)}
+          onAddTask={() => messages.addToTasks(screen, (link, subject) => tasks.addMessage(link, subject))}
           onSaveSource={() => messages.saveSource(screen)}
           onFindKey={(address) => keys.findFor(address)}
           onDelete={() => messages.delete(screen)}
@@ -189,6 +191,21 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onMove={(tag, by) => void tags.move(tag.id, by)}
           onSave={(tag, name, color) => void (tag ? tags.update(tag.id, name, color) : tags.create(name, color))}
           onDelete={(tag) => void tags.remove(tag.id)}
+        />
+      )
+    case 'tasks':
+      return (
+        <TasksScreen
+          state={screen}
+          onBack={() => navigator.showAccounts()}
+          onAdd={(title, repeat) => tasks.add(title, repeat)}
+          onDone={(id, done) => tasks.setDone(id, done)}
+          onItem={(itemId, done) => tasks.setItem(itemId, done)}
+          onAddItem={(taskId, title) => tasks.addItem(taskId, title)}
+          onRemoveItem={(itemId) => tasks.removeItem(itemId)}
+          onDefer={(id) => tasks.defer(id)}
+          onRemove={(id) => tasks.remove(id)}
+          onOpenMessage={(task) => (task.link ? tasks.openMessage(task.link) : undefined)}
         />
       )
     case 'filterRules':

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { AppState, DrawerLayoutAndroid, StatusBar, useWindowDimensions, View } from 'react-native'
+import { AppState, DrawerLayoutAndroid, StatusBar, Text, useWindowDimensions, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { Application, createApplication } from './src/app/Application'
-import { isWide, paneWidths } from './src/app/panes'
+import { isListScreen, isWide, paneWidths } from './src/app/panes'
 import { isOnline } from './src/app/queueStatus'
 import { showsQueueStatus } from './src/app/screens'
 import { AppStore } from './src/app/store'
@@ -24,7 +24,7 @@ import { StatusLine } from './src/ui/StatusLine'
 import { UndoBar } from './src/ui/UndoBar'
 import { useStyles } from './src/ui/useStyles'
 import { useTheme } from './src/ui/useTheme'
-import { language } from './src/i18n'
+import { language, t } from './src/i18n'
 
 /**
  * The prototype of stage 5: any number of accounts, a unified inbox, the folders of an account, a
@@ -49,6 +49,9 @@ export default function App() {
   const { width } = useWindowDimensions()
   // A wide window shows the list and the message that is open side by side.
   const split = !state.locked && isWide(width) && state.screen.name === 'message' && state.pane !== null
+  // The list alone in a wide window keeps its place on the left and leaves the right for the message it will open.
+  const waiting = !state.locked && isWide(width) && isListScreen(state.screen)
+  const left = split ? state.pane : waiting ? state.screen : null
   const drawerControl = useMemo(() => ({ open: () => drawer.current?.openDrawer() }), [])
   const drawerOpen = useRef(false)
   const sidebarControl = useMemo(() => ({ isOpen: () => drawerOpen.current, close: () => drawer.current?.closeDrawer() }), [])
@@ -120,6 +123,7 @@ export default function App() {
                 onAccounts={() => go(() => application.navigator.showAccounts())}
                 onAddAccount={() => go(() => application.navigator.showLogin())}
                 onSettings={() => go(() => application.settings.show())}
+                onTasks={() => go(() => application.tasks.show())}
               />
             ) : null}
           </SafeAreaView>
@@ -140,15 +144,21 @@ export default function App() {
                 <SortContext.Provider value={sortControl}>
                   {application && state.locked ? (
                     <LockScreen onUnlock={() => void application.lock.unlock()} />
-                  ) : application && split && state.pane ? (
+                  ) : application && left ? (
                     <View style={{ flex: 1, flexDirection: 'row' }}>
                       <View style={{ width: paneWidths(width).list, borderRightWidth: 1, borderRightColor: colors.border }}>
                         <OpenMessageContext.Provider value={state.screen.name === 'message' ? { folderId: state.screen.folder.id, uid: state.screen.summary.uid } : null}>
-                          <ScreenView application={application} screen={state.pane} />
+                          <ScreenView application={application} screen={left} />
                         </OpenMessageContext.Provider>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <ScreenView application={application} screen={state.screen} />
+                        {split ? (
+                          <ScreenView application={application} screen={state.screen} />
+                        ) : (
+                          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                            <Text style={{ color: colors.muted, textAlign: 'center' }}>{t('Wähle eine Nachricht, um sie hier zu lesen.')}</Text>
+                          </View>
+                        )}
                       </View>
                     </View>
                   ) : application ? (

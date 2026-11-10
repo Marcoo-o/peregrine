@@ -1456,7 +1456,7 @@ the message, a look for mail while the application is closed, the keys sealed by
 **Third**
 
 16. *Filter rules* (done, see "What filter rules found").
-17. *The daily list and tasks* (recurring tasks, linked to messages). L, and unclear whether it is wanted on a phone.
+17. *The daily list and tasks* (done, see "What the daily list found"; the tagged mails of the desktop's list are not on the phone).
 18. *Diagnostics:* a log that can be recorded and exported for a bug report (S to M).
 19. *What is left of OpenPGP:* publishing the own key and the search for the key of the sender of a message are done; choosing which of several keys signs (the newest does), one key for each of several recipients with the choice shown, and the search from a recipient that has none are left (S each).
 20. *A wide screen* (done, see "What two panes and contacts found").
@@ -1647,7 +1647,7 @@ on the device. The copy is the one a picked file goes through).
 
 The phone listed folders and opened them. The desktop makes, renames and deletes them, marks a whole folder as read and empties the trash, and `ImapSession` had the commands.
 
-- *A screen for a folder*, from the gear next to the count in its list, and one for a new folder, from "Ordner anlegen" at the foot of the folders. A new one sits at
+- *A screen for a folder*, from a long press on it in the list of folders, and one for a new folder, from "Ordner anlegen" in the menu ("...") at the top of the folders, where the other things that are done to an account are too (sender and signature, edit, remove). A new one sits at
   the top or under any of the others.
 - *Changing the folders themselves is not queued.* A new name or a folder that is gone changes what every other action names, and a rename that waited for a
   connection would let the actions behind it run against a folder that is not there under that name. It needs a connection and says so when there is none. The folders
@@ -1881,6 +1881,21 @@ Covered by tests: the HTML made of each marker and what it must not make (snake_
 
 Covered by tests: renaming (the name in the sidebar, empty, long, a search that is not kept). The mark in the list is a style on a row and was not seen on a device.
 
+## What the daily list found
+
+The desktop's daily list, on the phone, with the same rules: `@peregrine/core/recurrence` (once, daily, weekdays, weekly, monthly) decides what is due on a day, and nothing is written for days that have not come.
+
+- *The data* (migration 16, `tasks.ts`): a task is a title, notes, a rule and the day it starts on; the days a task was finished on are rows of their own (so a repeating task is done for one day and open on the next); a checklist whose items are ticked for a day and so are open again the next day by the date alone. A task made from a message keeps where it is and its Message-ID, and finds it again by the Message-ID when it was moved; with the message gone it stands as text and says so.
+- *The screen* ("Aufgaben" in the sidebar): today's tasks with a switch each, the checklist, "Checkliste" to add a point, "Nachricht öffnen" for a task made from a message, "Auf morgen" for one that happens once (a repeating one is not moved, since changing its start would move all the days after), "Entfernen", and a form for a new task with how often it comes. Weekly and monthly are of the weekday and the day of the month of the day it is made on. "Auf die Liste für heute" in the menu of a message makes a task of it.
+- *Tidying.* A task that happens once, was finished and whose day has gone by is taken away when the list is opened; a repeating one keeps its days; one that was not finished is kept.
+- *What it does not do.* The tagged mails of the desktop's list (mail with a chosen keyword shown beside the tasks) are not on the phone: which keyword is a setting of the desktop and the phone has none; there is no choosing of another day (the list is today's), no ordering by hand, no notes field in the form, and no reminders: a task is not a notification. Like on the desktop, a task that happens once and was not finished is on its own day's list only; "Auf morgen" is what carries it on.
+
+## What the empty right pane found
+
+In a wide window the list now keeps its place on the left from the start, and on the right a line says to choose a message. The list is the same view in the same place when a message is opened, so it keeps where it was scrolled to. Only a screen that is a list (folder, all accounts, search, conversation) is placed like this; the rest have the window.
+
+Covered by tests: the rule of a task from its start day, what is due on which day, finishing per day, the checklist's ticks being per day, moving, removing, tidying, finding the message of a task after it moved or when it is gone, and the lines of the screen. The empty pane and the screens were not seen on a device.
+
 ## What the choice of keys found
 
 An account can hold several keys (a new one is made, an old one stays to open old mail) and an address can have several public keys (the person changed keys). Until now the newest that could be used was used. The decision made for what several keys mean: **the newest usable key stays the default, and the user can name another; a named key that cannot be used is passed over for the next that can, so a choice never makes a message fail that would have gone.**
@@ -1891,4 +1906,14 @@ An account can hold several keys (a new one is made, an old one stays to open ol
 - *What it does not do.* The choice is not per message, only per account and per address; a key that is chosen for signing is also the one a message is encrypted to for its sender; and a key found while writing has no check beyond what the lookup does (the address is among its user IDs).
 
 Covered by tests: keeping the choice, putting the chosen key first, passing over one that cannot be used, a message that is signed with the newest and then with the chosen key (checked against both public keys), one that is encrypted to the newest key of an address and then to the chosen (opened with both private keys), the keys screen's lines, and the recipients without key, the look, its failure and the keeping. The screens were not seen on a device.
+
+## What looking at it on a device found
+
+The first look at the new screens on the emulator (a phone, against a Dovecot with two demo accounts) found that they worked and looked wrong, which tests cannot say:
+
+- *Filter rules and the folder's screen* were walls of buttons: every field, comparison and action a chip, so that a rule's form was several screens long. They are dropdowns now (`Dropdown.tsx`, which opens as the same sheet from the bottom that the other choices use), a condition is a small card with field and comparison side by side, the list of rules is one card with a switch in each row and the rest (apply now, up, down) in a menu, and the folder's screen is two small cards of rows.
+- *The foot of the folders* had four full-width actions (new folder, sender and signature, edit, remove account) that took the screen below the folders. They are a menu at the title now, and the gear that stood next to the count in a folder's list is gone: what can be done to a folder is a long press on it.
+- *The daily list* showed a switch, two chips and a form of chips under every task. It is a card of rows now: a round tick, the title and its rule, a menu for the rest, the points of the checklist under it, and a quick entry above that takes a rule from a dropdown only once a title is typed.
+- *Spacing of the sections* of the settings was reduced a little (24 to 18 above a heading).
+- *What worked on the first try:* the language following the phone and the choice taking effect at once, conversations in the list, rules acting on the real server (flagging, the plural line "1 message was sorted."), the tasks, and the account setup with the form scrolling to the field being typed in.
 

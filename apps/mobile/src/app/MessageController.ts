@@ -14,6 +14,7 @@ import { refusalText } from '../attachmentText'
 import { storeBody } from '../bodyIndex'
 import { describeError, explainError } from '../errors'
 import { FLAGGED, SEEN } from '../flags'
+import type { TaskLink } from '../tasks'
 import { getFolder, getFolderBySpecialUse, listFolders, type Folder } from '../folders'
 import type { MailActions } from '../mailActions'
 import { getMessage, snoozeMessages, type StoredMessage } from '../messages'
@@ -268,6 +269,13 @@ export class MessageController {
     const { name, address } = parseAddress(state.message.from)
     const result = await saveContact(this.services.db, { name: name ?? '', address })
     this.showNotice(state, 'problem' in result ? result.problem : t('{n} ist bei den Kontakten.', { n: result.saved.name || result.saved.address }))
+  }
+
+  /** Puts the open message on the list for today, as a task that opens it, and says so on the message. */
+  async addToTasks(state: MessageState, add: (link: TaskLink, subject: string) => Promise<string>): Promise<void> {
+    const messageId = state.summary.messageId ?? null
+    const said = await add({ accountId: state.account.id, folderId: state.folder.id, uid: state.summary.uid, messageId }, state.summary.subject)
+    this.showNotice(state, said)
   }
 
   /** Hands the message, as it is read, to the print service, which prints it or saves it as a PDF as the user chooses there. */
