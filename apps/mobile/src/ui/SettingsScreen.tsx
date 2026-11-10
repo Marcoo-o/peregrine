@@ -53,6 +53,7 @@ export function SettingsScreen(props: {
   onLock: (on: boolean) => void
   onContacts: () => void
   onFilters: () => void
+  onBackup: () => void
   onConversations: (on: boolean) => void
   onLockDelay: (seconds: number) => void
   onTags: () => void
@@ -174,6 +175,10 @@ export function SettingsScreen(props: {
       <Text style={styles.section}>{t('Filterregeln')}</Text>
       <Text style={styles.hint}>{t('Sortieren, was im Posteingang ankommt: verschieben, als gelesen markieren, markieren oder löschen.')}</Text>
       <Button label={t('Filterregeln verwalten')} variant="secondary" onPress={props.onFilters} />
+
+      <Text style={styles.section}>{t('Sicherung')}</Text>
+      <Text style={styles.hint}>{t('Konten, Schlüssel, Regeln, Aufgaben und Einstellungen in einer verschlüsselten Datei, für den Fall, dass das Telefon verloren geht, und für ein neues.')}</Text>
+      <Button label={t('Sichern und zurückspielen')} variant="secondary" onPress={props.onBackup} />
       <View style={styles.group}>
         <SwitchRow label={t('Kontakte des Geräts vorschlagen')} value={list.deviceContacts} onChange={props.onDeviceContacts} />
       </View>

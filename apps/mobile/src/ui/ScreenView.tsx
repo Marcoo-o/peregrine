@@ -11,6 +11,7 @@ import { ScheduledScreen } from './ScheduledScreen'
 import { SourceScreen } from './SourceScreen'
 import { ThreadScreen } from './ThreadScreen'
 import { ContactsScreen } from './ContactsScreen'
+import { BackupScreen } from './BackupScreen'
 import { FilterRulesScreen } from './FilterRulesScreen'
 import { TasksScreen } from './TasksScreen'
 import { LoadingScreen } from './LoadingScreen'
@@ -26,7 +27,7 @@ import { UnifiedScreen } from './UnifiedScreen'
 
 /** The screen for what the application is showing, with what each of its buttons does handed to it. */
 export function ScreenView(props: { application: Application; screen: Screen }): ReactElement {
-  const { navigator, messages, compose, accounts, settings, selection, tags, keys, folders, senders, contacts, filters, tasks, services } = props.application
+  const { navigator, messages, compose, accounts, settings, selection, tags, keys, folders, senders, contacts, filters, tasks, backup, services } = props.application
   const { screen } = props
 
   switch (screen.name) {
@@ -193,6 +194,15 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onDelete={(tag) => void tags.remove(tag.id)}
         />
       )
+    case 'backup':
+      return (
+        <BackupScreen
+          state={screen}
+          onMake={(password, again, options) => backup.make(password, again, options)}
+          onRestore={(password) => backup.restore(password)}
+          onBack={() => settings.show()}
+        />
+      )
     case 'tasks':
       return (
         <TasksScreen
@@ -311,6 +321,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onLock={(on) => settings.setLock(on)}
           onContacts={() => contacts.show()}
           onFilters={() => filters.show()}
+          onBackup={() => backup.show()}
           onConversations={(on) => settings.setConversations(on)}
           onLockDelay={(seconds) => settings.setLockDelay(seconds)}
           onTags={() => void tags.show()}

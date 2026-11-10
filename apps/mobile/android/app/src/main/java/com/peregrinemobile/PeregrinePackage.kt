@@ -18,7 +18,8 @@ class PeregrinePackage : ReactPackage {
       PeregrinePgpModule(context),
       PeregrineContactsModule(context),
       PeregrineLockModule(context),
-      PeregrinePrintModule(context)
+      PeregrinePrintModule(context),
+      PeregrineBackupModule(context)
     )
 
   override fun createViewManagers(context: ReactApplicationContext): List<ViewManager<*, *>> =

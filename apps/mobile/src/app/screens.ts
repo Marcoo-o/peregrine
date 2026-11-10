@@ -229,6 +229,15 @@ export interface FilterRulesState {
   error?: string
 }
 
+/** The backup of what the user made, and putting one back. */
+export interface BackupState {
+  name: 'backup'
+  notice?: string
+  error?: string
+  /** What is being done that takes a moment, said on the screen. */
+  busy?: string
+}
+
 /** The daily list: what is due on a day. */
 export interface TasksState {
   name: 'tasks'
@@ -329,6 +338,7 @@ export type Screen =
   | ContactsState
   | FilterRulesState
   | TasksState
+  | BackupState
   | FolderToolsState
   | TagsState
 

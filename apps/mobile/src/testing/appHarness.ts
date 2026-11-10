@@ -1,4 +1,5 @@
 import type { FetchedMessage, ImapSession, MailboxEntry } from '@peregrine/core/imapSession'
+import { nodeBackupCipher } from '../../../../packages/core/test-support/backupCipherNode'
 import { language, useSystemLanguages } from '../i18n'
 import { FakeSmtpServer } from '../../../../packages/smtp/test-support/fakeServer'
 import { addAccount, type Account, type NewAccount } from '../accounts'
@@ -482,6 +483,7 @@ export async function appHarness() {
     deviceContacts,
     deviceLock,
     printer,
+    backupCipher: nodeBackupCipher({ rounds: 1000 }),
     notifications,
     syncSchedule,
     push,
