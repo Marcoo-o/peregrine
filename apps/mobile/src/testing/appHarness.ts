@@ -12,6 +12,7 @@ import type { BackupFolder } from '../autoBackup'
 import { AppStore } from '../app/store'
 import type { DeviceLock } from '../lock'
 import type { Printer } from '../printing'
+import type { Unsubscriber } from '../unsubscriber'
 import { saveSendSettings } from '../settings'
 import type { Contact, DeviceContacts } from '../contacts'
 import type { Files, PickedFile } from '../files'
@@ -319,6 +320,17 @@ export class FakePrinter implements Printer {
   }
 }
 
+/** The network of a mailing list: keeps what it was asked and says what it is told to. */
+export class FakeUnsubscriber implements Unsubscriber {
+  readonly posted: string[] = []
+  failWith: Error | null = null
+
+  async post(url: string): Promise<void> {
+    if (this.failWith) throw this.failWith
+    this.posted.push(url)
+  }
+}
+
 /** The device's files, which keeps what it was asked to do and answers as it is told to. */
 export class FakeFiles implements Files {
   readonly picked: PickedFile[] = []
@@ -522,6 +534,7 @@ export async function appHarness() {
   useSystemLanguages(() => ['de'])
   language.apply('system')
   const printer = new FakePrinter()
+  const unsubscriber = new FakeUnsubscriber()
   const backupFolder = new FakeBackupFolder()
   const smtp = new FakeSmtpServer()
   const notifications = new FakeNotifications()
@@ -535,6 +548,7 @@ export async function appHarness() {
     deviceContacts,
     deviceLock,
     printer,
+    unsubscriber,
     backupCipher: nodeBackupCipher({ rounds: 1000 }),
     backupFolder,
     notifications,
@@ -561,7 +575,7 @@ export async function appHarness() {
 
   const folderOf = (folders: Folder[], path: string): Folder => folders.find((f) => f.imapPath === path) as Folder
 
-  return { app, store, db, raw, server, files, deviceContacts, deviceLock, printer, backupFolder, smtp, notifications, syncSchedule, push, logs, reconnectTimers, givenAccount, folderOf }
+  return { app, store, db, raw, server, files, deviceContacts, deviceLock, printer, unsubscriber, backupFolder, smtp, notifications, syncSchedule, push, logs, reconnectTimers, givenAccount, folderOf }
 }
 
 /**

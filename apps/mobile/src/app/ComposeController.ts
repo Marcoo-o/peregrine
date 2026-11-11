@@ -121,6 +121,16 @@ export class ComposeController {
     this.show({ account: state.account, returnTo: state, draft: this.started(state.account, replyDraft(state.message)) })
   }
 
+  /**
+   * A message that asks a mailing list to take the address off, as the list's own header gives it, from the account the open message came to. It is
+   * shown and not sent: what the header names is written by the sender, and the user is the one who reads it and sends it.
+   */
+  startUnsubscribeMail(state: MessageState, mail: { to: string; subject: string; body: string }): void {
+    // Lists read the word "unsubscribe" in the subject or the body, whatever else the header asked for.
+    const draft = { ...emptyDraft, to: mail.to, subject: mail.subject || 'unsubscribe', body: mail.body }
+    this.show({ account: state.account, returnTo: state, draft: this.started(state.account, draft) })
+  }
+
   /** An answer to everybody the open message went to. */
   startReplyAll(state: MessageState): void {
     if (!state.message) return

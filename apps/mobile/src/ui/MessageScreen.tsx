@@ -10,7 +10,10 @@ import { tagCoverage, type Tag } from '../tags'
 import { parseAddress } from '@peregrine/smtp/headers'
 import { roleOf } from '../unified'
 import { decideLink } from '../reading/linkGuard'
+import type { UnsubscribeMode } from '@peregrine/core/unsubscribe'
+import { unsubscribeOffer } from '../reading/unsubscribeAdvice'
 import { ActionSheet } from './ActionSheet'
+import { UnsubscribeSheet } from './UnsubscribeSheet'
 import { AttachmentList } from './AttachmentList'
 import { Spinner } from './controls'
 import { BackBar, Title } from './Header'
@@ -42,6 +45,10 @@ export function MessageScreen(props: {
   onUnsnooze: () => void
   onCreateTag: (name: string, color: string) => Promise<Tag | undefined>
   onReply: () => void
+  /** Asks the list to take the address off with one request. */
+  onUnsubscribeOneClick: (target: { url: string; host: string }) => void
+  /** Opens a message that asks the list to, to be read and sent by the user. */
+  onUnsubscribeMail: (mail: { to: string; subject: string; body: string }) => void
   onReplyAll: () => void
   onForward: () => void
   onToggleSeen: () => void
@@ -76,6 +83,7 @@ export function MessageScreen(props: {
   const [menuOpen, setMenuOpen] = useState(false)
   const [tagging, setTagging] = useState(false)
   const [snoozing, setSnoozing] = useState(false)
+  const [unsubscribing, setUnsubscribing] = useState(false)
   const tags = useTags()
 
   // A message with a page reports its own links; one without has the addresses that are in its text.
@@ -85,6 +93,18 @@ export function MessageScreen(props: {
   )
   const remoteImages = facts?.images.filter((image) => /^https?:/i.test(image.src)).length ?? 0
   const hints = hintsFor({ assessment, page, remoteImages, showingImages: showImages, pgp: props.state.protection })
+
+  // What the message itself offers for leaving its list, and what to make of that given what is known about it.
+  const unsubscribe = useMemo(() => unsubscribeOffer(message, assessment, senderAddress), [message, assessment, senderAddress])
+
+  const goUnsubscribe = (mode: UnsubscribeMode) => {
+    setUnsubscribing(false)
+    const options = unsubscribe?.options
+    if (!options) return
+    if (mode === 'one-click' && options.oneClick) props.onUnsubscribeOneClick(options.oneClick)
+    else if (mode === 'mail' && options.mail) props.onUnsubscribeMail(options.mail)
+    else if (mode === 'page' && options.page) Linking.openURL(options.page.url).catch(() => undefined)
+  }
 
   const followLink = (url: string) => {
     const decision = decideLink(url, facts?.links ?? [], known, { warnSuspicious: safety.warnSuspiciousLinks, confirmAll: safety.confirmAllLinks })
@@ -152,6 +172,7 @@ export function MessageScreen(props: {
             : { label: t('Später erinnern …'), onPress: () => setSnoozing(true) },
           { label: t('Verschieben …'), onPress: props.onMove },
           { label: t('Als Spam markieren'), onPress: props.onJunk },
+          ...(unsubscribe ? [{ label: t('Vom Newsletter abmelden …'), onPress: () => setUnsubscribing(true) }] : []),
           ...(message ? [{ label: t('Drucken oder als PDF speichern'), onPress: props.onPrint }] : []),
           ...(message ? [{ label: t('Zu Kontakten hinzufügen'), onPress: props.onAddContact }] : []),
           { label: t('Auf die Liste für heute'), onPress: props.onAddTask },
@@ -163,6 +184,16 @@ export function MessageScreen(props: {
               ]
             : [])
         ]}
+      />
+      <UnsubscribeSheet
+        advice={unsubscribing && unsubscribe ? unsubscribe.advice : null}
+        senderDomain={unsubscribe?.senderDomain ?? ''}
+        onCancel={() => setUnsubscribing(false)}
+        onGo={goUnsubscribe}
+        onJunk={() => {
+          setUnsubscribing(false)
+          props.onJunk()
+        }}
       />
       <SnoozeSheet visible={snoozing} onChoose={props.onSnooze} onClose={() => setSnoozing(false)} />
       <TagSheet

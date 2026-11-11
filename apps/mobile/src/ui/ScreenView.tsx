@@ -141,6 +141,8 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onUnsnooze={() => messages.unsnooze(screen)}
           onCreateTag={(name, color) => tags.create(name, color)}
           onReply={() => compose.startReply(screen)}
+          onUnsubscribeOneClick={(target) => messages.unsubscribeOneClick(screen, target)}
+          onUnsubscribeMail={(mail) => compose.startUnsubscribeMail(screen, mail)}
           onReplyAll={() => compose.startReplyAll(screen)}
           onForward={() => compose.startForward(screen)}
           onToggleSeen={() => messages.markUnread(screen)}
