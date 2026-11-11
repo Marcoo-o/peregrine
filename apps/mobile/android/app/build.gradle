@@ -86,7 +86,18 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.peregrinemobile"
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
+        // The package of the push service of the system, where a system has one that speaks the protocol of `SystemPush.kt` (see docs/mobile.md, "The push
+        // provider of a system"): its permissions, its actions and its receiver are named after it. A build for a system whose service has another package says
+        // so with `-PperegrinePushProvider=<package>` (or in `~/.gradle/gradle.properties`); without a service of that name nothing is sent and the application
+        // looks for mail as it does anywhere else.
+        def pushProvider = project.findProperty('peregrinePushProvider') ?: 'app.peregrine.push'
+        manifestPlaceholders = [pushProvider: pushProvider]
+        buildConfigField "String", "PUSH_PROVIDER", "\"${pushProvider}\""
+
         applicationId "com.peregrinemobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion

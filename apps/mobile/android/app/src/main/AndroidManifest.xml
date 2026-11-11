@@ -14,11 +14,11 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Where the system has a push service, this is what lets the application register what it should watch. Where it has none the
          permission is not defined, and asking for it does nothing. -->
-    <uses-permission android:name="org.frogger.permission.PUSH_REGISTER" />
+    <uses-permission android:name="${pushProvider}.permission.PUSH_REGISTER" />
 
     <!-- Whether there is a push service is asked of the package manager, which only answers for packages it is told of here. -->
     <queries>
-        <package android:name="org.frogger.push" />
+        <package android:name="${pushProvider}" />
     </queries>
 
     <application
@@ -86,10 +86,10 @@
       <receiver
         android:name=".PushWakeReceiver"
         android:exported="true"
-        android:permission="org.frogger.permission.PUSH_DELIVER">
+        android:permission="${pushProvider}.permission.PUSH_DELIVER">
         <!-- What makes this receiver known to the push service, which only sees applications that have one. -->
         <intent-filter>
-          <action android:name="org.frogger.push.action.WAKE" />
+          <action android:name="${pushProvider}.action.WAKE" />
         </intent-filter>
       </receiver>
       <!-- Hands a file to another application for as long as that one application needs it, by a content address and never a path. -->
