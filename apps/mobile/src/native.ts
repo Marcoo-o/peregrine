@@ -8,6 +8,7 @@ import { RnFiles } from './RnFiles'
 import { RnPgp } from './RnPgp'
 import { RnTransport } from './RnTransport'
 import { RnBackupCipher } from './RnBackupCipher'
+import { RnBackupFolder } from './RnBackupFolder'
 
 /**
  * Where the application meets the two native modules in `android/app/.../com/peregrinemobile`.
@@ -21,6 +22,11 @@ export function createTransport(): RnTransport {
 /** The files of the device: picking, reading what was picked, saving, handing a file to another application. */
 export function createFiles(): RnFiles {
   return new RnFiles(NativeModules.PeregrineFiles)
+}
+
+/** The folder of the scheduled backups, the password kept for them and the platform's scheduler. */
+export function createBackupFolder(): RnBackupFolder {
+  return new RnBackupFolder(NativeModules.PeregrineBackup)
 }
 
 /** The sealing of a backup with a password. */

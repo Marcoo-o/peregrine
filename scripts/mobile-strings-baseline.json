@@ -1,5 +1,6 @@
 {
   "apps/mobile/src/RnTransport.ts": 2,
+  "apps/mobile/src/background/registerAutoBackup.ts": 1,
   "apps/mobile/src/background/registerBackgroundSync.ts": 1,
   "apps/mobile/src/i18n.ts": 2,
   "apps/mobile/src/pgp/readProtected.ts": 1,

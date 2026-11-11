@@ -5,6 +5,7 @@ import { ComposeController } from './ComposeController'
 import { ProtectionDefaults } from '../pgp/protectionDefaults'
 import { ContactsController } from './ContactsController'
 import { FilterRulesController } from './FilterRulesController'
+import { applyAutoBackup } from '../autoBackup'
 import { BackupController } from './BackupController'
 import { TasksController } from './TasksController'
 import { FolderController } from './FolderController'
@@ -101,6 +102,8 @@ export class Application {
     await this.settings.applySchedule()
     await this.settings.applyPush()
     await this.reloadSettings()
+    // The next scheduled backup is armed again, which the platform may have lost (a reinstall); a failure of the scheduler must not keep the application from starting.
+    await applyAutoBackup(this.services.db, this.services.backupFolder).catch(() => undefined)
     await this.navigator.start()
     await this.openLaunchTarget()
     await this.openIncoming()

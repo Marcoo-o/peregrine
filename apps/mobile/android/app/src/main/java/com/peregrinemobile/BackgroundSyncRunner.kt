@@ -13,7 +13,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * Runs the task `PeregrineSync` that JavaScript registered, without a screen, and waits until it is done.
+ * Runs a task that JavaScript registered (`PeregrineSync` for the look for mail, `PeregrineBackup` for a scheduled backup), without a screen, and waits until it is done.
  *
  * It does what `HeadlessJsTaskService` of React Native does, but from the scheduler's job and not from a
  * service. A service could not be started from here on a phone that has the application in the background:
@@ -35,38 +35,38 @@ object BackgroundSyncRunner {
    * Returns whether the task finished before it was given up on. Called on the scheduler's thread.
    * [force] is passed to the task, which then looks though the application is on the screen.
    */
-  fun run(context: Context, force: Boolean): Boolean {
+  fun run(context: Context, force: Boolean, taskKey: String = TASK_KEY): Boolean {
     val finished = CountDownLatch(1)
-    UiThreadUtil.runOnUiThread { prepare(context, force, finished) }
+    UiThreadUtil.runOnUiThread { prepare(context, force, taskKey, finished) }
     return finished.await(WAIT_MINUTES, TimeUnit.MINUTES)
   }
 
-  private fun prepare(context: Context, force: Boolean, finished: CountDownLatch) {
+  private fun prepare(context: Context, force: Boolean, taskKey: String, finished: CountDownLatch) {
     val host =
       checkNotNull((context.applicationContext as ReactApplication).reactHost) {
         "The application has no React host to run the look for mail in"
       }
     val current = host.currentReactContext
     if (current != null) {
-      start(current, force, finished)
+      start(current, force, taskKey, finished)
       return
     }
     host.addReactInstanceEventListener(
       object : ReactInstanceEventListener {
         override fun onReactContextInitialized(context: ReactContext) {
           host.removeReactInstanceEventListener(this)
-          start(context, force, finished)
+          start(context, force, taskKey, finished)
         }
       }
     )
     host.start()
   }
 
-  private fun start(reactContext: ReactContext, force: Boolean, finished: CountDownLatch) {
+  private fun start(reactContext: ReactContext, force: Boolean, taskKey: String, finished: CountDownLatch) {
     val tasks = HeadlessJsTaskContext.getInstance(reactContext)
     // Allowed on the screen too: the application may be open, and the task then does nothing and ends.
     val data = Arguments.createMap().apply { putBoolean("force", force) }
-    val config = HeadlessJsTaskConfig(TASK_KEY, data, TASK_TIMEOUT_MS, true)
+    val config = HeadlessJsTaskConfig(taskKey, data, TASK_TIMEOUT_MS, true)
     tasks.addTaskEventListener(
       object : HeadlessJsTaskEventListener {
         private var mine = -1
