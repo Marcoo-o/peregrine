@@ -91,6 +91,11 @@ function createStyles({ colors }: Theme) {
     menuRowLast: { borderBottomWidth: 0 },
     menuText: { flex: 1, fontSize: 16, color: colors.text },
     menuTextDanger: { flex: 1, fontSize: 16, color: colors.danger },
+    // A row of the overview of the settings: its name, a line under it that says what is on it, and the sign that it opens.
+    menuTexts: { flex: 1, paddingVertical: 10, gap: 2 },
+    menuTitle: { fontSize: 16, color: colors.text },
+    menuSummary: { fontSize: 13, color: colors.muted },
+    menuChevron: { fontSize: 22, color: colors.muted },
     // The daily list: a row per task with a round tick, and the points of its checklist under it, indented.
     taskRow: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, gap: 6 },
     taskLine: { flexDirection: 'row', alignItems: 'center', gap: 12 },

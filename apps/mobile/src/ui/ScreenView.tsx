@@ -40,7 +40,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onOpen={(account) => navigator.openAccount(account)}
           onAdd={() => navigator.showLogin()}
           onSearch={() => navigator.showSearch('')}
-          onSettings={() => settings.show()}
+          onSettings={() => settings.open()}
         />
       )
     case 'login':
@@ -62,7 +62,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           actions={selection}
           onRefresh={() => navigator.showUnified({ refresh: true })}
           onSearch={() => navigator.showSearch('')}
-          onSettings={() => settings.show()}
+          onSettings={() => settings.open()}
           onCompose={() => compose.startNewFromAnyAccount(screen)}
           onCreateTag={(name, color) => tags.create(name, color)}
           onOpen={(message) => messages.openFromUnified(message)}
@@ -95,7 +95,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           state={screen}
           onOpen={(folder) => navigator.showMessages(screen.account, folder, { sync: true })}
           onSearch={() => navigator.showSearch('')}
-          onSettings={() => settings.show()}
+          onSettings={() => settings.open()}
           onRemove={() => accounts.remove(screen.account)}
           onEdit={() => accounts.startEdit(screen.account)}
           onFolderTools={(folder) => folders.startTools(screen.account, folder)}
@@ -113,7 +113,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           actions={selection}
           onRefresh={() => navigator.showMessages(screen.account, screen.folder, { sync: true })}
           onSearch={() => navigator.showSearch('')}
-          onSettings={() => settings.show()}
+          onSettings={() => settings.open()}
           onCompose={() => compose.startNew(screen.account, screen)}
           onCreateTag={(name, color) => tags.create(name, color)}
           onOpen={(message) => messages.open(screen.account, screen.folder, message, 'folder')}
@@ -338,6 +338,7 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           onRunNow={() => settings.runNow()}
           onKeepConnection={(on) => settings.setKeepConnection(on)}
           onBatterySettings={() => settings.openBatterySettings()}
+          onPage={(page) => settings.openPage(page)}
         />
       )
   }
