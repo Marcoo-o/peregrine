@@ -97,6 +97,7 @@
   "Danach lässt sich für diese Adresse nicht mehr verschlüsseln, und Signaturen von ihr werden nicht mehr geprüft.": "After that you can no longer encrypt for this address, and signatures from it are no longer checked.",
   "Dann": "Then",
   "Darin steht kein Schlüssel.": "There is no key in it.",
+  "Das Ergebnis steht noch aus. Es erscheint hier, wenn du diese Seite wieder öffnest.": "The result is still to come. It appears here when you open this page again.",
   "Das Konto hat keinen Schlüssel": "The account has no key",
   "Das Konto, für das die Nachricht geschrieben wurde, gibt es nicht mehr.": "The account the message was written for no longer exists.",
   "Das Konto, seine gespeicherten Nachrichten und alles, was noch auf eine Verbindung wartet, werden von diesem Gerät gelöscht. Auf dem Mailserver bleibt alles, wie es ist.": "The account, its saved messages and everything still waiting for a connection are deleted from this device. Everything on the mail server stays as it is.",

@@ -219,6 +219,8 @@ export class FakeBackupFolder implements BackupFolder {
   /** The moments the next run was armed for, the last being the one that waits; null for a run that was cancelled. */
   readonly armed: Array<number | null> = []
   runs = 0
+  /** What the platform's run does when it is asked for one: the tests make it record itself as the real one does. */
+  onRun: (() => Promise<void>) | null = null
 
   async state() {
     return { folder: this.folder, hasPassword: this.password !== null }
@@ -252,6 +254,7 @@ export class FakeBackupFolder implements BackupFolder {
 
   async runNow() {
     this.runs += 1
+    await this.onRun?.()
   }
 }
 

@@ -8,6 +8,10 @@ import type { AppStore } from './store'
 /** The largest file that is read as a backup: a few thousand rules, tasks and contacts are some hundred kilobytes, and more is not a backup of this. */
 const MAX_FILE_BYTES = 50 * 1024 * 1024
 
+/** How often and how long the screen looks for the result of a run it asked for. */
+const RUN_LOOKS = 20
+const RUN_LOOK_MS = 3000
+
 /** The shortest password for a backup. The file is what holds the keys, and a short password is what anybody who gets the file tries first. */
 export const MIN_PASSWORD = 8
 
@@ -80,10 +84,23 @@ export class BackupController {
     await this.show(t('Das Passwort ist vergessen und das automatische Sichern aus.'))
   }
 
-  /** Makes a scheduled backup now, in the background where the schedule makes them. */
+  /** How the screen waits between looks for the result of a run in the background; a test makes it no wait. */
+  delay: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  /**
+   * Makes a scheduled backup now, in the background where the schedule makes them, and shows what it came to: the run is the platform's and is not under this screen,
+   * so the screen looks at the settings every few seconds, while it is the screen, until the run has recorded itself.
+   */
   async runAutoNow(): Promise<void> {
+    const before = (await loadAutoBackup(this.services.db)).lastRun
     await this.services.backupFolder.runNow()
-    await this.show(t('Die Sicherung läuft im Hintergrund. Das Ergebnis steht gleich hier.'))
+    await this.show(undefined, undefined, t('Die Sicherung läuft im Hintergrund. Das Ergebnis steht gleich hier.'))
+    for (let look = 0; look < RUN_LOOKS; look++) {
+      await this.delay(RUN_LOOK_MS)
+      if (this.store.screen.name !== 'backup') return
+      if ((await loadAutoBackup(this.services.db)).lastRun !== before) return this.show()
+    }
+    await this.show(t('Das Ergebnis steht noch aus. Es erscheint hier, wenn du diese Seite wieder öffnest.'))
   }
 
   /** Makes a backup sealed with the password, and lets the user choose where to save it. */

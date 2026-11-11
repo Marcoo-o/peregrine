@@ -59,7 +59,7 @@ export function BackupScreen(props: {
 
       <Text style={styles.section}>{t('Automatisch sichern')}</Text>
       <Text style={styles.hint}>{t('Der Ordner und das Passwort werden einmal gewählt. Danach macht das Telefon die Sicherung von selbst, auch wenn die App geschlossen ist, und behält die letzten Dateien.')}</Text>
-      <View style={styles.menuCard}>
+      <View style={styles.group}>
         <SwitchRow label={t('Automatisch sichern')} value={settings.enabled} disabled={!idle} onChange={(enabled) => props.onAuto({ enabled })} />
       </View>
       <Button label={auto.folder ? t('Ordner: {name}', { name: auto.folder }) : t('Ordner wählen')} variant="secondary" disabled={!idle} onPress={props.onChooseFolder} />
@@ -110,6 +110,8 @@ export function BackupScreen(props: {
               options={MINUTES.map((minute) => ({ value: String(minute), label: two(minute) }))}
               onChange={(value) => props.onAuto({ minute: Number(value) })}
             />
+          </View>
+          <View style={styles.fieldRow}>
             <Dropdown
               caption={t('Behalten')}
               value={String(settings.keep)}
@@ -117,7 +119,7 @@ export function BackupScreen(props: {
               onChange={(value) => props.onAuto({ keep: Number(value) })}
             />
           </View>
-          <View style={styles.menuCard}>
+          <View style={styles.group}>
             <SwitchRow label={t('Private Schlüssel einschließen')} value={settings.privateKeys} disabled={!idle} onChange={(on) => props.onAuto({ privateKeys: on })} />
             <SwitchRow label={t('Passwörter der Konten einschließen')} value={settings.passwords} disabled={!idle} onChange={(on) => props.onAuto({ passwords: on })} />
           </View>

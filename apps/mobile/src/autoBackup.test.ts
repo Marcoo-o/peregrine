@@ -154,11 +154,31 @@ describe('the screen for the scheduled backup', () => {
     expect(t.backupFolder.armed.at(-1)).toBeNull()
   })
 
-  it('asks the scheduler for a run now', async () => {
+  it('asks the scheduler for a run now, and shows what it came to when the run has recorded itself', async () => {
     const t = await withBackup()
+    t.app.backup.delay = async () => undefined
+    t.backupFolder.onRun = async () => {
+      await saveAutoBackup(t.db, { lastRun: 123, status: 'done' })
+    }
     await t.app.backup.runAutoNow()
     expect(t.backupFolder.runs).toBe(1)
-    expect(shown(t).notice).toContain('Hintergrund')
+    expect(shown(t).busy).toBeUndefined()
+    expect(shown(t).auto.settings).toMatchObject({ lastRun: 123, status: 'done' })
+  })
+
+  it('says that the result is still to come when the run does not record itself in time, and stops looking when the screen is left', async () => {
+    const t = await withBackup()
+    t.app.backup.delay = async () => undefined
+    await t.app.backup.runAutoNow()
+    expect(shown(t).notice).toContain('noch aus')
+    let looks = 0
+    t.app.backup.delay = async () => {
+      looks += 1
+      t.store.showScreen({ name: 'login' })
+    }
+    await t.app.backup.runAutoNow()
+    expect(looks).toBe(1)
+    expect(t.store.screen.name).toBe('login')
   })
 
   it('has the schedule armed again when the application starts', async () => {

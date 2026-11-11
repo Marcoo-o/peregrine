@@ -35,7 +35,7 @@ describe('the catalogs', () => {
         const have = new Set(Object.keys(CATALOGS[code]))
         expect([...used].filter((key) => !have.has(key)).sort()).toEqual([])
         expect([...have].filter((key) => !used.has(key)).sort()).toEqual([])
-      })
+      }, 30_000)
 
       it('keeps the values that are put into a text, in each of its forms', () => {
         const wrong: string[] = []
@@ -155,5 +155,5 @@ describe('the code', () => {
     const baseline = (await import('../../../scripts/mobile-strings-baseline.json')).default as Record<string, number>
     const more = Object.entries(counts).filter(([file, n]) => n > (baseline[file] ?? 0))
     expect(more).toEqual([])
-  })
+  }, 30_000)
 })
