@@ -1,0 +1,20 @@
+# What every editor should do in this repository, so that a file is not changed by the one who happened to open it.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{kt,kts,gradle,java}]
+indent_size = 2
+
+[*.md]
+# A trailing double space is a line break in Markdown.
+trim_trailing_whitespace = false
+
+[*.{bat,cmd}]
+end_of_line = crlf
