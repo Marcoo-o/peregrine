@@ -1,5 +1,5 @@
 import { keyserverUrl, splitAddress, wkdUrls } from '@peregrine/core/keyLookup'
-import { sha1 } from '@noble/hashes/legacy'
+import { sha1 } from '@noble/hashes/legacy.js'
 import { encodeUtf8 } from '@peregrine/imap/utf8'
 import { scanKeys, type ScannedKey } from './pgpService'
 

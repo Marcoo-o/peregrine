@@ -13,6 +13,23 @@ VERSION="$1"
 [ -n "$VERSION" ] || { echo "usage: build-apk.sh <versionName> [versionCode]" >&2; exit 2; }
 CODE="${2:-$(git -C "$ROOT" rev-list --count HEAD)}"
 
+# The key: the keystore made by make-keystore.sh and its alias, unless something else is set. The passwords are asked for here, in a terminal, when they are not
+# in the environment or in ~/.gradle/gradle.properties: they are not written anywhere, and are in the environment of this one build only.
+export PEREGRINE_RELEASE_STORE_FILE="${PEREGRINE_RELEASE_STORE_FILE:-$(cygpath -m "$HOME/.peregrine/release.keystore" 2>/dev/null || echo "$HOME/.peregrine/release.keystore")}"
+export PEREGRINE_RELEASE_KEY_ALIAS="${PEREGRINE_RELEASE_KEY_ALIAS:-peregrine}"
+if ! grep -qs "^peregrineReleaseStorePassword=" "$HOME/.gradle/gradle.properties" && [ -z "$PEREGRINE_RELEASE_STORE_PASSWORD" ]; then
+  if [ -t 0 ]; then
+    read -r -s -p "Keystore password (nothing is shown): " PEREGRINE_RELEASE_STORE_PASSWORD
+    echo
+    read -r -s -p "Key password (empty if it is the same): " PEREGRINE_RELEASE_KEY_PASSWORD
+    echo
+    export PEREGRINE_RELEASE_STORE_PASSWORD PEREGRINE_RELEASE_KEY_PASSWORD="${PEREGRINE_RELEASE_KEY_PASSWORD:-$PEREGRINE_RELEASE_STORE_PASSWORD}"
+  else
+    echo "No password: run this in a terminal, or set PEREGRINE_RELEASE_STORE_PASSWORD." >&2
+    exit 1
+  fi
+fi
+
 ( cd "$ROOT/apps/mobile/android" && ./gradlew :app:assembleRelease \
     -PperegrineVersionName="$VERSION" -PperegrineVersionCode="$CODE" -PperegrineRequireReleaseKey=true )
 
