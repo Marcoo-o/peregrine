@@ -1,6 +1,6 @@
 import 'react-native-get-random-values'
-import { sha1 } from '@noble/hashes/legacy'
-import { sha256, sha384, sha512 } from '@noble/hashes/sha2'
+import { sha1 } from '@noble/hashes/legacy.js'
+import { sha256, sha384, sha512 } from '@noble/hashes/sha2.js'
 
 /**
  * What OpenPGP needs of the runtime that React Native does not have: the Web Cryptography API. OpenPGP asks for `crypto.subtle`

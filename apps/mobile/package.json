@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
-    "@noble/hashes": "^1.8.0",
+    "@noble/hashes": "^2.4.0",
     "@op-engineering/op-sqlite": "19.0.5",
     "lucide-react-native": "1.72.0",
     "react": "19.3.1",
@@ -28,7 +28,7 @@
     "@react-native/metro-config": "0.88.1",
     "@react-native/typescript-config": "0.88.1",
     "@types/react": "^19.2.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">= 22.11.0"
