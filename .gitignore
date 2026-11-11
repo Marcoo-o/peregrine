@@ -26,3 +26,6 @@ IDEAS.de.md
 *.log
 .DS_Store
 Thumbs.db
+
+# The APK a release build puts together with its checksum.
+dist-android/

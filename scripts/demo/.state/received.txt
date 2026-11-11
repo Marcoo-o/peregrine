@@ -1,0 +1,8 @@
+
+===== 2026-11-11T21:34:37.163Z from work@demo.test to dana@northwind.test =====
+From: work@demo.test
+To: dana@northwind.test
+Subject: sink check
+
+hello
+
