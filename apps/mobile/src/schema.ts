@@ -230,7 +230,11 @@ const MIGRATIONS: string[][] = [
        PRIMARY KEY (task_id, occurred_on)
      )`,
     'CREATE INDEX idx_task_items_task ON task_items(task_id, sort_order)'
-  ]
+  ],
+  // 17. The newest messages first, over all folders: what the unified inbox and a search ask for. Without this the database reads every message of the phone
+  // and sorts them to find the 200 newest, which takes as long as there are messages; with it the newest are read from the end of the index, and the list is
+  // as fast with a hundred thousand messages as with a thousand. A message without a date sorts last, as the lists want it, since nothing is smaller than nothing.
+  ['CREATE INDEX idx_messages_date ON messages(date_ms DESC, uid DESC)']
 ]
 
 /** Brings the database up to the newest schema, each step whole or not at all. */
