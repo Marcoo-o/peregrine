@@ -84,7 +84,17 @@ class PeregrineNotificationsModule(context: ReactApplicationContext) : ReactCont
             target?.getString("accountId") ?: "",
             target?.getString("folderId") ?: "",
             target?.getInt("uid") ?: -1
-          )
+          ),
+        buttons =
+          if (options.hasKey("buttons")) {
+            options.getMap("buttons")?.let {
+              MailNotifications.Buttons(
+                archive = it.getString("archive") ?: "",
+                read = it.getString("read") ?: "",
+                reply = it.getString("reply") ?: ""
+              )
+            }
+          } else null
       )
     try {
       MailNotifications.show(reactApplicationContext, content)
@@ -114,6 +124,7 @@ class PeregrineNotificationsModule(context: ReactApplicationContext) : ReactCont
         putString("accountId", target.accountId)
         putString("folderId", target.folderId)
         putInt("uid", target.uid)
+        if (target.reply) putBoolean("reply", true)
       }
     )
   }

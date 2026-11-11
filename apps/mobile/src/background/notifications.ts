@@ -9,6 +9,15 @@ export interface MessageTarget {
   accountId: string
   folderId: string
   uid: number
+  /** Opening it goes straight to an answer to the message, which is what the button "Reply" of a notification leads to. */
+  reply?: boolean
+}
+
+/** The words on the buttons of a notification, in the language of the application: the platform shows them as they are given. */
+export interface NotificationButtons {
+  archive: string
+  read: string
+  reply: string
 }
 
 /** One notification for the new mail of one account. */
@@ -22,7 +31,15 @@ export interface MailNotification {
   count: number
   /** The newest of them, which is what a tap on the notification opens. */
   target: MessageTarget
+  /**
+   * The buttons "Archive", "Mark read" and "Reply", which are about one message: only a notification that stands for one message has them. On a locked
+   * screen the platform shows the public version of a notification, which has none.
+   */
+  buttons?: NotificationButtons
 }
+
+/** The words of the buttons, in the language the application is in now. */
+const buttonWords = (): NotificationButtons => ({ archive: t('Archivieren'), read: t('Gelesen'), reply: t('Antworten') })
 
 /** Something that shows notifications: the platform's, or one that writes down what it was told. */
 export interface Notifier {
@@ -82,11 +99,12 @@ export function buildNotifications(
         body: newest.subject || t(NEW_MESSAGE),
         subtitle: subtitleFor(kind, accountName),
         count: 1,
-        target
+        target,
+        buttons: buttonWords()
       })
     } else {
       const body = kind === 'back' ? backCountText(messages.length) : countText(messages.length)
-      notifications.push({ accountId, title: accountName, body, count: messages.length, target })
+      notifications.push({ accountId, title: accountName, body, count: messages.length, target, ...(messages.length === 1 ? { buttons: buttonWords() } : {}) })
     }
   }
   return notifications

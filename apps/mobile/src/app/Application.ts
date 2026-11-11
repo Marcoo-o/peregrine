@@ -134,7 +134,11 @@ export class Application {
   async openLaunchTarget(): Promise<void> {
     try {
       const target = await this.services.notifications.consumeLaunchTarget()
-      if (target) await this.messages.openTarget(target)
+      if (!target) return
+      await this.messages.openTarget(target)
+      // The button "Reply" of a notification: the message is open now, and its text is there to be quoted when the server gave it.
+      const screen = this.store.screen
+      if (target.reply && screen.name === 'message') this.compose.startReply(screen)
     } catch (error) {
       this.services.log.error(`the message of a notification could not be opened: ${describeError(error)}`)
     }

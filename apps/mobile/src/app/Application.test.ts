@@ -39,6 +39,21 @@ describe('starting the application', () => {
     expect(t.store.screen).toMatchObject({ name: 'message', summary: { subject: 'Budget' } })
   })
 
+  it('opens an answer to the message when the button "Reply" of the notification was pressed', async () => {
+    const t = await withMessage()
+    t.notifications.launchTargets.push({ accountId: t.work.id, folderId: t.folder.id, uid: 1, reply: true })
+    await t.app.start()
+    expect(t.store.screen).toMatchObject({ name: 'compose', draft: { subject: 'Re: Budget' } })
+  })
+
+  it('opens only the message when the text is not there to quote, so that nothing is answered blindly', async () => {
+    const t = await withMessage()
+    t.server.unreachable.add('work')
+    t.notifications.launchTargets.push({ accountId: t.work.id, folderId: t.folder.id, uid: 1, reply: true })
+    await t.app.start()
+    expect(t.store.screen.name).toBe('message')
+  })
+
   it('shows only the first screen when nothing was tapped', async () => {
     const t = await withMessage()
     await t.app.start()
