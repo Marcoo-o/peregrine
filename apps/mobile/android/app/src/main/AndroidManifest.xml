@@ -92,6 +92,8 @@
           <action android:name="${pushProvider}.action.WAKE" />
         </intent-filter>
       </receiver>
+      <!-- The buttons of a notification ("Archive", "Mark read"). Only the system's notification can press them: the receiver is not open to other applications. -->
+      <receiver android:name=".NotificationActionReceiver" android:exported="false" />
       <!-- Hands a file to another application for as long as that one application needs it, by a content address and never a path. -->
       <provider
         android:name="androidx.core.content.FileProvider"

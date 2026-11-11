@@ -34,7 +34,8 @@ class MainActivity : ReactActivity() {
     LaunchTarget.fromExtras(
       intent?.getStringExtra(LaunchTarget.EXTRA_ACCOUNT),
       intent?.getStringExtra(LaunchTarget.EXTRA_FOLDER),
-      intent?.getIntExtra(LaunchTarget.EXTRA_UID, -1) ?: -1
+      intent?.getIntExtra(LaunchTarget.EXTRA_UID, -1) ?: -1,
+      intent?.getBooleanExtra(LaunchTarget.EXTRA_REPLY, false) ?: false
     )
 
   /**

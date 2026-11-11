@@ -1,5 +1,5 @@
 import type { Notifications, SyncSchedule } from './devices'
-import type { MailNotification, MessageTarget } from './notifications'
+import type { MailNotification, MessageTarget, NotificationButtons } from './notifications'
 
 /** What the native module `PeregrineNotifications` offers, in the shapes that cross the bridge. */
 export interface NativeNotifications {
@@ -12,6 +12,7 @@ export interface NativeNotifications {
     subtitle?: string
     count: number
     target: MessageTarget
+    buttons?: NotificationButtons
   }): Promise<void>
   clearAll(): Promise<void>
   consumeLaunchTarget(): Promise<MessageTarget | null>
@@ -30,10 +31,17 @@ export class RnNotifications implements Notifications {
   }
 
   show(notification: MailNotification): Promise<void> {
-    const { accountId, title, body, subtitle, count, target } = notification
-    // A subtitle that is not there is left out of what crosses the bridge, where it would be a null the
-    // native side has to tell from a missing one.
-    return this.native.show({ accountId, title, body, ...(subtitle === undefined ? {} : { subtitle }), count, target })
+    const { accountId, title, body, subtitle, count, target, buttons } = notification
+    // What is not there is left out of what crosses the bridge, where it would be a null the native side has to tell from a missing one.
+    return this.native.show({
+      accountId,
+      title,
+      body,
+      ...(subtitle === undefined ? {} : { subtitle }),
+      count,
+      target,
+      ...(buttons === undefined ? {} : { buttons })
+    })
   }
 
   clearAll(): Promise<void> {

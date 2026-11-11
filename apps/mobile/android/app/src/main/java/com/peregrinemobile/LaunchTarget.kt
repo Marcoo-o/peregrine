@@ -12,15 +12,17 @@ object LaunchTarget {
   const val EXTRA_ACCOUNT = "peregrine.accountId"
   const val EXTRA_FOLDER = "peregrine.folderId"
   const val EXTRA_UID = "peregrine.uid"
+  const val EXTRA_REPLY = "peregrine.reply"
 
-  data class Target(val accountId: String, val folderId: String, val uid: Int)
+  /** The message, and whether the button "Reply" of the notification was pressed, which opens it on an answer. */
+  data class Target(val accountId: String, val folderId: String, val uid: Int, val reply: Boolean = false)
 
   @Volatile private var pending: Target? = null
 
   /** The target an intent carries, or null when it carries none or not all of one. */
-  fun fromExtras(accountId: String?, folderId: String?, uid: Int): Target? {
+  fun fromExtras(accountId: String?, folderId: String?, uid: Int, reply: Boolean = false): Target? {
     if (accountId.isNullOrEmpty() || folderId.isNullOrEmpty() || uid < 0) return null
-    return Target(accountId, folderId, uid)
+    return Target(accountId, folderId, uid, reply)
   }
 
   /** Keeps the target of an intent. An intent with none leaves what was kept as it is. */

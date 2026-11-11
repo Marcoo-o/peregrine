@@ -12,6 +12,12 @@ class LaunchTargetTest {
   }
 
   @Test
+  fun carriesWhetherTheButtonToReplyWasPressed() {
+    assertEquals(LaunchTarget.Target("a", "f", 7, reply = true), LaunchTarget.fromExtras("a", "f", 7, reply = true))
+    assertEquals(LaunchTarget.Target("a", "f", 7), LaunchTarget.fromExtras("a", "f", 7))
+  }
+
+  @Test
   fun a_target_needs_an_account_a_folder_and_a_uid() {
     assertEquals(LaunchTarget.Target("a", "f", 7), LaunchTarget.fromExtras("a", "f", 7))
     assertNull(LaunchTarget.fromExtras(null, "f", 7))

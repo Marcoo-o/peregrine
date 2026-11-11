@@ -38,9 +38,17 @@ describe('the notifications for new mail', () => {
         body: 'Budget',
         subtitle: 'Work',
         count: 1,
-        target: { accountId: 'work', folderId: 'f-work', uid: 1 }
+        target: { accountId: 'work', folderId: 'f-work', uid: 1 },
+        buttons: { archive: 'Archivieren', read: 'Gelesen', reply: 'Antworten' }
       }
     ])
+  })
+
+  it('have the buttons for one message, with or without the preview, and none for several', () => {
+    const [hidden] = buildNotifications([message()], settings({ preview: false }), noon)
+    expect(hidden.buttons).toEqual({ archive: 'Archivieren', read: 'Gelesen', reply: 'Antworten' })
+    const [several] = buildNotifications([message({ uid: 1 }), message({ uid: 2 })], settings(), noon)
+    expect(several.buttons).toBeUndefined()
   })
 
   it('say that there is a new message when it has no subject, and use the address for a sender with no name', () => {
@@ -116,7 +124,8 @@ describe('the notifications for messages that are back', () => {
         body: 'Budget',
         subtitle: 'Wiedervorlage für Work',
         count: 1,
-        target: { accountId: 'work', folderId: 'f-work', uid: 1 }
+        target: { accountId: 'work', folderId: 'f-work', uid: 1 },
+        buttons: { archive: 'Archivieren', read: 'Gelesen', reply: 'Antworten' }
       }
     ])
   })

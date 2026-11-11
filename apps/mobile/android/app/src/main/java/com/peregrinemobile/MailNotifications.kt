@@ -20,8 +20,12 @@ object MailNotifications {
     val body: String,
     val subtitle: String?,
     val count: Int,
-    val target: LaunchTarget.Target
+    val target: LaunchTarget.Target,
+    /** The words on the buttons, which a notification about one message has. */
+    val buttons: Buttons? = null
   )
+
+  data class Buttons(val archive: String, val read: String, val reply: String)
 
   /** The id a notification for an account has, the same each time: a new one replaces the one before. */
   fun idFor(accountId: String): Int = accountId.hashCode()
@@ -62,6 +66,12 @@ object MailNotifications {
             .setContentText(if (content.count == 1) "1 neue Nachricht" else "${content.count} neue Nachrichten")
             .build()
         )
+    content.buttons?.let { buttons ->
+      builder
+        .addAction(0, buttons.archive, NotificationActions.pending(context, id, NotificationActions.ARCHIVE, content.target))
+        .addAction(0, buttons.read, NotificationActions.pending(context, id, NotificationActions.READ, content.target))
+        .addAction(0, buttons.reply, replying(context, id, content.target))
+    }
     NotificationManagerCompat.from(context).notify(id, builder.build())
   }
 
@@ -70,16 +80,22 @@ object MailNotifications {
   }
 
   /** What a tap leads to: the application, with the message in the extras. */
-  private fun opening(context: Context, id: Int, target: LaunchTarget.Target): PendingIntent {
+  private fun opening(context: Context, id: Int, target: LaunchTarget.Target): PendingIntent = activity(context, id, target, reply = false)
+
+  /** What the button "Reply" leads to: the same, and the application goes on to an answer. */
+  private fun replying(context: Context, id: Int, target: LaunchTarget.Target): PendingIntent = activity(context, id + 1, target, reply = true)
+
+  private fun activity(context: Context, requestCode: Int, target: LaunchTarget.Target, reply: Boolean): PendingIntent {
     val intent =
       Intent(context, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         putExtra(LaunchTarget.EXTRA_ACCOUNT, target.accountId)
         putExtra(LaunchTarget.EXTRA_FOLDER, target.folderId)
         putExtra(LaunchTarget.EXTRA_UID, target.uid)
+        if (reply) putExtra(LaunchTarget.EXTRA_REPLY, true)
       }
     // The id is the request code, so that each account has its own, and the extras are replaced by the
     // newest message when one is already there.
-    return PendingIntent.getActivity(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
   }
 }
