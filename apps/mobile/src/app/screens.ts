@@ -135,8 +135,13 @@ export interface MoveState extends OpenMessage {
   returnTo: MessageState
 }
 
+/** The pages the settings are in: what belongs together, one page each. No page is the overview of them. */
+export type SettingsPage = 'appearance' | 'lists' | 'addresses' | 'security' | 'notifications'
+
 export interface SettingsState {
   name: 'settings'
+  /** The page that is open, or null for the overview. */
+  page: SettingsPage | null
   settings: NotificationSettings
   /** What is set about the lists of messages. */
   list: ListSettings

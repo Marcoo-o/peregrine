@@ -20,6 +20,7 @@ import { saveConversations } from '../threads'
 import { saveSafety, type SafetySettings } from '../safety'
 import type { LockController } from './LockController'
 import type { Navigator } from './Navigator'
+import type { SettingsPage } from './screens'
 import type { Services } from './services'
 import type { AppStore } from './store'
 import { language, msg, saveLanguageChoice, t } from '../i18n'
@@ -33,6 +34,12 @@ const LOOKING = msg('Der Abruf läuft. Neue Nachrichten erscheinen als Benachric
 
 /** The settings screen: what is said about new mail, and how often the phone looks for it. */
 export class SettingsController {
+  /**
+   * The page that is open. It is kept here and not on the screen, which is made anew at every change: a switch that was turned would otherwise
+   * take the user back to the overview, and so would coming back from the tags or the keys, which are managed from a page.
+   */
+  private page: SettingsPage | null = null
+
   constructor(
     private readonly services: Services,
     private readonly store: AppStore,
@@ -40,11 +47,24 @@ export class SettingsController {
     private readonly locking: LockController
   ) {}
 
-  /** Shows the settings as they are stored, with a line about what was just done when there is one. */
+  /** Opens the settings from outside them, at the overview. */
+  open(): Promise<void> {
+    this.page = null
+    return this.show()
+  }
+
+  /** Opens a page of the settings. */
+  openPage(page: SettingsPage): Promise<void> {
+    this.page = page
+    return this.show()
+  }
+
+  /** Shows the settings as they are stored, on the page that is open, with a line about what was just done when there is one. */
   async show(notice?: string): Promise<void> {
     const { db, notifications } = this.services
     this.store.showScreen({
       name: 'settings',
+      page: this.page,
       settings: await loadNotificationSettings(db),
       list: await loadListSettings(db),
       sending: await loadSendSettings(db),
@@ -134,7 +154,12 @@ export class SettingsController {
     this.store.setSort(await saveSort(this.services.db, sort))
   }
 
+  /** From a page to the overview, and from the overview to the accounts. */
   back(): Promise<void> {
+    if (this.page !== null) {
+      this.page = null
+      return this.show()
+    }
     return this.navigator.showAccounts()
   }
 

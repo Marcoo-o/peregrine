@@ -26,6 +26,47 @@ describe('the settings screen', () => {
     expect(t.screen().accounts.map((a) => a.displayName)).toEqual(['work', 'home'])
   })
 
+  describe('the pages', () => {
+    it('start at the overview', async () => {
+      const t = await onSettings()
+      expect(t.screen().page).toBeNull()
+    })
+
+    it('open a page, which stays open when something on it is switched', async () => {
+      const t = await onSettings()
+      await t.app.settings.openPage('lists')
+      expect(t.screen().page).toBe('lists')
+      await t.app.settings.setShowPreview(false)
+      expect(t.screen()).toMatchObject({ page: 'lists', list: { showPreview: false } })
+    })
+
+    it('are come back to from the screens that are opened from them, such as the tags', async () => {
+      const t = await onSettings()
+      await t.app.settings.openPage('lists')
+      await t.app.tags.show()
+      expect(t.store.screen.name).toBe('tags')
+      await t.app.settings.show()
+      expect(t.screen().page).toBe('lists')
+    })
+
+    it('go back to the overview, and the overview to the accounts', async () => {
+      const t = await onSettings()
+      await t.app.settings.openPage('notifications')
+      await t.app.settings.back()
+      expect(t.screen().page).toBeNull()
+      await t.app.settings.back()
+      expect(t.store.screen.name).toBe('accounts')
+    })
+
+    it('are not remembered when the settings are opened again from the accounts', async () => {
+      const t = await onSettings()
+      await t.app.settings.openPage('security')
+      await t.app.navigator.showAccounts()
+      await t.app.settings.open()
+      expect(t.screen().page).toBeNull()
+    })
+  })
+
   it('goes back to the accounts', async () => {
     const t = await onSettings()
     await t.app.settings.back()
