@@ -9,11 +9,8 @@
 # server, and was checked by hand for stage 4, as docs/mobile.md says.
 #
 # A debug APK only. It installs on a phone that allows apps from outside the store, which is all a
-# pull request or a development build needs. A release build has to be signed, which needs a
-# keystore kept in the repository's secrets, and that, with attaching the result to the release
-# next to the Windows and Linux files, belongs to stage 6. When it gets there, upload the checksums
-# as a `checksums-Android` artifact like the jobs in release.yml do, and the release picks them up
-# without further changes.
+# pull request or a development build needs. A release is signed by hand with the maintainer's own
+# key, which is never in a pipeline (see "What releasing found" in docs/mobile.md).
 name: Android
 
 on:
@@ -38,9 +35,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # React Native 0.88 asks for 22.13 or newer, and 22 resolves to the newest of that line.
           node-version: 22
@@ -56,12 +53,12 @@ jobs:
 
       # The Gradle wrapper of the project asks for Gradle 9, which needs JDK 17 or newer. 21 is the
       # one the build was tried with.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       # The certificate check of the native transport, against a test server on the JVM. It is the
       # reason the phone has a transport of its own, so it runs on every change.
@@ -69,13 +66,14 @@ jobs:
         working-directory: apps/mobile/android
         run: ./gradlew testDebugUnitTest
 
-      # Two architectures and not the four the project defaults to: arm64 is the phones, x86_64 the
-      # emulator. The rest would triple the time for devices nobody has.
+      # The native code is compiled once for each architecture, which is most of the time of this job. A pull request
+      # is built for one (x86_64, which is also the emulator), and what lands on main for the two that matter: arm64
+      # is the phones. The other two the project defaults to would triple the time for devices nobody has.
       - name: Build the debug APK
         working-directory: apps/mobile/android
-        run: ./gradlew assembleDebug -PbundleJs -PreactNativeArchitectures=arm64-v8a,x86_64
+        run: ./gradlew assembleDebug -PbundleJs -PreactNativeArchitectures=${{ github.event_name == 'pull_request' && 'x86_64' || 'arm64-v8a,x86_64' }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: peregrine-android-debug
           path: apps/mobile/android/app/build/outputs/apk/debug/*.apk

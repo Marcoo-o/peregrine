@@ -89,6 +89,16 @@ describe('the people to suggest', () => {
     ])
   })
 
+  it('are made from the newest messages only, so that they take no longer with every message the phone has', async () => {
+    const db = await mailbox([
+      { name: 'Old', address: 'old@sender.test', times: 3 },
+      { name: 'Latest', address: 'latest@sender.test' }
+    ])
+    // Of the newest two messages one is from Old and one from Latest; of the newest one only Latest's.
+    expect((await suggestContacts(db, 'sender', [], 2)).map((contact) => contact.address).sort()).toEqual(['latest@sender.test', 'old@sender.test'])
+    expect((await suggestContacts(db, 'sender', [], 1)).map((contact) => contact.address)).toEqual(['latest@sender.test'])
+  })
+
   it('are one for each address, with the name and the spelling that were used most, and the messages of every spelling counted', async () => {
     const db = await mailbox([
       { name: 'Anna', address: 'Anna@Sender.test', times: 1 },

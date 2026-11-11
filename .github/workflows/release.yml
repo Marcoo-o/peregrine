@@ -54,9 +54,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -77,7 +77,7 @@ jobs:
       # below, against the draft the release job creates.
       - run: npm run ${{ matrix.script }} -- --publish never
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: peregrine-${{ runner.os }}
           path: ${{ matrix.artifacts }}
@@ -96,7 +96,7 @@ jobs:
           sha256sum ${{ matrix.sums }} > ../checksums/${{ runner.os }}.txt
           cat ../checksums/${{ runner.os }}.txt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: checksums-${{ runner.os }}
           path: checksums/${{ runner.os }}.txt
@@ -112,13 +112,13 @@ jobs:
     steps:
       # Two downloads rather than one, so the checksum files do not end up attached as if they
       # were installers.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: peregrine-*
           path: artifacts
           merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: checksums-*
           path: checksums
@@ -167,7 +167,7 @@ jobs:
           cat notes.md
 
       # A tag: the real thing, kept as a draft until somebody writes the notes.
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           draft: true
@@ -188,7 +188,7 @@ jobs:
       # A commit on main: one rolling pre-release, replaced each time. `tag_name` is fixed and
       # the tag is moved to the commit that was built, so the entry always describes what is
       # attached to it.
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         if: github.ref == 'refs/heads/main'
         with:
           tag_name: nightly
