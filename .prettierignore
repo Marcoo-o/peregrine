@@ -1,0 +1,17 @@
+node_modules
+out
+dist
+dist-electron
+dist-android
+build
+.gradle
+.cxx
+*.tsbuildinfo
+package-lock.json
+# Prose and data that are written by hand or by a script, not by a formatter.
+*.md
+apps/mobile/src/locales/*.json
+scripts/mobile-strings-baseline.json
+# Native code and the files of the build tools are not JavaScript.
+apps/mobile/android
+apps/mobile/ios

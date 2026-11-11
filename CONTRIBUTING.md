@@ -118,6 +118,15 @@ Prose style, so the whole project reads as one voice:
 * No semicolons in prose. Two sentences are clearer than one long one.
 * Write out what a name abbreviates the first time it appears in a file.
 
+## Formatting
+
+`.editorconfig` tells an editor the basics (UTF-8, LF, two spaces, a final newline), and `.gitattributes` keeps
+line endings as LF on every machine, Windows included. Prettier is set up (`.prettierrc.json`) for new code, but
+the code that was there before is **not** formatted with it: that would change about half of the files and bury what
+each line's history says. So `npm run format:changed` looks only at the files your branch changes and says which
+Prettier would format differently; `bash scripts/format-changed.sh --write` formats them. Look at the diff before
+you commit that, and leave a file as it is when the formatting would bury your change. Nothing here runs by itself.
+
 ## Tests
 
 Pure logic belongs in `packages/core` and gets a test. That package may import nothing but its
