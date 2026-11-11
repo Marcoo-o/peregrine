@@ -16,13 +16,13 @@ import android.os.Build
  * of the platform, as it did before.
  */
 object SystemPush {
-  /** The package of the service and its receiver of registrations. */
-  private const val PACKAGE = "org.frogger.push"
-  private const val RECEIVER = "org.frogger.push.RegistrationReceiver"
+  /** The package of the service and its receiver of registrations: the one this build was made for (see [PushProtocol]). */
+  private val PACKAGE = BuildConfig.PUSH_PROVIDER
+  private val RECEIVER = PushProtocol.receiver(PACKAGE)
 
-  const val ACTION_REGISTER = "org.frogger.push.action.REGISTER"
-  const val ACTION_UNREGISTER = "org.frogger.push.action.UNREGISTER"
-  const val ACTION_UNREGISTER_ALL = "org.frogger.push.action.UNREGISTER_ALL"
+  val ACTION_REGISTER = PushProtocol.actionRegister(PACKAGE)
+  val ACTION_UNREGISTER = PushProtocol.actionUnregister(PACKAGE)
+  val ACTION_UNREGISTER_ALL = PushProtocol.actionUnregisterAll(PACKAGE)
 
   /** The receiver the service wakes, by the name it is given when a source is registered. */
   const val WAKE_RECEIVER = "com.peregrinemobile.PushWakeReceiver"
