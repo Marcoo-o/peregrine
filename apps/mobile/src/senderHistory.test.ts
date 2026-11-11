@@ -52,6 +52,14 @@ describe('how many messages the phone has from an address', () => {
     expect(await messagesFrom(await mailbox(), 'ANNA@sender.test')).toBe(3)
   })
 
+  it('stops counting at a limit, which is all that telling a first contact from another needs', async () => {
+    const db = await mailbox()
+    expect(await messagesFrom(db, 'anna@sender.test', 2)).toBe(2)
+    expect(await messagesFrom(db, 'anna@sender.test', 10)).toBe(3)
+    expect(await messagesFrom(db, 'ben@sender.test', 2)).toBe(1)
+    expect(await messagesFrom(db, 'nobody@sender.test', 2)).toBe(0)
+  })
+
   it('does not count another address that only contains this one', async () => {
     const db = await mailbox()
     expect(await messagesFrom(db, 'a@sender.test')).toBe(0)

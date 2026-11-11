@@ -22,7 +22,7 @@ import { readMessage } from '../messageText'
 import { readProtected } from '../pgp/readProtected'
 import { assessMessage, isOwnAddress, knownDomainsOf } from '../reading/assessment'
 import type { SearchHit } from '../search'
-import { isFirstContact, messagesFrom } from '../senderHistory'
+import { FIRST_CONTACT_COUNT, isFirstContact, messagesFrom } from '../senderHistory'
 import type { UnifiedMessage } from '../unified'
 import type { MessageTarget } from '../background/notifications'
 import type { Navigator } from './Navigator'
@@ -106,7 +106,7 @@ export class MessageController {
       const knownDomains = knownDomainsOf(accounts)
       // What the user wrote themselves, a draft or a copy in the sent folder, is not a first message from anybody.
       const sender = parseAddress(message.from).address
-      const firstContact = !isOwnAddress(accounts, sender) && isFirstContact(await messagesFrom(this.services.db, sender))
+      const firstContact = !isOwnAddress(accounts, sender) && isFirstContact(await messagesFrom(this.services.db, sender, FIRST_CONTACT_COUNT))
       this.store.showScreen({
         name: 'message',
         ...opened,

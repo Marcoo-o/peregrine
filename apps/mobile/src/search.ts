@@ -79,7 +79,7 @@ export async function searchMessages(db: SqlDb, input: string, limit: number = S
      JOIN folders f ON f.id = m.folder_id
      JOIN accounts a ON a.id = m.account_id
      WHERE ${conditions.join(' AND ')}
-     ORDER BY m.date_ms IS NULL, m.date_ms DESC, m.uid DESC
+     ORDER BY m.date_ms DESC, m.uid DESC
      LIMIT ?`,
     ...params,
     limit

@@ -39,6 +39,12 @@ export function mergeSuggestions(history: Contact[], book: Contact[], limit: num
 /** How many messages are looked at for a typed part: a short part matches a great many, and only the best are shown. */
 const CANDIDATES = 100
 
+/**
+ * How many of the newest messages the suggestions are made from. Looking through every message the phone has takes as long as there are, at every key that
+ * is typed (some 70 ms for a hundred thousand on a fast machine, several times that on a phone); the people one writes to are in the recent ones.
+ */
+export const RECENT_MESSAGES = 20_000
+
 /** How many are suggested, which is what fits under a field without pushing the rest of the form out of sight. */
 export const SUGGESTIONS = 4
 
@@ -69,14 +75,17 @@ interface Row {
  * The people that match what was typed, from the senders of the messages the phone has, in any folder of any account.
  * The ones that sent most come first and then the latest. The user's own addresses are left out, since nobody writes
  * to themselves by suggestion, and so is an address that has been typed in full already, since there is nothing to add.
+ * Only the newest `recent` messages are looked through (by when they came to the phone), see `RECENT_MESSAGES`.
  */
-export async function suggestContacts(db: SqlDb, typed: string, own: string[] = []): Promise<Contact[]> {
+export async function suggestContacts(db: SqlDb, typed: string, own: string[] = [], recent: number = RECENT_MESSAGES): Promise<Contact[]> {
   const wanted = typed.trim().toLowerCase()
   if (wanted === '') return []
   // `instr` is no pattern, so nothing that can be typed in an address means anything but itself.
   const rows = await db.all<Row>(
-    `SELECT sender, COUNT(*) AS n, MAX(date_ms) AS last FROM messages
+    `SELECT sender, COUNT(*) AS n, MAX(date_ms) AS last
+     FROM (SELECT sender, date_ms FROM messages ORDER BY rowid DESC LIMIT ?)
      WHERE instr(lower(sender), ?) > 0 GROUP BY sender ORDER BY n DESC, last DESC LIMIT ?`,
+    recent,
     wanted,
     CANDIDATES
   )

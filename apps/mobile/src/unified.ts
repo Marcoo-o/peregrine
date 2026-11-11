@@ -74,7 +74,8 @@ function listCondition(role: UnifiedRole, now: number): { sql: string; params: A
   return {
     sql: `${sql} AND (m.snoozed_until IS NULL OR m.snoozed_until <= ?)`,
     params: [...params, now],
-    order: 'm.date_ms IS NULL, m.date_ms DESC, m.uid DESC'
+    // No `IS NULL` first: a message without a date is last in a descending order anyway, and the plain order is the one idx_messages_date serves.
+    order: 'm.date_ms DESC, m.uid DESC'
   }
 }
 
