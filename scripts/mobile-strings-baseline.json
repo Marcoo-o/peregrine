@@ -9,5 +9,6 @@
   "apps/mobile/src/pgp/runtime.ts": 1,
   "apps/mobile/src/senderHistory.ts": 1,
   "apps/mobile/src/ui/KeysScreen.tsx": 1,
-  "apps/mobile/src/unified.ts": 1
+  "apps/mobile/src/unified.ts": 1,
+  "apps/mobile/src/unsubscriber.ts": 1
 }

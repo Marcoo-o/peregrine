@@ -271,6 +271,19 @@ export class MessageController {
     this.showNotice(state, 'problem' in result ? result.problem : t('{n} ist bei den Kontakten.', { n: result.saved.name || result.saved.address }))
   }
 
+  /**
+   * Asks the list the open message came from to take the address off, with the one request that "one click" is, and says on the message what came of
+   * it. The address was read from the message and checked (`parseUnsubscribe`), and `unsubscriber` checks it once more.
+   */
+  async unsubscribeOneClick(state: MessageState, target: { url: string; host: string }): Promise<void> {
+    try {
+      await this.services.unsubscriber.post(target.url)
+      this.showNotice(state, t('Abgemeldet: {host} hat die Anfrage angenommen. Bis keine Nachrichten mehr kommen, kann es ein paar Tage dauern.', { host: target.host }))
+    } catch (error) {
+      this.showNotice(state, t('Abmelden bei {host} ging nicht: {n}', { host: target.host, n: explainError(error) }))
+    }
+  }
+
   /** Puts the open message on the list for today, as a task that opens it, and says so on the message. */
   async addToTasks(state: MessageState, add: (link: TaskLink, subject: string) => Promise<string>): Promise<void> {
     const messageId = state.summary.messageId ?? null

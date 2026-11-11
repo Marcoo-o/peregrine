@@ -10,6 +10,7 @@ import type { DeviceLock } from '../lock'
 import type { BackupCipher } from '@peregrine/core/backupFormat'
 import type { BackupFolder } from '../autoBackup'
 import type { Printer } from '../printing'
+import type { Unsubscriber } from '../unsubscriber'
 import { describeError } from '../errors'
 import type { Files } from '../files'
 import { MailActions } from '../mailActions'
@@ -35,6 +36,8 @@ export interface Platform {
   deviceLock: DeviceLock
   /** The print service of the device, which also makes a PDF. */
   printer: Printer
+  /** Asks a mailing list to take the address off with one request. */
+  unsubscriber: Unsubscriber
   /** Seals and opens a backup with a password. */
   backupCipher: BackupCipher
   /** The folder of the scheduled backups, the password kept for them and the scheduler that runs them. */
@@ -57,6 +60,7 @@ export interface Services {
   deviceContacts: DeviceContacts
   deviceLock: DeviceLock
   printer: Printer
+  unsubscriber: Unsubscriber
   backupCipher: BackupCipher
   backupFolder: BackupFolder
   notifications: Notifications
@@ -86,7 +90,7 @@ export interface ServiceListeners {
  * and sends what was written, and the actions the screens ask for, which go through the queue.
  */
 export function createServices(db: SqlDb, platform: Platform, listeners: ServiceListeners): Services {
-  const { log, files, deviceContacts, deviceLock, printer, backupCipher, backupFolder, notifications, syncSchedule, push } = platform
+  const { log, files, deviceContacts, deviceLock, printer, unsubscriber, backupCipher, backupFolder, notifications, syncSchedule, push } = platform
   const connections = new Connections(
     (account) => platform.connectImap(imapLoginOf(account)),
     listeners.connectionsChanged
@@ -106,6 +110,7 @@ export function createServices(db: SqlDb, platform: Platform, listeners: Service
     deviceContacts,
     deviceLock,
     printer,
+    unsubscriber,
     backupCipher,
     backupFolder,
     notifications,
