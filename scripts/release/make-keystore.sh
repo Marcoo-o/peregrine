@@ -21,13 +21,21 @@ if [ -e "$STORE" ]; then
 fi
 mkdir -p "$(dirname "$STORE")"
 echo "Making $STORE. keytool asks for a password for the keystore and then for the key (the same is fine) and for a name, which is shown in the certificate."
-"$KEYTOOL" -genkeypair -v -keystore "$STORE" -alias peregrine -keyalg RSA -keysize 4096 -validity 10000
+echo "(a password has to be at least six characters; keytool gives up after three tries)"
+"$KEYTOOL" -genkeypair -v -keystore "$STORE" -alias peregrine -keyalg RSA -keysize 4096 -validity 10000 || true
+# keytool answers 0 even when it gave up, so whether there is a keystore is what says whether it worked.
+if [ ! -s "$STORE" ]; then
+  echo "No keystore was made. Run this again." >&2
+  exit 1
+fi
 chmod 600 "$STORE" 2>/dev/null || true
+# Gradle on Windows wants the path as Windows writes it (C:/Users/...), not as Git Bash does (/c/Users/...).
+GRADLE_STORE="$(cygpath -m "$STORE" 2>/dev/null || echo "$STORE")"
 
 echo
 echo "Done. Add this to ~/.gradle/gradle.properties (the passwords are yours to type; nothing was written for you):"
 echo
-echo "    peregrineReleaseStoreFile=$STORE"
+echo "    peregrineReleaseStoreFile=$GRADLE_STORE"
 echo "    peregrineReleaseStorePassword=<the keystore password>"
 echo "    peregrineReleaseKeyAlias=peregrine"
 echo "    peregrineReleaseKeyPassword=<the key password>"
