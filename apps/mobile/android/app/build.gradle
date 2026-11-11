@@ -68,6 +68,34 @@ react {
 def enableProguardInReleaseBuilds = false
 
 /**
+ * The key a release build is signed with: the user's own, which is never in the repository. Where it is kept is given in `~/.gradle/gradle.properties` (or with
+ * `-P` on the command line, or as environment variables `PEREGRINE_RELEASE_STORE_FILE` and so on):
+ *
+ *   peregrineReleaseStoreFile=/home/me/.peregrine/release.keystore
+ *   peregrineReleaseStorePassword=...
+ *   peregrineReleaseKeyAlias=peregrine
+ *   peregrineReleaseKeyPassword=...
+ *
+ * `scripts/release/make-keystore.sh` makes the keystore. Without one a release build still builds, signed with the debug key so that it can be tried, and says so
+ * loudly; `-PperegrineRequireReleaseKey=true` (which `scripts/release/build-apk.sh` passes) makes that an error instead, so that a build that is to be given to
+ * somebody can never be signed with the debug key by mistake.
+ */
+def releaseSetting = { String name ->
+    def env = System.getenv('PEREGRINE_RELEASE_' + name.replaceAll(/([A-Z])/, '_$1').toUpperCase().replaceFirst('^_', ''))
+    return project.findProperty('peregrineRelease' + name) ?: env
+}
+def releaseStoreFile = releaseSetting('StoreFile')
+def hasReleaseKey = releaseStoreFile != null && file(releaseStoreFile).exists() && releaseSetting('StorePassword') != null && releaseSetting('KeyAlias') != null
+if (project.findProperty('peregrineRequireReleaseKey') == 'true' && !hasReleaseKey) {
+    throw new GradleException('No release key is set up (peregrineReleaseStoreFile, StorePassword, KeyAlias, KeyPassword): see scripts/release/make-keystore.sh')
+}
+gradle.taskGraph.whenReady { graph ->
+    if (!hasReleaseKey && graph.allTasks.any { it.name in ['assembleRelease', 'bundleRelease', 'packageRelease'] }) {
+        logger.warn('WARNING: this release build is signed with the DEBUG key (no release key is set up). Do not give it to anybody: it cannot be updated by a properly signed build.')
+    }
+}
+
+/**
  * The preferred build flavor of JavaScriptCore (JSC)
  *
  * For example, to use the international variant, you can use:
@@ -101,10 +129,20 @@ android {
         applicationId "com.peregrinemobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // The version a release is given: `-PperegrineVersionName=1.2.0` and `-PperegrineVersionCode=12` (the code only ever goes up: it is what the system compares
+        // to decide whether a build is an update). `scripts/release/build-apk.sh` sets both.
+        versionCode((project.findProperty('peregrineVersionCode') ?: '1').toString().toInteger())
+        versionName(project.findProperty('peregrineVersionName') ?: '1.0')
     }
     signingConfigs {
+        if (hasReleaseKey) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseSetting('StorePassword')
+                keyAlias releaseSetting('KeyAlias')
+                keyPassword releaseSetting('KeyPassword') ?: releaseSetting('StorePassword')
+            }
+        }
         debug {
             storeFile file('debug.keystore')
             storePassword 'android'
@@ -119,9 +157,8 @@ android {
             if (project.hasProperty('devSuffix')) applicationIdSuffix project.property('devSuffix')
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // The user's own key where there is one, the debug key (and a warning, see above) where there is not.
+            signingConfig hasReleaseKey ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
