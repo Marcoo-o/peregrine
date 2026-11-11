@@ -26,3 +26,9 @@ IDEAS.de.md
 *.log
 .DS_Store
 Thumbs.db
+
+# The demo environment: its certificate and key, and what its mail server received.
+scripts/demo/.state/
+
+# The debug build's trust of the demo certificate (scripts/demo/trust.sh makes it). Never committed: it names a certificate that only this machine has.
+apps/mobile/android/app/src/debug/
