@@ -13,7 +13,7 @@ bash scripts/demo/demo.sh down
 
 `up` starts, in this order:
 
-1. **Dovecot** (`dovecot.sh`, as root in WSL or on Linux) with `work@demo.test` and `home@demo.test`, password `demo`, three messages each, IMAP with TLS on
+1. **Dovecot** (`dovecot.sh`, as root in WSL or on Linux) with the accounts `work` and `home` (a login with the domain, `work@demo.test`, is the same account), password `demo`, three messages each, IMAP with TLS on
    1993 and with STARTTLS on 1143. The certificate is made once into `scripts/demo/.state/` with the names the emulator reaches the host by (`localhost`,
    `127.0.0.1`, `10.0.2.2`) and is made anew when less than a week of it is left. It is the configuration of `packages/imap/test-server`.
 2. **The trust of the debug build** (`trust.sh`): makes `apps/mobile/android/app/src/debug` with a network security config whose `debug-overrides` name that one

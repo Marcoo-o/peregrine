@@ -4,7 +4,7 @@
 #
 #     sudo bash scripts/demo/dovecot.sh [reset]
 #
-# Accounts `work@demo.test` and `home@demo.test`, password `demo`, IMAP with TLS on port 1993 and with STARTTLS on 1143. It is not a service: it runs from
+# Accounts `work` and `home` (also as `work@demo.test` and `home@demo.test`), password `demo`, IMAP with TLS on port 1993 and with STARTTLS on 1143. It is not a service: it runs from
 # /tmp/peregrine-dovecot and holds no real mail. With `reset` the mailboxes are emptied first. The certificate is made once into scripts/demo/.state, with the
 # names the emulator reaches the host by (localhost, 127.0.0.1 and 10.0.2.2), and a new one is made when it has less than a week left.
 set -e
@@ -21,8 +21,11 @@ fi
 cp "$STATE/cert.pem" "$STATE/key.pem" "$D/"
 
 id vmail >/dev/null 2>&1 || useradd -r -M -s /usr/sbin/nologin vmail
-printf 'work@demo.test:{PLAIN}demo\nhome@demo.test:{PLAIN}demo\n' >"$D/users"
+# The accounts are `work` and `home`, and a login with the domain (`work@demo.test`) is the same account: the domain is taken off (%Ln) for the login and for
+# the folder of the mail, so that an application that was set up with either spelling gets the same mailbox.
+printf 'work:{PLAIN}demo\nhome:{PLAIN}demo\n' >"$D/users"
 cp "$HERE/../../packages/imap/test-server/dovecot.conf" "$D/dovecot.conf"
+sed -i -e 's#username_format=%u#username_format=%Ln#' -e 's#home=/tmp/peregrine-dovecot/home/%u#home=/tmp/peregrine-dovecot/home/%Ln#' -e 's#mail_home = /tmp/peregrine-dovecot/home/%u#mail_home = /tmp/peregrine-dovecot/home/%Ln#' "$D/dovecot.conf"
 
 if [ -f "$D/run/master.pid" ]; then
   OLD="$(cat "$D/run/master.pid")"
@@ -50,4 +53,4 @@ for account in work home; do
     bash "$HERE/seed.sh" "$account" "Sam Fischer <sam@contoso.test>" "Lunch on Thursday?" 3
   fi
 done
-echo "ready: work@demo.test and home@demo.test, password demo"
+echo "ready: work and home (also as work@demo.test and home@demo.test), password demo"
