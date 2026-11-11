@@ -4,8 +4,12 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import androidx.work.Constraints
 import androidx.work.Data
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
@@ -53,9 +57,21 @@ object NotificationActions {
   /** Whether an action is one of the two the task knows. */
   fun isKnown(action: String?): Boolean = action == ARCHIVE || action == READ
 
+  /**
+   * The system lets a job use the network only when the job says it needs it: without that, a task started from a notification while the application is in the
+   * background finds no network (found on a device: the connection failed at once with only the name of the host). From Android 12 the work is expedited, which the
+   * system runs at once for as long as the application has quota, and as ordinary work when it has none. Without a network the work waits for one, and is kept
+   * across a restart of the phone: the button was pressed, and the notification is gone, so it is to be done when it can be.
+   */
   fun start(context: Context, action: String, target: LaunchTarget.Target) {
-    val request = OneTimeWorkRequest.Builder(NotificationActionWorker::class.java).setInputData(dataOf(action, target)).build()
-    WorkManager.getInstance(context).enqueue(request)
+    val builder =
+      OneTimeWorkRequest.Builder(NotificationActionWorker::class.java)
+        .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+        .setInputData(dataOf(action, target))
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      builder.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+    }
+    WorkManager.getInstance(context).enqueue(builder.build())
   }
 
   fun targetOf(intent: Intent): LaunchTarget.Target? =

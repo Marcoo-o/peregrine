@@ -1,4 +1,6 @@
 MIME-Version: 1.0
+List-Unsubscribe: <mailto:leave@lists.northwind.test?subject=unsubscribe>, <https://lists.northwind.test/u/abc123>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
 Content-Type: multipart/alternative; boundary="demo-boundary"
 
 --demo-boundary
