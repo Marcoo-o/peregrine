@@ -2,6 +2,7 @@ import type { BackupCipher } from '@peregrine/core/backupFormat'
 import type { SqlDb } from '@peregrine/core/sqlDb'
 import type { FilterAction, FilterCondition } from '@peregrine/core/types'
 import { decodeUtf8, encodeUtf8 } from '@peregrine/imap/utf8'
+import { t, tn } from './i18n'
 import { newId } from './ids'
 
 /**
@@ -131,6 +132,21 @@ const parse = <T>(raw: string, fallback: T): T => {
   } catch {
     return fallback
   }
+}
+
+/** What a count says in words, leaving out what is nought. */
+export function countsText(counts: BackupCounts): string {
+  const parts = [
+    counts.accounts > 0 ? tn(counts.accounts, '{count} Konto', '{count} Konten') : '',
+    counts.identities > 0 ? tn(counts.identities, '{count} Absender', '{count} Absender') : '',
+    counts.keys > 0 ? tn(counts.keys, '{count} Schlüssel', '{count} Schlüssel') : '',
+    counts.contacts > 0 ? tn(counts.contacts, '{count} Kontakt', '{count} Kontakte') : '',
+    counts.tags > 0 ? tn(counts.tags, '{count} Tag', '{count} Tags') : '',
+    counts.rules > 0 ? tn(counts.rules, '{count} Regel', '{count} Regeln') : '',
+    counts.tasks > 0 ? tn(counts.tasks, '{count} Aufgabe', '{count} Aufgaben') : '',
+    counts.settings > 0 ? tn(counts.settings, '{count} Einstellung', '{count} Einstellungen') : ''
+  ].filter((part) => part !== '')
+  return parts.length > 0 ? parts.join(', ') : t('nichts')
 }
 
 export const countsOf = (bundle: BackupBundle): BackupCounts => ({

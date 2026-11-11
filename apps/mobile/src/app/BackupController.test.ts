@@ -3,7 +3,8 @@ import { listAccounts } from '../accounts'
 import { openBackup } from '../backup'
 import { saveContact } from '../contactBook'
 import { appHarness } from '../testing/appHarness'
-import { backupFileName, countsText } from './BackupController'
+import { countsText } from '../backup'
+import { backupFileName } from './BackupController'
 import type { BackupState } from './screens'
 
 const OPTIONS = { passwords: true, privateKeys: true }

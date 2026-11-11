@@ -1,4 +1,5 @@
-import { restoreBackup, makeBackup, openBackup, type BackupCounts, type BackupOptions } from '../backup'
+import { applyAutoBackup, loadAutoBackup, saveAutoBackup, type AutoBackupSettings } from '../autoBackup'
+import { countsText, restoreBackup, makeBackup, openBackup, type BackupOptions } from '../backup'
 import { explainError } from '../errors'
 import { t, tn } from '../i18n'
 import type { Services } from './services'
@@ -7,23 +8,12 @@ import type { AppStore } from './store'
 /** The largest file that is read as a backup: a few thousand rules, tasks and contacts are some hundred kilobytes, and more is not a backup of this. */
 const MAX_FILE_BYTES = 50 * 1024 * 1024
 
+/** How often and how long the screen looks for the result of a run it asked for. */
+const RUN_LOOKS = 20
+const RUN_LOOK_MS = 3000
+
 /** The shortest password for a backup. The file is what holds the keys, and a short password is what anybody who gets the file tries first. */
 export const MIN_PASSWORD = 8
-
-/** What a count says in words, leaving out what is nought. */
-export function countsText(counts: BackupCounts): string {
-  const parts = [
-    counts.accounts > 0 ? tn(counts.accounts, '{count} Konto', '{count} Konten') : '',
-    counts.identities > 0 ? tn(counts.identities, '{count} Absender', '{count} Absender') : '',
-    counts.keys > 0 ? tn(counts.keys, '{count} Schlüssel', '{count} Schlüssel') : '',
-    counts.contacts > 0 ? tn(counts.contacts, '{count} Kontakt', '{count} Kontakte') : '',
-    counts.tags > 0 ? tn(counts.tags, '{count} Tag', '{count} Tags') : '',
-    counts.rules > 0 ? tn(counts.rules, '{count} Regel', '{count} Regeln') : '',
-    counts.tasks > 0 ? tn(counts.tasks, '{count} Aufgabe', '{count} Aufgaben') : '',
-    counts.settings > 0 ? tn(counts.settings, '{count} Einstellung', '{count} Einstellungen') : ''
-  ].filter((part) => part !== '')
-  return parts.length > 0 ? parts.join(', ') : t('nichts')
-}
 
 /** The name of the file of a backup made on a day. */
 export function backupFileName(now: Date): string {
@@ -41,23 +31,91 @@ export class BackupController {
   ) {}
 
   /** The screen, with a line about what was just done or what went wrong. */
-  show(notice?: string, error?: string, busy?: string): void {
-    this.store.showScreen({ name: 'backup', notice, error, busy })
+  async show(notice?: string, error?: string, busy?: string): Promise<void> {
+    const { db, backupFolder } = this.services
+    const state = await backupFolder.state().catch(() => ({ folder: null, hasPassword: false }))
+    this.store.showScreen({ name: 'backup', auto: { settings: await loadAutoBackup(db), folder: state.folder, hasPassword: state.hasPassword }, notice, error, busy })
+  }
+
+  /** Puts a change of the scheduled backup in force: kept, and the next run armed or cancelled. It cannot be switched on without a folder and a password. */
+  async setAuto(change: Partial<AutoBackupSettings>): Promise<void> {
+    const { db, backupFolder } = this.services
+    if (change.enabled === true) {
+      const state = await backupFolder.state()
+      if (!state.folder || !state.hasPassword) return this.show(undefined, t('Wähle zuerst einen Ordner und gib ein Passwort ein.'))
+    }
+    await saveAutoBackup(db, change)
+    await applyAutoBackup(db, backupFolder)
+    await this.show()
+  }
+
+  /** Lets the user choose the folder the scheduled backups go into. */
+  async chooseFolder(): Promise<void> {
+    const { db, backupFolder } = this.services
+    try {
+      const name = await backupFolder.chooseFolder()
+      if (name === null) return this.show()
+      await applyAutoBackup(db, backupFolder)
+      await this.show(t('Die Sicherungen gehen in den Ordner „{name}“.', { name }))
+    } catch (error) {
+      await this.show(undefined, t('Der Ordner ließ sich nicht wählen: {n}', { n: explainError(error) }))
+    }
+  }
+
+  /** Keeps the password of the scheduled backups, sealed by the Keystore. It is not shown again and not given back. */
+  async rememberPassword(password: string): Promise<void> {
+    const { db, backupFolder } = this.services
+    if (password.length < MIN_PASSWORD) return this.show(undefined, t('Das Passwort braucht mindestens {n} Zeichen.', { n: MIN_PASSWORD }))
+    try {
+      await backupFolder.rememberPassword(password)
+      await applyAutoBackup(db, backupFolder)
+      await this.show(t('Das Passwort ist gemerkt, vom Schlüsselspeicher des Telefons gesichert.'))
+    } catch (error) {
+      await this.show(undefined, t('Das Passwort ließ sich nicht merken: {n}', { n: explainError(error) }))
+    }
+  }
+
+  /** Forgets the password and with it the schedule: a scheduled backup cannot be made without it. */
+  async forgetPassword(): Promise<void> {
+    const { db, backupFolder } = this.services
+    await backupFolder.forgetPassword()
+    await saveAutoBackup(db, { enabled: false })
+    await applyAutoBackup(db, backupFolder)
+    await this.show(t('Das Passwort ist vergessen und das automatische Sichern aus.'))
+  }
+
+  /** How the screen waits between looks for the result of a run in the background; a test makes it no wait. */
+  delay: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  /**
+   * Makes a scheduled backup now, in the background where the schedule makes them, and shows what it came to: the run is the platform's and is not under this screen,
+   * so the screen looks at the settings every few seconds, while it is the screen, until the run has recorded itself.
+   */
+  async runAutoNow(): Promise<void> {
+    const before = (await loadAutoBackup(this.services.db)).lastRun
+    await this.services.backupFolder.runNow()
+    await this.show(undefined, undefined, t('Die Sicherung läuft im Hintergrund. Das Ergebnis steht gleich hier.'))
+    for (let look = 0; look < RUN_LOOKS; look++) {
+      await this.delay(RUN_LOOK_MS)
+      if (this.store.screen.name !== 'backup') return
+      if ((await loadAutoBackup(this.services.db)).lastRun !== before) return this.show()
+    }
+    await this.show(t('Das Ergebnis steht noch aus. Es erscheint hier, wenn du diese Seite wieder öffnest.'))
   }
 
   /** Makes a backup sealed with the password, and lets the user choose where to save it. */
   async make(password: string, again: string, options: BackupOptions): Promise<void> {
     if (password.length < MIN_PASSWORD) return this.show(undefined, t('Das Passwort braucht mindestens {n} Zeichen.', { n: MIN_PASSWORD }))
     if (password !== again) return this.show(undefined, t('Die beiden Passwörter sind nicht gleich.'))
-    this.show(undefined, undefined, t('Die Sicherung wird verschlüsselt. Das dauert einen Moment.'))
+    await this.show(undefined, undefined, t('Die Sicherung wird verschlüsselt. Das dauert einen Moment.'))
     try {
       const { file, counts } = await makeBackup(this.services.db, this.services.backupCipher, password, options)
       const name = backupFileName(new Date())
       const saved = await this.services.files.save(name, 'application/octet-stream', file)
       if (!saved) return this.show()
-      this.show(t('Gespeichert: {name}. Darin: {counts}.', { name, counts: countsText(counts) }))
+      await this.show(t('Gespeichert: {name}. Darin: {counts}.', { name, counts: countsText(counts) }))
     } catch (error) {
-      this.show(undefined, t('Die Sicherung ging schief: {n}', { n: explainError(error) }))
+      await this.show(undefined, t('Die Sicherung ging schief: {n}', { n: explainError(error) }))
     }
   }
 
@@ -74,7 +132,7 @@ export class BackupController {
       }
       const file = await files.read(picked.path)
       await files.remove([picked.path]).catch(() => undefined)
-      this.show(undefined, undefined, t('Die Sicherung wird geöffnet. Das dauert einen Moment.'))
+      await this.show(undefined, undefined, t('Die Sicherung wird geöffnet. Das dauert einen Moment.'))
       const opened = await openBackup(this.services.backupCipher, file, password)
       if ('problem' in opened) {
         const said =
@@ -90,9 +148,9 @@ export class BackupController {
       const lines = [t('Zurückgespielt: {added}. Schon da: {known}.', { added: countsText(result.added), known: countsText(result.known) })]
       if (result.accountsWithoutPassword > 0) lines.push(tn(result.accountsWithoutPassword, '{count} Konto braucht noch sein Passwort: unter „Konto bearbeiten“.', '{count} Konten brauchen noch ihr Passwort: unter „Konto bearbeiten“.'))
       if (result.rulesWithoutFolder > 0) lines.push(tn(result.rulesWithoutFolder, '{count} Regel wartet auf ihren Ordner: spiel die Sicherung noch einmal zurück, wenn das Konto verbunden ist.', '{count} Regeln warten auf ihren Ordner: spiel die Sicherung noch einmal zurück, wenn das Konto verbunden ist.'))
-      this.show(lines.join(' '))
+      await this.show(lines.join(' '))
     } catch (error) {
-      this.show(undefined, t('Das Zurückspielen ging schief: {n}', { n: explainError(error) }))
+      await this.show(undefined, t('Das Zurückspielen ging schief: {n}', { n: explainError(error) }))
     }
   }
 }

@@ -5,6 +5,7 @@ import type { PushState } from '../background/devices'
 import type { Draft } from '../draft'
 import type { ListSettings, NotificationSettings, SendSettings } from '../settings'
 import type { Folder } from '../folders'
+import type { AutoBackupSettings } from '../autoBackup'
 import type { DayTask } from '../tasks'
 import type { BookContact } from '../contactBook'
 import type { Identity } from '../identities'
@@ -232,6 +233,8 @@ export interface FilterRulesState {
 /** The backup of what the user made, and putting one back. */
 export interface BackupState {
   name: 'backup'
+  /** The scheduled backup: what the user chose, the folder, and whether a password is kept for it. */
+  auto: { settings: AutoBackupSettings; folder: string | null; hasPassword: boolean }
   notice?: string
   error?: string
   /** What is being done that takes a moment, said on the screen. */

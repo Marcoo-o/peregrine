@@ -8,6 +8,7 @@ import type { Notifications, PushDevice, PushSource, PushState, SyncSchedule } f
 import type { MailNotification, MessageTarget } from '../background/notifications'
 import type { ImapLogin } from '../app/accountForm'
 import type { Platform } from '../app/services'
+import type { BackupFolder } from '../autoBackup'
 import { AppStore } from '../app/store'
 import type { DeviceLock } from '../lock'
 import type { Printer } from '../printing'
@@ -204,6 +205,56 @@ function toFetched(message: FakeMessage): FetchedMessage {
       date: message.date,
       from: [{ address: 'sender@example.net' }]
     }
+  }
+}
+
+/** The folder of the scheduled backups and the scheduler, as the tests see them: what was written, what was armed, and what the user answers when asked for a folder. */
+export class FakeBackupFolder implements BackupFolder {
+  folder: string | null = null
+  password: string | null = null
+  /** What the user chooses in the dialog for the folder: a name, or null for none. */
+  chooseAnswer: string | null = 'Backups'
+  failWith: Error | null = null
+  readonly written: { name: string; content: Uint8Array; keep: number }[] = []
+  /** The moments the next run was armed for, the last being the one that waits; null for a run that was cancelled. */
+  readonly armed: Array<number | null> = []
+  runs = 0
+  /** What the platform's run does when it is asked for one: the tests make it record itself as the real one does. */
+  onRun: (() => Promise<void>) | null = null
+
+  async state() {
+    return { folder: this.folder, hasPassword: this.password !== null }
+  }
+
+  async chooseFolder() {
+    if (this.chooseAnswer !== null) this.folder = this.chooseAnswer
+    return this.chooseAnswer
+  }
+
+  async rememberPassword(password: string) {
+    this.password = password
+  }
+
+  async forgetPassword() {
+    this.password = null
+  }
+
+  async sealToFolder(name: string, content: Uint8Array, keep: number) {
+    if (this.failWith) throw this.failWith
+    this.written.push({ name, content, keep })
+  }
+
+  async arm(atMillis: number) {
+    this.armed.push(atMillis)
+  }
+
+  async disarm() {
+    this.armed.push(null)
+  }
+
+  async runNow() {
+    this.runs += 1
+    await this.onRun?.()
   }
 }
 
@@ -471,6 +522,7 @@ export async function appHarness() {
   useSystemLanguages(() => ['de'])
   language.apply('system')
   const printer = new FakePrinter()
+  const backupFolder = new FakeBackupFolder()
   const smtp = new FakeSmtpServer()
   const notifications = new FakeNotifications()
   const syncSchedule = new FakeSyncSchedule()
@@ -484,6 +536,7 @@ export async function appHarness() {
     deviceLock,
     printer,
     backupCipher: nodeBackupCipher({ rounds: 1000 }),
+    backupFolder,
     notifications,
     syncSchedule,
     push,
@@ -508,7 +561,7 @@ export async function appHarness() {
 
   const folderOf = (folders: Folder[], path: string): Folder => folders.find((f) => f.imapPath === path) as Folder
 
-  return { app, store, db, raw, server, files, deviceContacts, deviceLock, printer, smtp, notifications, syncSchedule, push, logs, reconnectTimers, givenAccount, folderOf }
+  return { app, store, db, raw, server, files, deviceContacts, deviceLock, printer, backupFolder, smtp, notifications, syncSchedule, push, logs, reconnectTimers, givenAccount, folderOf }
 }
 
 /**

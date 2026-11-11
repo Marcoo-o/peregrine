@@ -200,6 +200,11 @@ export function ScreenView(props: { application: Application; screen: Screen }):
           state={screen}
           onMake={(password, again, options) => backup.make(password, again, options)}
           onRestore={(password) => backup.restore(password)}
+          onAuto={(change) => backup.setAuto(change)}
+          onChooseFolder={() => backup.chooseFolder()}
+          onRememberPassword={(password) => backup.rememberPassword(password)}
+          onForgetPassword={() => backup.forgetPassword()}
+          onRunAuto={() => backup.runAutoNow()}
           onBack={() => settings.show()}
         />
       )
