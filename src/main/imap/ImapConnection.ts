@@ -220,10 +220,12 @@ export class ImapConnection implements ImapSession {
       uidValidity: true,
       messages: true
     })
+    // imapflow 2 says `false` when the server gave no answer for the folder; that is the same as nothing known of it.
+    const known = status || undefined
     return {
-      uidValidity: status.uidValidity ?? 0n,
-      uidNext: status.uidNext ?? 0,
-      messages: status.messages ?? 0
+      uidValidity: known?.uidValidity ?? 0n,
+      uidNext: known?.uidNext ?? 0,
+      messages: known?.messages ?? 0
     }
   }
 
