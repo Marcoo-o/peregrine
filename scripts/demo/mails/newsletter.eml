@@ -1,0 +1,19 @@
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="demo-boundary"
+
+--demo-boundary
+Content-Type: text/plain; charset=utf-8
+
+Northwind Weekly
+
+Three things this week: the new office opens, the cafeteria changes its hours, and the quarterly numbers are out.
+
+--demo-boundary
+Content-Type: text/html; charset=utf-8
+
+<html><body style="font-family: sans-serif">
+<h2>Northwind Weekly</h2>
+<p>Three things this week: the <b>new office</b> opens, the cafeteria changes its hours, and the quarterly numbers are out.</p>
+<p><a href="https://lists.northwind.test/read/42">Read the whole issue</a></p>
+</body></html>
+--demo-boundary--

