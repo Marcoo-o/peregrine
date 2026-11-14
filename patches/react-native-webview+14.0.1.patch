@@ -1,0 +1,46 @@
+react-native-webview 14.0.1 for Android Gradle Plugin 9 with built-in Kotlin and the new DSL.
+
+Its build file applies the `kotlin-android` plugin itself, which AGP 9 refuses when it provides Kotlin ("Cannot add extension with name 'kotlin'"), and sets
+the SDK with the old `compileSdkVersion` call, which the new DSL does not have. With this the application does not need the two opt-outs
+`android.builtInKotlin=false` and `android.newDsl=false`, which AGP 10 removes. The same helper is in op-sqlite's build file.
+
+Applied by scripts/apply-patches.cjs after an install. Remove it when react-native-webview does this itself (newer than 14.0.1).
+
+diff --git a/node_modules/react-native-webview/android/build.gradle b/node_modules/react-native-webview/android/build.gradle
+index ae14145..9eedd71 100644
+--- a/node_modules/react-native-webview/android/build.gradle
++++ b/node_modules/react-native-webview/android/build.gradle
+@@ -57,7 +57,23 @@ apply plugin: 'com.android.library'
+ if (isNewArchitectureEnabled()) {
+     apply plugin: 'com.facebook.react'
+ }
+-apply plugin: 'kotlin-android'
++// Android Gradle Plugin 9 ships built-in Kotlin and applies the Kotlin plugin itself; applying it again fails with "Cannot add extension with name 'kotlin'".
++// Apply it only when AGP is not providing Kotlin (AGP 8 and older, or AGP 9 with android.builtInKotlin=false).
++def shouldApplyKotlinPlugin() {
++  def agpMajor = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')[0].toInteger()
++  if (agpMajor <= 8) {
++    return true
++  }
++  if (agpMajor >= 10) {
++    return false
++  }
++  def propertyVal = providers.gradleProperty("android.builtInKotlin").orNull
++  def builtInKotlinEnabled = propertyVal != null ? propertyVal.toBoolean() : true
++  return !builtInKotlinEnabled
++}
++if (shouldApplyKotlinPlugin()) {
++  apply plugin: 'kotlin-android'
++}
+ 
+ android {
+     if (supportsNamespace()) {
+@@ -73,7 +89,7 @@ android {
+         }
+     }
+ 
+-    compileSdkVersion getExtOrIntegerDefault('compileSdkVersion')
++    compileSdk getExtOrIntegerDefault('compileSdkVersion')
+ 
+     defaultConfig {
+         minSdkVersion getReactNativeWebViewMinSdkVersion()
