@@ -62,11 +62,11 @@ types and allowed to import nothing but its own files, so a second application c
 
 ## Builds
 
-Every pull request is type checked, tested and built on Windows. Every commit on `main` builds
-the Windows installer and the Linux packages and replaces the `nightly` pre-release. A tag
-starting with `v` does the same into a draft release. Each build job writes the SHA-256 of its
-files into the release text. Nothing is signed. The Android application is built and tested on
-every change to it, as a debug APK that is not part of a release yet. [docs/building.md](docs/building.md) has the details, including signing and what
+Every pull request is type checked, tested and built on Windows. A tag starting with `v` builds
+the Windows installer and the Linux packages into a draft release; there is no build of every
+commit on `main`. Each build job writes the SHA-256 of its files into the release text. Nothing is
+signed. The Android application is built and tested on every change to it, as a debug APK, and
+released by hand with a key of its own (tags `android-v<version>`). [docs/building.md](docs/building.md) has the details, including signing and what
 to do on a new machine.
 
 ## Contributing and security
