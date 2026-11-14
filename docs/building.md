@@ -29,14 +29,19 @@ Three workflows under `.github/workflows`, each explained at the top of its own 
 | Workflow | When | What it does |
 |---|---|---|
 | `ci.yml` | every pull request | typecheck, tests and a build, on Windows with Node 22 and 24 |
-| `release.yml` | every commit on `main`, every `v*` tag | typecheck and tests, then the Windows installer and the Linux packages, then a release |
+| `release.yml` | every `v*` tag (and by hand) | typecheck and tests, then the Windows installer and the Linux packages, then a draft release |
 | `android.yml` | changes under `apps/mobile` or `packages` | the type check, the native tests and a debug APK that carries its own JavaScript |
 
-**Development builds.** Every commit on `main` replaces a single rolling pre-release tagged
-`nightly`, so there is always a current build to try without waiting for a version. One entry,
-replaced each time, rather than one per commit: a hundred releases nobody can tell apart is not
-a changelog. The tag is not called `main`, because a tag and a branch sharing a name make
-every bare `main` ambiguous, and `git push origin main` then refuses to run at all.
+**Development builds.** There is no build of every commit on `main`: a rolling pre-release called
+`nightly` used to be replaced on every push, and was taken out, because it showed whatever was merged
+last and made the real versions the exception on the page of releases. A change is built and
+tested on its pull request. To have a build of `main` or of a branch, run the Release workflow by
+hand (Actions, Release, Run workflow, or `gh workflow run release.yml --ref <branch>`): it builds both
+platforms, checks them, and leaves the installers as artifacts of that run without publishing anything.
+
+**The Android application** is not built by a workflow: it is signed with a key that is never in a
+pipeline, by hand, and its releases are tagged `android-v<version>` (which does not start with `v`, so
+it does not start the Release workflow). `docs/mobile.md` ("What releasing found") has the steps.
 
 **Releases.** Pushing a tag that starts with `v` builds the same files and attaches them to a
 draft release:
