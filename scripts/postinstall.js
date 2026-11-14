@@ -13,3 +13,6 @@ if (!existsSync(electronExe)) {
 // better-sqlite3-multiple-ciphers builds on Node-API since 13.0.0 and ships a prebuilt
 // binary for every platform in the package itself, picked at runtime. There is nothing
 // left to rebuild against the Electron ABI.
+
+// What `npm install` does by itself with scripts on: the patches to packages (see patches/ and scripts/apply-patches.cjs).
+execSync('node scripts/apply-patches.cjs', { cwd: path.join(__dirname, '..'), stdio: 'inherit' })
